@@ -1,0 +1,25 @@
+Voxel‐dim (W):  min = 79, max = 768,  mean = 512.6
+
+Spacing (x):  min = 0.352, max = 1.367,  mean = 0.766  (mm)
+Spacing (y):  min = 0.352, max = 3.000,  mean = 0.767  (mm)
+Spacing (z):  min = 0.450, max = 8.000,  mean = 2.891  (mm)
+
+Aspect ratio (W/H):  min = 0.154, max = 1.000, mean = 0.999
+Aspect ratio (W/D):  min = 0.154, max = 21.333, mean = 5.278
+Aspect ratio (H/D):  min = 0.483, max = 21.333, mean = 5.279
+
+Overall class balance (total voxels across all 2000 GT cases = 96,086,195,354):
+  • background (value=0): 90,997,606,409 voxels  (94.70%)
+  • liver (value=1): 2,868,007,164 voxels  (2.98%)
+  • right-kidney (value=2): 324,466,224 voxels  (0.34%)
+  • spleen (value=3): 391,409,484 voxels  (0.41%)
+  • pancreas (value=4): 139,801,930 voxels  (0.15%)
+  • aorta (value=5): 142,977,003 voxels  (0.15%)
+  • ivc (value=6): 126,187,088 voxels  (0.13%)
+  • rag (value=7): 7,163,651 voxels  (0.01%)
+  • lag (value=8): 8,082,944 voxels  (0.01%)
+  • gallbladder (value=9): 57,231,754 voxels  (0.06%)
+  • esophagus (value=10): 24,723,503 voxels  (0.03%)
+  • stomach (value=11): 567,500,543 voxels  (0.59%)
+  • duodenum (value=12): 106,818,179 voxels  (0.11%)
+  • left kidney (value=13): 324,219,478 voxels  (0.34%)
