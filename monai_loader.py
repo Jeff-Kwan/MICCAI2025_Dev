@@ -76,7 +76,7 @@ class NiftiSegmentationDataset(Dataset):
             img_name = img_path.name
             if not img_name.lower().endswith(".nii.gz"):
                 continue
-            base = img_name[: -len(".nii.gz")]
+            base = img_name.replace("_0000.", ".")[: -len(".nii.gz")]
             lbl_path = label_map.get(base)
             if lbl_path is None:
                 # No matching label for this image
@@ -113,59 +113,78 @@ if __name__ == "__main__":
     # Define your transforms exactly as before:
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"]),
-            mt.EnsureChannelFirstd(keys="image"),
-            mt.EnsureTyped(keys=["image", "label"]),
-            mt.ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.LoadImaged(["image", "label"]),
+            mt.EnsureChannelFirstd(keys=["image", "label"]),
+            mt.EnsureTyped(["image", "label"], dtype=[torch.float32, torch.long]),
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=(1.0, 1.0, 1.0),
+                mode=("bilinear", "nearest"),),
+            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.ScaleIntensityRanged(
+                keys=["image"],
+                a_min=-57,
+                a_max=164,
+                b_min=0.0,
+                b_max=1.0,
+                clip=True),
+            # mt.RandCropByPosNegLabeld(
+            #     keys=["image", "label"],
+            #     label_key="label",
+            #     spatial_size=(96, 96, 96),
+            #     pos=1,
+            #     neg=1,
+            #     num_samples=4,
+            #     image_key="image",
+            #     image_threshold=0),
+            mt.RandAffined(
+                keys=["image", "label"],
                 mode=("bilinear", "nearest"),
-            ),
-            mt.RandSpatialCropd(keys=["image", "label"], roi_size=[224, 224, 144], random_size=False),
-            mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
-            mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
-            mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
-            mt.NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-            mt.RandScaleIntensityd(keys="image", factors=0.1, prob=1.0),
-            mt.RandShiftIntensityd(keys="image", offsets=0.1, prob=1.0),
+                prob=0.5,
+                rotate_range=(0, 0, 0.1),
+                scale_range=(0.1, 0.1, 0.1),
+                padding_mode="zeros"),
+            # mt.CropForegroundd(keys=["image", "label"], source_key="image"),
+            # mt.RandSpatialCropd(keys=["image", "label"], roi_size=[224, 224, 144], random_size=False),
+            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
+            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
+            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
+            mt.NormalizeIntensityd(keys="image"),
         ]
     )
     val_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"]),
-            mt.EnsureChannelFirstd(keys="image"),
-            mt.EnsureTyped(keys=["image", "label"]),
-            mt.ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.LoadImaged(["image", "label"]),
+            mt.EnsureChannelFirstd(keys=["image", "label"]),
+            mt.EnsureTyped(["image", "label"], dtype=[torch.float32, torch.long]),
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=(1.0, 1.0, 1.0),
-                mode=("bilinear", "nearest"),
-            ),
-            mt.NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
+                mode=("bilinear", "nearest"),),
+            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.NormalizeIntensityd(keys="image"),
         ]
     )
 
     # Instantiate datasets
     train_ds = NiftiSegmentationDataset(
-        images_dir="path/to/train/images",
-        labels_dir="path/to/train/labels",
+        images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+        labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         transform=train_transform,
     )
-    val_ds = NiftiSegmentationDataset(
-        images_dir="path/to/val/images",
-        labels_dir="path/to/val/labels",
-        transform=val_transform,
-    )
+    # val_ds = NiftiSegmentationDataset(
+    #     images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+    #     labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+    #     transform=val_transform,
+    # )
 
     # Wrap in DataLoader
-    train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_ds, batch_size=2, shuffle=False, num_workers=2)
+    train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, num_workers=4)
+    # val_loader = DataLoader(val_ds, batch_size=2, shuffle=False, num_workers=2)
 
     # Iterate
     for batch in train_loader:
-        images = batch["image"]   # shape: [B, C, D, H, W]
-        labels = batch["label"]   # shape: [B, C, D, H, W]
-        # … forward pass, etc.
+        img = batch["image"]; label = batch["label"]
+        print(img.shape, label.shape)
+        print(img.dtype, label.dtype)
+        exit()
