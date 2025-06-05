@@ -1,13 +1,11 @@
-import argparse
+import numpy as np
 import nibabel as nib
 
 def main():
-    parser = argparse.ArgumentParser(description="Load a .nii.gz file, show its shape, and print all metadata")
-    parser.add_argument("input_file", type=str, help="Path to the .nii.gz file")
-    args = parser.parse_args()
+    input_file = "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr/Case_00001_0000.nii.gz"
     
     # Load the NIfTI file
-    img = nib.load(args.input_file)
+    img = nib.load(str(input_file), mmap=True)
 
     # Print header metadata
     header = img.header
@@ -16,8 +14,8 @@ def main():
         print(f"{key}: {value}")
 
     # Get image data and shape
-    data = img.get_fdata()
-    print(f"Image shape: {data.shape}\n")
+    data_np = img.get_fdata(dtype=np.float32)
+    print(f"Image shape: {data_np.shape}\n")
 
     # Print affine transform
     print("Affine:")
