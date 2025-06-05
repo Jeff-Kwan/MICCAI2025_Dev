@@ -12,7 +12,7 @@ class LayerNormTranspose(nn.Module):
     temporarily transposing it to the last position.
     """
     def __init__(self, dim: int, features: int, eps: float = 1e-6,
-                 elementwise_affine: bool = True):
+                 elementwise_affine: bool = True, bias: bool = True):
         super().__init__()
         self.dim = dim
         self.norm = nn.LayerNorm(features, eps, elementwise_affine)
@@ -74,26 +74,28 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int,
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        if h_c % 2:
-            raise ValueError("h_c must be even.")
         self.in_conv = nn.Sequential(
             LayerNormTranspose(1, in_c),
-            nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias))
-
-        self.path1 = nn.Conv3d(h_c//2, h_c//2, 3, 1, 1, bias=bias)
-        self.path2 = nn.Conv3d(h_c//2, h_c//2, 3, 1, 2, dilation=2, bias=bias)
+            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
+        
+        self.dilated = nn.Conv3d(h_c, h_c, 3, 1, 2, bias=bias, dilation=2)
 
         self.out_conv = nn.Sequential(
             nn.SiLU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
+        
+    def _inner(self, x):
+        z = self.in_conv(x)
+        z = z + self.dilated(z)
+        x = self.out_conv(z)
+        return x
 
     def forward(self, x):
-        x1, x2 = self.in_conv(x).chunk(2, dim=1)
-        x = torch.cat([self.path1(x1), self.path2(x2)], dim=1)
-        return self.out_conv(x)
-
+        if self.training and x.requires_grad:
+            return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
+        else:
+            return self._inner(x)
 
 class SwiGLU(nn.Module):
     """Channel-wise SwiGLU MLP."""
@@ -123,7 +125,7 @@ class Downsampling(nn.Module):
     """Downsampling block."""
     def __init__(self, in_c: int, out_c: int):
         super().__init__()
-        self.norm = LayerNormTranspose(1, in_c, elementwise_affine=False)
+        self.norm = LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False)
         self.down = nn.Conv3d(in_c, out_c, 2, 2, 0, bias=False)
         nn.init.kaiming_normal_(self.down.weight, nonlinearity="linear")
 
@@ -137,7 +139,7 @@ class Upsampling(nn.Module):
     """Upsampling block."""
     def __init__(self, in_c: int, out_c: int):
         super().__init__()
-        self.norm = LayerNormTranspose(1, in_c, elementwise_affine=False)
+        self.norm = LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False)
         self.up = nn.ConvTranspose3d(in_c, out_c, 2, 2, 0, bias=False)
         nn.init.kaiming_normal_(self.up.weight, nonlinearity="linear")
 
@@ -179,7 +181,7 @@ class PositionEmbedding(nn.Module):
         self.channels = channels
         # fixed sin-cos on z, y, x
         self.pos_embed = nn.Conv3d(channels*3//2, channels, 1, 1, 0, bias=False)
-        self.norm = LayerNormTranspose(1, channels, elementwise_affine=False)
+        self.norm = LayerNormTranspose(1, channels, elementwise_affine=False, bias=False)
         self.register_buffer("rads", 2048 ** torch.linspace(0, 1, channels // 4).view(-1, 1, 1, 1),
                              persistent=False)
         self.register_buffer("_cached_pos", None, persistent=False)
@@ -236,13 +238,13 @@ class PatchViT3D(nn.Module):
         
         # Native Resolution
         self.init_convs = nn.ModuleList(
-            [ConvBlock(in_c, in_c//2, in_c, dropout=dropout) for _ in range(2)])
+            [ConvBlock(in_c, in_c, in_c, dropout=dropout) for _ in range(2)])
         
         self.merge_final = nn.Conv3d(in_c*2, in_c, 1, 1, 0, bias=False)
         self.final_convs = nn.ModuleList(
-            [ConvBlock(in_c, in_c//2, in_c, dropout=dropout) for _ in range(2)])
+            [ConvBlock(in_c, in_c, in_c, dropout=dropout) for _ in range(2)])
         self.out_conv = nn.Sequential(
-            LayerNormTranspose(1, in_c, elementwise_affine=False),
+            LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False),
             nn.Conv3d(in_c, out_c, 1, 1, 0, bias=False))
 
         # Down Once Scale
@@ -332,6 +334,8 @@ class PatchViT3D(nn.Module):
         for conv in self.final_convs:
             x = x + conv(x)
         x = self.out_conv(x)
+
+        x = F.interpolate(x, size=(S1, S2, S3), mode='trilinear', align_corners=False)
         return x
 
 # ---------- demo ----------------------------------------------

@@ -26,6 +26,8 @@ output_dir = "./data/FLARE-Task2-LaptopSeg/train_pseudo_label"
 subprocess.run([
     "7z", "x", file1, f"-o{output_dir}"
 ], check=True)
+os.remove(file1)
 subprocess.run([
     "7z", "x", file2, f"-o{output_dir}"
 ], check=True)
+os.remove(file2)
