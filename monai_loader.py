@@ -106,63 +106,79 @@ class NiftiSegmentationDataset(Dataset):
 
 
 if __name__ == "__main__":
-
+    # Reference: https://github.com/Project-MONAI/tutorials/blob/main/3d_segmentation/swin_unetr_btcv_segmentation_3d.ipynb
     from monai.data import DataLoader
     import monai.transforms as mt
-
-    # Define your transforms exactly as before:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    shape = (96, 96, 96)
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(["image", "label"]),
-            mt.EnsureChannelFirstd(keys=["image", "label"]),
-            mt.EnsureTyped(["image", "label"], dtype=[torch.float32, torch.long]),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=(1.0, 1.0, 1.0),
-                mode=("bilinear", "nearest"),),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.ScaleIntensityRanged(
                 keys=["image"],
-                a_min=-57,
-                a_max=164,
+                a_min=-175,
+                a_max=250,
                 b_min=0.0,
                 b_max=1.0,
-                clip=True),
-            # mt.RandCropByPosNegLabeld(
-            #     keys=["image", "label"],
-            #     label_key="label",
-            #     spatial_size=(96, 96, 96),
-            #     pos=1,
-            #     neg=1,
-            #     num_samples=4,
-            #     image_key="image",
-            #     image_threshold=0),
-            mt.RandAffined(
+                clip=True,
+            ),
+            mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
+            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
+            mt.Spacingd(
                 keys=["image", "label"],
+                pixdim=(1.5, 1.5, 2.0),
                 mode=("bilinear", "nearest"),
-                prob=0.5,
-                rotate_range=(0, 0, 0.1),
-                scale_range=(0.1, 0.1, 0.1),
-                padding_mode="zeros"),
-            # mt.CropForegroundd(keys=["image", "label"], source_key="image"),
-            # mt.RandSpatialCropd(keys=["image", "label"], roi_size=[224, 224, 144], random_size=False),
-            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
-            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
-            # mt.RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
-            mt.NormalizeIntensityd(keys="image"),
+            ),
+            mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=False),
+            mt.RandCropByPosNegLabeld(
+                keys=["image", "label"],
+                label_key="label",
+                spatial_size=shape,
+                pos=1,
+                neg=1,
+                image_key="image",
+                image_threshold=0,
+            ),
+            mt.RandAxisFlip(
+                prob=0.10,
+            ),
+            mt.RandRotate90d(
+                keys=["image", "label"],
+                prob=0.10,
+                max_k=3,
+            ),
+            mt.RandShiftIntensityd(
+                keys=["image"],
+                offsets=0.10,
+                prob=0.50,
+            ),
+            # mt.RandAffined(
+            #     keys=["image", "label"],
+            #     mode=("bilinear", "nearest"),
+            #     prob=0.5,
+            #     rotate_range=(0.1, 0.1, 0.1),
+            #     scale_range=(0.2, 0.2, 0.2),
+            #     padding_mode="zeros"),
+            mt.RandGaussianNoised(
+                keys=["image"],
+                prob=0.1,
+                mean=0.0,
+                std=0.05,
+            ),
         ]
     )
     val_transform = mt.Compose(
         [
-            mt.LoadImaged(["image", "label"]),
-            mt.EnsureChannelFirstd(keys=["image", "label"]),
-            mt.EnsureTyped(["image", "label"], dtype=[torch.float32, torch.long]),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.ScaleIntensityRanged(keys=["image"], a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
+            mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
+            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
             mt.Spacingd(
                 keys=["image", "label"],
-                pixdim=(1.0, 1.0, 1.0),
-                mode=("bilinear", "nearest"),),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
-            mt.NormalizeIntensityd(keys="image"),
+                pixdim=(1.5, 1.5, 2.0),
+                mode=("bilinear", "nearest"),
+            ),
+            mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=True),
         ]
     )
 
