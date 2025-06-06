@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Optional, List, Dict
 
@@ -8,7 +7,7 @@ from torch.utils.data import Dataset
 import monai.transforms as mt
 
 
-class NiftiSegmentationDataset(Dataset):
+class SegDataset(Dataset):
     """
     PyTorch Dataset for 3D segmentation where both images and labels are stored
     as `.nii.gz` volumes. The transform should include MONAI keys
@@ -87,13 +86,14 @@ class NiftiSegmentationDataset(Dataset):
 
         if not self.examples:
             raise RuntimeError(
-                f"No matching label '.nii.gz' found for any image in {self.images_dir!r}"
-            )
+                f"No matching label '.nii.gz' found for any image in {self.images_dir!r}")
 
         if missing_labels:
             print("Warning: The following images had no matching label and were skipped:")
             for fn in missing_labels:
                 print(f"  • {fn}")
+            raise RuntimeWarning(
+                f"Some images had no matching label: {len(missing_labels)} out of {len(image_paths)}")
 
     def __len__(self) -> int:
         return len(self.examples)
@@ -183,12 +183,12 @@ if __name__ == "__main__":
     )
 
     # Instantiate datasets
-    train_ds = NiftiSegmentationDataset(
+    train_ds = SegDataset(
         images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
         labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         transform=train_transform,
     )
-    # val_ds = NiftiSegmentationDataset(
+    # val_ds = SegDataset(
     #     images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
     #     labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
     #     transform=val_transform,

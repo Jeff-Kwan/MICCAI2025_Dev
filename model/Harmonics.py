@@ -221,7 +221,7 @@ class PositionEmbedding(nn.Module):
 
 # ---------- full model --------------------------------------------------------
 
-class PatchViT3D(nn.Module):
+class HarmonicSeg(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
         in_c = p["in_channels"]
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     }
 
     x = torch.randn(B, S1, S2, S3).to(device)
-    model = PatchViT3D(params).to(device)
+    model = HarmonicSeg(params).to(device)
 
     # Profile the forward and backward pass
     if device == torch.device("cuda"):

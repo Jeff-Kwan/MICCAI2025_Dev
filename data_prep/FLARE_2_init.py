@@ -31,3 +31,14 @@ subprocess.run([
     "7z", "x", file2, f"-o{output_dir}"
 ], check=True)
 os.remove(file2)
+
+
+# Recursively rename files to replace "_0000." with "."
+def rename_files(directory):
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if "_0000." in filename:
+                new_filename = filename.replace("_0000.", ".")
+                os.rename(os.path.join(root, filename), os.path.join(root, new_filename))
+
+rename_files("./data")
