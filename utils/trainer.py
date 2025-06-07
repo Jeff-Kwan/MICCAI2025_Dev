@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from time import time
 
 import monai.metrics as mm
-# from monai.metrics.surface_distance import SurfaceDistanceMetric
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 
@@ -39,16 +38,6 @@ class Trainer():
         self.dice_metric = mm.DiceMetric(
             include_background=False,
         )
-
-        # MONAI Surface Distance metric (mean symmetric distance):
-        #  - include_background=False → ignore channel 0
-        #  - reduction=MEAN_BATCH → average over classes & batch
-        #  - distance_metric="euclidean" → Euclidean distance in voxel units
-        #  - symmetric=True → average pred→GT and GT→pred distances
-        # self.surface_dist_metric = SurfaceDistanceMetric(
-        #     include_background=False,
-        #     # symmetric=True
-        # )
 
         self.start_time = None
 
@@ -88,14 +77,12 @@ class Trainer():
             self.train_losses.append(train_loss / len(train_loader))
             self.val_losses.append(val_loss)
             self.val_metrics['dice'].append(metrics['dice'])
-            # self.val_metrics['surf_dist'].append(metrics['surf_dist'])
 
             print(
                 f"Epoch {epoch+1}/{epochs} | "
                 f"Train Loss: {self.train_losses[-1]:.5f} | "
                 f"Val Loss: {self.val_losses[-1]:.5f} | "
                 f"Val Dice: {metrics['dice']:.5f} | "
-                # f"Val SurfDist: {metrics['surf_dist']:.5f}"
             )
 
             # Save results, checkpoint, etc.
@@ -122,27 +109,25 @@ class Trainer():
                 imgs = dict["image"].to(self.device, non_blocking=True)       # [B, C_img, H, W, D]
                 masks = dict["label"].to(self.device, non_blocking=True)     # [B, H, W, D] (integer labels)
 
-                # # --- SLIDING WINDOW INFERENCE ---
-                # # Each batch may contain multiple volumes; we run sliding window per volume.
-                # # Here, we assume batch size B=1 for 3D volumes or handle one by one:
-                # # If B>1 with mixed sizes, you might loop over each sample. For simplicity:
-                # B, C, H, W, D = imgs.shape
-                # # Create placeholder for aggregated logits
-                # aggregated_logits = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
-                # for b in range(B):
-                #     single_img = imgs[b:b+1]  # [1, C, H, W, D]
-                #     # Perform sliding window inference on this single volume
-                #     logits_patch = sliding_window_inference(
-                #         inputs=single_img,
-                #         roi_size=self.train_params['shape'],        # e.g. (128,128,64)
-                #         sw_batch_size=self.train_params.get('sw_batch_size', 1),
-                #         predictor=lambda x: self.model(x),
-                #         overlap=self.train_params.get('sw_overlap', 0.25),
-                #         mode="gaussian"
-                #     )  # output: [1, num_classes, H, W, D]
-                #     aggregated_logits[b] = logits_patch
-
-                aggregated_logits = self.model(imgs)
+                # --- SLIDING WINDOW INFERENCE ---
+                # Each batch may contain multiple volumes; we run sliding window per volume.
+                # Here, we assume batch size B=1 for 3D volumes or handle one by one:
+                # If B>1 with mixed sizes, you might loop over each sample. For simplicity:
+                B, C, H, W, D = imgs.shape
+                # Create placeholder for aggregated logits
+                aggregated_logits = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
+                for b in range(B):
+                    single_img = imgs[b:b+1]  # [1, C, H, W, D]
+                    # Perform sliding window inference on this single volume
+                    logits_patch = sliding_window_inference(
+                        inputs=single_img,
+                        roi_size=self.train_params['shape'],        # e.g. (128,128,64)
+                        sw_batch_size=self.train_params.get('sw_batch_size', 1),
+                        predictor=lambda x: self.model(x),
+                        overlap=self.train_params.get('sw_overlap', 0.25),
+                        mode="gaussian"
+                    )  # output: [1, num_classes, H, W, D]
+                    aggregated_logits[b] = logits_patch
 
                 # Compute loss using aggregated logits
                 loss = self.criterion(aggregated_logits, masks)
@@ -156,8 +141,6 @@ class Trainer():
                 # Compute Dice (averaged across classes & batch)
                 self.dice_metric(y_pred=pred_onehot, y=masks_onehot)
 
-                # Compute Surface Distance (mean symmetric)
-                # self.surface_dist_metric(y_pred=pred_onehot, y=masks_onehot)
 
         # Aggregate loss over batches
         mean_val_loss = loss_total / len(data_loader)
@@ -165,9 +148,6 @@ class Trainer():
         # Aggregate and reset MONAI metrics → return scalar floats
         dice_score = self.dice_metric.aggregate().item()
         self.dice_metric.reset()
-
-        # surf_dist_score = self.surface_dist_metric.aggregate().item()
-        # self.surface_dist_metric.reset()
 
         return mean_val_loss, {'dice': dice_score}
 
@@ -239,17 +219,7 @@ class Trainer():
             label='Val Dice', color='black'
         )
 
-        # Create a twin y-axis for Surface Distance
-        # ax_metric2 = ax_metric.twinx()  # share the same x-axis
-        # ax_metric2.set_ylabel('Val Surface Distance')
-        # # Plot Val Surface Distance on the right y-axis
-        # line2, = ax_metric2.plot(
-        #     epochs, self.val_metrics['surf_dist'],
-        #     label='Val Surface Distance', color='tab:green'
-        # )
-
         # Combine legends from both axes
-        # lines = [line1, line2]
         lines = [line1]
         labels = [l.get_label() for l in lines]
         ax_metric.legend(lines, labels, loc='upper right')
