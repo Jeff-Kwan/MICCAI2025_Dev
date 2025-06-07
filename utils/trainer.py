@@ -146,7 +146,7 @@ class Trainer():
                 loss_total += loss.item()
 
                 # Convert aggregated logits → discrete labels & one-hot encoding
-                pred_labels = torch.argmax(aggregated_logits, dim=1)  # [B, H, W, D]
+                pred_labels = torch.argmax(aggregated_logits, dim=1, keep_dim=True)  # [B, H, W, D]
                 pred_onehot = one_hot(pred_labels, num_classes=self.num_classes)  # [B, C, H, W, D]
 
                 # Compute Dice (averaged across classes & batch)
