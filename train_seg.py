@@ -79,7 +79,7 @@ if __name__ == "__main__":
         'shape': (128, 128, 128),
         'norm_clip': (-175, 250, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
-        'sw_batch_size': 8,
+        'sw_batch_size': 32,
         'sw_overlap': 0.25
     }
 
