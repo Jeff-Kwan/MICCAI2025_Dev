@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=48,
+        num_workers=64,
         pin_memory=True,
         persistent_workers=True)
     val_loader = DataLoader(
@@ -109,8 +109,8 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 100,
-        'batch_size': 4,
-        'aggregation': 1,
+        'batch_size': 1,
+        'aggregation': 8,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
