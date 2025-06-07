@@ -148,12 +148,13 @@ class Trainer():
                 # Convert aggregated logits → discrete labels & one-hot encoding
                 pred_labels = torch.argmax(aggregated_logits, dim=1, keepdim=True)  # [B, H, W, D]
                 pred_onehot = one_hot(pred_labels, num_classes=self.num_classes)  # [B, C, H, W, D]
+                masks_onehot = one_hot(masks, num_classes=self.num_classes)  # [B, C, H, W, D]
 
                 # Compute Dice (averaged across classes & batch)
-                self.dice_metric(y_pred=pred_onehot, y=masks)
+                self.dice_metric(y_pred=pred_onehot, y=masks_onehot)
 
                 # Compute Surface Distance (mean symmetric)
-                self.surface_dist_metric(y_pred=pred_onehot, y=masks)
+                self.surface_dist_metric(y_pred=pred_onehot, y=masks_onehot)
 
         # Aggregate loss over batches
         mean_val_loss = loss_total / len(data_loader)
