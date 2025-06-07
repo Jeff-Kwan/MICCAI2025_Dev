@@ -46,7 +46,7 @@ def training(model_params, train_params, output_dir, comments):
         persistent_workers=True)
     val_loader = DataLoader(
         val_dataset,
-        batch_size=train_params['batch_size'],
+        batch_size=1,
         shuffle=False,
         num_workers=16,
         persistent_workers=True)
