@@ -25,7 +25,7 @@ class Trainer():
         self.val_losses = []
         self.val_metrics = {
             'dice': [],
-            'surf_dist': []
+            # 'surf_dist': []
         }
         self.best_results = {}
 
@@ -88,14 +88,14 @@ class Trainer():
             self.train_losses.append(train_loss / len(train_loader))
             self.val_losses.append(val_loss)
             self.val_metrics['dice'].append(metrics['dice'])
-            self.val_metrics['surf_dist'].append(metrics['surf_dist'])
+            # self.val_metrics['surf_dist'].append(metrics['surf_dist'])
 
             print(
                 f"Epoch {epoch+1}/{epochs} | "
                 f"Train Loss: {self.train_losses[-1]:.5f} | "
                 f"Val Loss: {self.val_losses[-1]:.5f} | "
                 f"Val Dice: {metrics['dice']:.5f} | "
-                f"Val SurfDist: {metrics['surf_dist']:.5f}"
+                # f"Val SurfDist: {metrics['surf_dist']:.5f}"
             )
 
             # Save results, checkpoint, etc.
