@@ -182,8 +182,7 @@ class Trainer():
             json.dump(results, f, indent=4)
 
         # If current epoch is the best so far, save a copy
-        if (self.val_metrics['dice'][-1] >= max(self.val_metrics['dice'])
-            and self.val_metrics['surf_dist'][-1] <= min(self.val_metrics['surf_dist'])):
+        if self.val_metrics['dice'][-1] >= max(self.val_metrics['dice']):
             torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'best_model.pth'))
             self.best_results = {
                 'epoch (0-based)': epoch,
