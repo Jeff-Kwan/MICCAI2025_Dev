@@ -56,8 +56,8 @@ class HyperEdgeAttention(nn.Module):
         tokens = x.permute(0, 2, 3, 4, 1).reshape(B, S1 * S2 * S3, C)
         tokens = self.in_norm(tokens)
 
+        scale = self.edges / S1 / S2 / S3
         if self.training and x.requires_grad:
-            scale =  self.edges / S1 / S2 / S3
             z = checkpoint.checkpoint(self._compute_edges, tokens, scale, use_reentrant=False)
         else:
             z = self._compute_edges(tokens, scale)
