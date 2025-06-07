@@ -92,8 +92,8 @@ def get_transforms(shape, norm_clip, pixdim):
                 pixdim=pixdim,
                 mode=("bilinear", "nearest"),
                 lazy=True),
-            mt.CropForegroundd(keys=["image", "label"], source_key="label", 
-                                allow_smaller=True, lazy=True),
+            # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
+            #                     allow_smaller=True, lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
