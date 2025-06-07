@@ -143,64 +143,18 @@ if __name__ == "__main__":
     shape = (128, 128, 128)
 
     # Deterministic transforms
-    transforms = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=pixdim,
-                mode=("bilinear", "nearest"),
-                lazy=True
-            ),
-            mt.CropForegroundd(keys=["image", "label"], source_key="label", 
-                               allow_smaller=True, lazy=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
-            mt.RandAffined(
-                keys=["image","label"],
-                prob=0.5,
-                spatial_size=shape,
-                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                scale_range=(0.1,0.1,0.1),                   # ±10%
-                mode=("bilinear","nearest"),
-                padding_mode="border",
-                lazy=True
-            ),
-            mt.RandSpatialCropd(
-                keys=["image", "label"], 
-                roi_size=shape,
-                lazy=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"], 
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True),
-            mt.RandShiftIntensityd(
-                keys=["image"],
-                prob=0.20,
-                offsets=0.20,
-            ),
-            mt.RandGaussianNoised(
-                keys=["image"],
-                prob=0.20,
-                mean=0.0,
-                std=0.10,
-            ),
-        ]
-    )
-
+    transforms, _ = get_transforms(
+        shape=shape,
+        norm_clip=norm_clip,
+        pixdim=pixdim)
+    
     # Instantiate datasets
     dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
             labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
         transform=transforms,
-        cache_dir="data/cache",
+        cache_dir="data/cache/gt_label",
     )
 
     # Wrap in DataLoader
