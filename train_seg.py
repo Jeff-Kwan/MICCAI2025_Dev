@@ -108,7 +108,7 @@ if __name__ == "__main__":
         'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 1e-3,
-        'weight_decay': 5e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (128, 128, 128),
         'norm_clip': (-325, 325, -1.0, 1.0),
