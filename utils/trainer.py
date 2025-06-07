@@ -44,7 +44,7 @@ class Trainer():
         # you can override thresholds via train_params['surface_dice_class_thresholds']
         thresholds = self.train_params.get(
             'surface_dice_class_thresholds',
-            [1.0] * self.num_classes
+            [1.0] * (self.num_classes - 1)  # No background
         )
         self.surface_dice_metric = mm.SurfaceDiceMetric(
             class_thresholds=thresholds,
