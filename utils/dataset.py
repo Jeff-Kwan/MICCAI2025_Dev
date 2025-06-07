@@ -6,7 +6,7 @@ import numpy as np
 import monai.transforms as mt
 
 from monai.transforms import MapTransform
-from typing import Hashable, Mapping, Sequence, Union
+from typing import Hashable, Sequence, Union
 class MapLabelsToZeroOutsideRange(MapTransform):
     def __init__(
         self,
@@ -17,16 +17,13 @@ class MapLabelsToZeroOutsideRange(MapTransform):
         super().__init__(keys, allow_missing_keys)
         self.valid_labels = set(valid_labels)
 
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
-        d = dict(data)
-        for key in self.key_iterator(d):
-            label_array = d[key]
+    def __call__(self, data):
+        for key in self.keys:
             # Create a boolean mask where labels are not in the valid set
-            invalid_mask = ~np.isin(label_array, list(self.valid_labels))
+            invalid_mask = ~np.isin(data[key], list(self.valid_labels))
             # Set invalid labels to 0
-            label_array[invalid_mask] = 0
-            d[key] = label_array
-        return d
+            data[key][invalid_mask] = 0
+        return data
 
 def get_transforms(shape, norm_clip, pixdim):
     train_transform = mt.Compose(
@@ -82,7 +79,7 @@ def get_transforms(shape, norm_clip, pixdim):
             #     keys=["image"],
             #     prob=0.20)
             MapLabelsToZeroOutsideRange(
-                keys="label",
+                keys=["label"],
                 valid_labels=list(range(14)))  # Valid labels: 0 through 13
         ]
     )
