@@ -18,11 +18,6 @@ def get_transforms(shape, norm_clip, pixdim):
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
                                allow_smaller=True, lazy=True),
-            # mt.Resized(
-            #     keys=["image", "label"],
-            #     spatial_size=shape,
-            #     mode=("bilinear", "nearest"),
-            #     lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
@@ -73,11 +68,6 @@ def get_transforms(shape, norm_clip, pixdim):
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
                                allow_smaller=True, lazy=True),
-            # mt.Resized(
-            #     keys=["image", "label"],
-            #     spatial_size=shape,
-            #     mode=("bilinear", "nearest"),
-            #     lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
