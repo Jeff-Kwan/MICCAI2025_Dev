@@ -57,7 +57,7 @@ def training(model_params, train_params, output_dir, comments):
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
     criterion = DiceFocalLoss(softmax=True, include_background=True, to_onehot_y=True,
-                weight=torch.tensor([0.01] + [1.0] * (train_params['num_classes'] - 1), device=device))
+                weight=torch.tensor([0.05] + [1.0] * (train_params['num_classes'] - 1), device=device))
 
     # Compilation acceleration
     if train_params.get('compile', False):
