@@ -35,8 +35,11 @@ def get_transforms(shape, norm_clip, pixdim):
                 pixdim=pixdim,
                 mode=("bilinear", "nearest"),
                 lazy=True),
-            mt.CropForegroundd(keys=["image", "label"], source_key="label", 
-                                allow_smaller=True, lazy=True),
+            MapLabelsToZeroOutsideRange(
+                keys=["label"],
+                valid_labels=list(range(14))),  # Valid labels: 0 through 13
+            # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
+            #                     allow_smaller=True, lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
@@ -78,9 +81,6 @@ def get_transforms(shape, norm_clip, pixdim):
             # mt.RandGaussianSmoothd(
             #     keys=["image"],
             #     prob=0.20)
-            MapLabelsToZeroOutsideRange(
-                keys=["label"],
-                valid_labels=list(range(14)))  # Valid labels: 0 through 13
         ]
     )
     val_transform = mt.Compose(
