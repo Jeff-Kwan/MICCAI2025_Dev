@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader
+from monai.data import PersistentDataset, DataLoader, Dataset
 from monai.losses import DiceCELoss
 
 from utils import Trainer, get_transforms, get_data_files
@@ -29,12 +29,18 @@ def training(model_params, train_params, output_dir, comments):
                                 train_params['pixdim'])
 
     # Persistent dataset needs list of file paths?
-    train_dataset = PersistentDataset(
-        data = get_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
+    # train_dataset = PersistentDataset(
+    #     data = get_data_files(
+    #         images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+    #         labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
+    #     transform=train_transform,
+    #     cache_dir="data/cache/gt_label")
+    train_dataset = Dataset(
+        data=get_data_files(
+            images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"),
         transform=train_transform,
-        cache_dir="data/cache/gt_label")
+    )
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
@@ -105,21 +111,21 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 100,
-        'batch_size': 4,
+        'batch_size': 16,
         'aggregation': 1,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (160, 160, 160),
         'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
-        'autocast': False,
+        'autocast': True,
         'sw_batch_size': 64,
         'sw_overlap': 0.1
     }
 
-    output_dir = "HarmonicSeg-50GT"
+    output_dir = "Pseudo-Aladdin-160x3"
     comments = ["HarmonicSeg - 50 Gound Truth set training"]
 
     training(model_params, train_params, output_dir, comments)
