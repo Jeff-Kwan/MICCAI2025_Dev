@@ -59,7 +59,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=30)
+        num_workers=24)
 
 
     # Training setup

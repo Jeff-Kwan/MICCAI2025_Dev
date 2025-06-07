@@ -33,10 +33,10 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            # mt.RandSpatialCropd(
-            #     keys=["image", "label"], 
-            #     roi_size=shape,
-            #     lazy=True),
+            mt.RandSpatialCropd(
+                keys=["image", "label"], 
+                roi_size=shape,
+                lazy=True),
             # mt.RandAffined(
             #     keys=["image","label"],
             #     prob=1.0,
