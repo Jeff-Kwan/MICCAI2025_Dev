@@ -5,6 +5,29 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
+from monai.transforms import MapTransform
+from typing import Hashable, Mapping, Sequence, Union
+class MapLabelsToZeroOutsideRange(MapTransform):
+    def __init__(
+        self,
+        keys: Union[Sequence[Hashable], Hashable],
+        valid_labels: Sequence[int],
+        allow_missing_keys: bool = False,
+    ):
+        super().__init__(keys, allow_missing_keys)
+        self.valid_labels = set(valid_labels)
+
+    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
+        d = dict(data)
+        for key in self.key_iterator(d):
+            label_array = d[key]
+            # Create a boolean mask where labels are not in the valid set
+            invalid_mask = ~np.isin(label_array, list(self.valid_labels))
+            # Set invalid labels to 0
+            label_array[invalid_mask] = 0
+            d[key] = label_array
+        return d
+
 def get_transforms(shape, norm_clip, pixdim):
     train_transform = mt.Compose(
         [
@@ -58,6 +81,9 @@ def get_transforms(shape, norm_clip, pixdim):
             # mt.RandGaussianSmoothd(
             #     keys=["image"],
             #     prob=0.20)
+            MapLabelsToZeroOutsideRange(
+                keys="label",
+                valid_labels=list(range(14)))  # Valid labels: 0 through 13
         ]
     )
     val_transform = mt.Compose(
