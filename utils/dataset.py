@@ -49,6 +49,9 @@ def get_transforms(shape, norm_clip, pixdim):
                 b_min=norm_clip[2],
                 b_max=norm_clip[3],
                 clip=True),
+            MapLabelsToZeroOutsideRange(
+                keys=["label"],
+                valid_labels=list(range(14))),  # Valid labels: 0 through 13
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
@@ -57,9 +60,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 roi_size=shape,
                 lazy=True),
-            MapLabelsToZeroOutsideRange(
-                keys=["label"],
-                valid_labels=list(range(14))),  # Valid labels: 0 through 13
             # mt.RandAffined(
             #     keys=["image","label"],
             #     prob=1.0,

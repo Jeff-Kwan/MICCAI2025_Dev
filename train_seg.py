@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=42,
+        num_workers=48,
         pin_memory=True,
         persistent_workers=True)
     val_loader = DataLoader(
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 50,
+        'epochs': 100,
         'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 1e-3,
