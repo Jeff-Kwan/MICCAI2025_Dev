@@ -7,23 +7,23 @@ import monai.transforms as mt
 from utils import Trainer
 from model.Harmonics import HarmonicSeg
 
-def get_transforms(device, shape):
+def get_transforms(device, shape, norm_clip, pixdim):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.ScaleIntensityRanged(
                 keys=["image"],
-                a_min=-175,
-                a_max=250,
-                b_min=0.0,
-                b_max=1.0,
+                a_min=norm_clip[0],
+                a_max=norm_clip[1],
+                b_min=norm_clip[2],
+                b_max=norm_clip[3],
                 clip=True,
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
             mt.Spacingd(
                 keys=["image", "label"],
-                pixdim=(1.5, 1.5, 2.0),
+                pixdim=pixdim,
                 mode=("bilinear", "nearest"),
             ),
             mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=False),
@@ -67,12 +67,17 @@ def get_transforms(device, shape):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.ScaleIntensityRanged(keys=["image"], a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
+            mt.ScaleIntensityRanged(keys=["image"],
+                                    a_min=norm_clip[0],
+                                    a_max=norm_clip[1],
+                                    b_min=norm_clip[2],
+                                    b_max=norm_clip[3],
+                                    clip=True),
             mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
             mt.Spacingd(
                 keys=["image", "label"],
-                pixdim=(1.5, 1.5, 2.0),
+                pixdim=pixdim,
                 mode=("bilinear", "nearest"),
             ),
             mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=True),
