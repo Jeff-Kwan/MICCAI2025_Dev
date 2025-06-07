@@ -76,7 +76,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (256, 256, 256),
         'norm_clip': (-175, 250, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'sw_batch_size': 128,
