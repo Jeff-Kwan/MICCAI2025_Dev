@@ -225,6 +225,7 @@ class PositionEmbedding(nn.Module):
 class HarmonicSeg(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
+        self.model_params = p
         in_c = p["in_channels"]
         out_c = p["out_channels"]
         channels = p["channels"]

@@ -122,25 +122,27 @@ class Trainer():
                 imgs = dict["image"].to(self.device, non_blocking=True)       # [B, C_img, H, W, D]
                 masks = dict["label"].to(self.device, non_blocking=True)     # [B, H, W, D] (integer labels)
 
-                # --- SLIDING WINDOW INFERENCE ---
-                # Each batch may contain multiple volumes; we run sliding window per volume.
-                # Here, we assume batch size B=1 for 3D volumes or handle one by one:
-                # If B>1 with mixed sizes, you might loop over each sample. For simplicity:
-                B, C, H, W, D = imgs.shape
-                # Create placeholder for aggregated logits
-                aggregated_logits = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
-                for b in range(B):
-                    single_img = imgs[b:b+1]  # [1, C, H, W, D]
-                    # Perform sliding window inference on this single volume
-                    logits_patch = sliding_window_inference(
-                        inputs=single_img,
-                        roi_size=self.train_params['shape'],        # e.g. (128,128,64)
-                        sw_batch_size=self.train_params.get('sw_batch_size', 1),
-                        predictor=lambda x: self.model(x),
-                        overlap=self.train_params.get('sw_overlap', 0.25),
-                        mode="gaussian"
-                    )  # output: [1, num_classes, H, W, D]
-                    aggregated_logits[b] = logits_patch
+                # # --- SLIDING WINDOW INFERENCE ---
+                # # Each batch may contain multiple volumes; we run sliding window per volume.
+                # # Here, we assume batch size B=1 for 3D volumes or handle one by one:
+                # # If B>1 with mixed sizes, you might loop over each sample. For simplicity:
+                # B, C, H, W, D = imgs.shape
+                # # Create placeholder for aggregated logits
+                # aggregated_logits = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
+                # for b in range(B):
+                #     single_img = imgs[b:b+1]  # [1, C, H, W, D]
+                #     # Perform sliding window inference on this single volume
+                #     logits_patch = sliding_window_inference(
+                #         inputs=single_img,
+                #         roi_size=self.train_params['shape'],        # e.g. (128,128,64)
+                #         sw_batch_size=self.train_params.get('sw_batch_size', 1),
+                #         predictor=lambda x: self.model(x),
+                #         overlap=self.train_params.get('sw_overlap', 0.25),
+                #         mode="gaussian"
+                #     )  # output: [1, num_classes, H, W, D]
+                #     aggregated_logits[b] = logits_patch
+
+                aggregated_logits = self.model(imgs)
 
                 # Compute loss using aggregated logits
                 loss = self.criterion(aggregated_logits, masks)

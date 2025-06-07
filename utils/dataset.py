@@ -18,6 +18,11 @@ def get_transforms(shape, norm_clip, pixdim):
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
                                allow_smaller=True, lazy=True),
+            mt.Resized(
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("bilinear", "nearest"),
+                lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
@@ -32,10 +37,10 @@ def get_transforms(shape, norm_clip, pixdim):
                 padding_mode="border",
                 lazy=True
             ),
-            mt.RandSpatialCropd(
-                keys=["image", "label"], 
-                roi_size=shape,
-                lazy=True),
+            # mt.RandSpatialCropd(
+            #     keys=["image", "label"], 
+            #     roi_size=shape,
+            #     lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
                 a_min=norm_clip[0],
@@ -68,6 +73,11 @@ def get_transforms(shape, norm_clip, pixdim):
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
                                allow_smaller=True, lazy=True),
+            mt.Resized(
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("bilinear", "nearest"),
+                lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
