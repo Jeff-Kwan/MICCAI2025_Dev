@@ -54,8 +54,10 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image"],
                 prob=0.20,
                 mean=0.0,
-                std=0.10,
-            ),
+                std=0.10),
+            mt.RandGaussianSmoothd(
+                keys=["image"],
+                prob=0.20)
         ]
     )
     val_transform = mt.Compose(

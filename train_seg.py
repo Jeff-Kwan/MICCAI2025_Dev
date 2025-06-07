@@ -87,7 +87,7 @@ def training(model_params, train_params, output_dir, comments):
     test_results.update(test_metrics)
     with open(f'{output_dir}/results.txt', 'a') as f:
         f.write(f'\nLast Model Test Performance:\n{json.dumps(test_results, indent=4)}')
-    print(f'Last Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}, Jaccard: {test_metrics["jaccard"]:.5f}')
+    print(f'Last Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}')
     
     # Test Best Model
     trainer.model.load_state_dict(torch.load(f'{output_dir}/best_model.pth', weights_only=True))
@@ -96,7 +96,7 @@ def training(model_params, train_params, output_dir, comments):
     test_results.update(test_metrics)
     with open(f'{output_dir}/results.txt', 'a') as f:
         f.write(f'\nBest Model Test Performance:\n{json.dumps(test_results, indent=4)}')
-    print(f'Best Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}, Jaccard: {test_metrics["jaccard"]:.5f}')
+    print(f'Best Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}')
 
 
 
@@ -104,14 +104,14 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 10,
+        'epochs': 1,
         'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 5e-4,
         'weight_decay': 5e-2,
         'num_classes': 14,
         'shape': (128, 128, 128),
-        'norm_clip': (-200, 400, -1.0, 1.0),
+        'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
         'autocast': False,
