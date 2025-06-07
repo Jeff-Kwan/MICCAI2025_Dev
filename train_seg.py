@@ -19,7 +19,7 @@ def training(model_params, train_params, output_dir, comments):
     os.makedirs(output_dir, exist_ok=True)
 
     # Data loading
-    transforms = get_transforms(train_params['shape'],
+    train_transform, val_transform = get_transforms(train_params['shape'],
                                 train_params['norm_clip'], 
                                 train_params['pixdim'])
 
@@ -28,13 +28,13 @@ def training(model_params, train_params, output_dir, comments):
         data = get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
             labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
-        transform=transforms,
+        transform=train_transform,
         cache_dir="data/cache/gt_label")
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
             labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"),
-        transform=transforms,
+        transform=val_transform,
         cache_dir="data/cache/val")
 
     train_loader = DataLoader(
