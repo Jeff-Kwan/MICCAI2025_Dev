@@ -109,12 +109,12 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 100,
-        'batch_size': 8,
+        'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (160, 160, 160),
         'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         'sw_overlap': 0.1
     }
 
-    output_dir = "Pseudo-Aladdin-128x3"
+    output_dir = "Pseudo-Aladdin-160x3"
     comments = ["HarmonicSeg - 50 Gound Truth set training", "DiceCE, No data augmentation except rand crop"]
 
     training(model_params, train_params, output_dir, comments)

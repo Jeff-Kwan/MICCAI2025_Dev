@@ -35,9 +35,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 pixdim=pixdim,
                 mode=("bilinear", "nearest"),
                 lazy=True),
-            MapLabelsToZeroOutsideRange(
-                keys=["label"],
-                valid_labels=list(range(14))),  # Valid labels: 0 through 13
             # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
             #                     allow_smaller=True, lazy=True),
             mt.SpatialPadd(
@@ -60,6 +57,9 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 roi_size=shape,
                 lazy=True),
+            MapLabelsToZeroOutsideRange(
+                keys=["label"],
+                valid_labels=list(range(14))),  # Valid labels: 0 through 13
             # mt.RandAffined(
             #     keys=["image","label"],
             #     prob=1.0,
@@ -92,8 +92,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 pixdim=pixdim,
                 mode=("bilinear", "nearest"),
                 lazy=True),
-            # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
-            #                     allow_smaller=True, lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
