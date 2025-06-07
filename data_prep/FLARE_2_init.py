@@ -19,6 +19,8 @@ snapshot_download(
     resume_download=True,
 )
 
+shutil.rmtree("data/FLARE-Task2-LaptopSeg/.cache")
+
 
 # Unzip the specific .7z file using 7z command-line tool
 file1 = "./data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_aladdin5_flare22.7z"
@@ -33,8 +35,6 @@ subprocess.run([
 ], check=True)
 os.remove(file2)
 
-# Get rid of unpacking artifacts
-shutil.rmtree("data/FLARE-Task2-LaptopSeg/.cache")
 shutil.rmtree("data/FLARE-Task2-LaptopSeg/train_pseudo_label/__MACOSX")
 
 # Recursively rename files to replace "_0000." with "."
