@@ -22,20 +22,31 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.RandAffined(
-                keys=["image","label"],
-                prob=0.5,
-                spatial_size=shape,
-                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                scale_range=(0.1,0.1,0.1),                   # ±10%
-                mode=("bilinear","nearest"),
-                padding_mode="border",
-                lazy=True
-            ),
-            mt.RandSpatialCropd(
-                keys=["image", "label"], 
-                roi_size=shape,
-                lazy=True),
+            # mt.RandAffined(
+            #     keys=["image","label"],
+            #     prob=1.0,
+            #     spatial_size=shape,
+            #     rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
+            #     scale_range=(0.1,0.1,0.1),                   # ±10%
+            #     mode=("bilinear","nearest"),
+            #     padding_mode="border",
+            #     lazy=True
+            # ),
+            # mt.RandSpatialCropd(
+            #     keys=["image", "label"], 
+            #     roi_size=shape,
+            #     lazy=True),
+            mt.Rand3DElasticd(
+                keys=["image", "label"],
+                prob=1.0,
+                sigma_range=(3, 7),
+                magnitude_range=(0.0, 10.0),
+                rotate_range=(np.pi/9, np.pi/9, np.pi/9),
+                shear_range=(0.05, 0.05, 0.05, 0.05, 0.05, 0.05),
+                translate_range=(5, 5, 5),
+                scale_range=(0.1, 0.1, 0.1),
+                mode=("bilinear", "nearest"),
+                padding_mode="border"),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
                 a_min=norm_clip[0],
@@ -45,15 +56,13 @@ def get_transforms(shape, norm_clip, pixdim):
                 clip=True),
             mt.RandShiftIntensityd(
                 keys=["image"],
-                prob=0.20,
-                offsets=0.20,
-            ),
+                prob=0.50,
+                offsets=0.20),
             mt.RandGaussianNoised(
                 keys=["image"],
-                prob=0.20,
+                prob=0.50,
                 mean=0.0,
-                std=0.10,
-            ),
+                std=0.10),
         ]
     )
     val_transform = mt.Compose(

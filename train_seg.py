@@ -77,14 +77,14 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 100,
+        'epochs': 200,
         'batch_size': 4,
         'aggregation': 1,
-        'learning_rate': 2e-3,
-        'weight_decay': 1e-3,
+        'learning_rate': 3e-3,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (128, 128, 128),
-        'norm_clip': (-175, 250, -1.0, 1.0),
+        'norm_clip': (-200, 400, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
         'sw_batch_size': 128,
