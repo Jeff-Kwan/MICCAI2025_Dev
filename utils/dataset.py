@@ -39,7 +39,7 @@ def get_transforms(shape, norm_clip, pixdim):
                 lazy=True),
             mt.RandAffined(
                 keys=["image","label"],
-                prob=0.5,
+                prob=1.0,
                 spatial_size=shape,
                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
                 scale_range=(0.1,0.1,0.1),                   # ±10%
@@ -48,12 +48,11 @@ def get_transforms(shape, norm_clip, pixdim):
                 lazy=True),
             mt.RandShiftIntensityd(
                 keys=["image"],
-                prob=0.20,
-                offsets=0.20,
-            ),
+                prob=0.50,
+                offsets=0.20,),
             mt.RandGaussianNoised(
                 keys=["image"],
-                prob=0.20,
+                prob=0.50,
                 mean=0.0,
                 std=0.10,
             ),

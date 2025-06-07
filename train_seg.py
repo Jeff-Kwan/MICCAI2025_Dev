@@ -48,7 +48,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=train_params['batch_size'],
         shuffle=False,
-        num_workers=8,
+        num_workers=16,
         persistent_workers=True)
 
 
@@ -84,13 +84,13 @@ if __name__ == "__main__":
         'learning_rate': 1e-3,
         'weight_decay': 5e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (192, 192, 192),
         'norm_clip': (-200, 400, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 16,
-        'sw_overlap': 0.5
+        'sw_batch_size': 64,
+        'sw_overlap': 0.1
     }
 
     output_dir = "output"
