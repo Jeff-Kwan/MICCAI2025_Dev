@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Dict
 import torch
-
+import numpy as np
 import monai.transforms as mt
 
 def get_transforms(shape, norm_clip, pixdim):
@@ -134,9 +134,7 @@ def get_data_files(
 
 if __name__ == "__main__":
     from monai.data import DataLoader, PersistentDataset
-    import monai.transforms as mt
     from tqdm import tqdm
-    import numpy as np
     torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
                                           np.ndarray, np.core.multiarray._reconstruct])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
