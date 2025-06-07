@@ -66,11 +66,11 @@ class Trainer():
             self.optimizer.zero_grad()
 
             for i, dict in enumerate(p_bar):
-                imgs = dict["image"].to(self.device, non_blocking=True)          # [B, C_img, H, W, D]
-                masks = dict["label"].to(self.device, non_blocking=True)        # [B, H, W, D] (integer labels)
+                imgs = dict["image"].to(self.device, non_blocking=True)
+                masks = dict["label"].to(self.device, non_blocking=True)
 
-                outputs = self.model(imgs)                               # logits [B, num_classes, H, W, D]
-                loss = self.criterion(outputs, masks)                    # existing loss function
+                outputs = self.model(imgs)
+                loss = self.criterion(outputs, masks)
                 loss.backward()
                 train_loss += loss.item()
 

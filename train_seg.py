@@ -59,6 +59,14 @@ def training(model_params, train_params, output_dir, comments):
     criterion = DiceFocalLoss(softmax=True, include_background=True, to_onehot_y=True,
                               weight=torch.tensor([0.01] + [1.0] * (train_params['num_classes'] - 1), device=device))
 
+    # Compilation acceleration
+    if train_params.get('compile', False):
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.set_float32_matmul_precision('medium')
+        # model = torch.compile(model)
+
     # Trainer
     trainer = Trainer(model, optimizer, criterion, scheduler, 
                       train_params, output_dir, device, comments)
@@ -76,9 +84,10 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 256, 256),
+        'shape': (128, 128, 128),
         'norm_clip': (-175, 250, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
+        'compile': True,
         'sw_batch_size': 128,
         'sw_overlap': 0.0
     }
