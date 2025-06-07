@@ -108,7 +108,7 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 100,
+        'epochs': 50,
         'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 1e-3,
