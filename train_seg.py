@@ -104,10 +104,10 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 1,
+        'epochs': 100,
         'batch_size': 4,
         'aggregation': 1,
-        'learning_rate': 5e-4,
+        'learning_rate': 1e-3,
         'weight_decay': 5e-2,
         'num_classes': 14,
         'shape': (128, 128, 128),
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         'compile': True,
         'autocast': False,
         'sw_batch_size': 64,
-        'sw_overlap': 0.2
+        'sw_overlap': 0.1
     }
 
     output_dir = "HarmonicSeg-50GT"
