@@ -65,9 +65,9 @@ class Trainer():
             p_bar = tqdm.tqdm(train_loader, desc=f'Epoch {epoch+1}/{epochs}')
             self.optimizer.zero_grad()
 
-            for i, (imgs, masks) in enumerate(p_bar):
-                imgs = imgs.to(self.device, non_blocking=True)          # [B, C_img, H, W, D]
-                masks = masks.to(self.device, non_blocking=True)        # [B, H, W, D] (integer labels)
+            for i, dict in enumerate(p_bar):
+                imgs = dict["image"].to(self.device, non_blocking=True)          # [B, C_img, H, W, D]
+                masks = dict["label"].to(self.device, non_blocking=True)        # [B, H, W, D] (integer labels)
 
                 outputs = self.model(imgs)                               # logits [B, num_classes, H, W, D]
                 loss = self.criterion(outputs, masks)                    # existing loss function
@@ -116,10 +116,10 @@ class Trainer():
         self.surface_dist_metric.reset()
 
         with torch.inference_mode():
-            for imgs, masks in data_loader:
+            for dict in data_loader:
                 # Move data to device
-                imgs = imgs.to(self.device, non_blocking=True)       # [B, C_img, H, W, D]
-                masks = masks.to(self.device, non_blocking=True)     # [B, H, W, D] (integer labels)
+                imgs = dict["image"].to(self.device, non_blocking=True)       # [B, C_img, H, W, D]
+                masks = dict["label"].to(self.device, non_blocking=True)     # [B, H, W, D] (integer labels)
 
                 # --- SLIDING WINDOW INFERENCE ---
                 # Each batch may contain multiple volumes; we run sliding window per volume.
