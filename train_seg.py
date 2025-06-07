@@ -60,13 +60,11 @@ def training(model_params, train_params, output_dir, comments):
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    # criterion = DiceFocalLoss(softmax=True, include_background=True, to_onehot_y=True,
-    #             weight=torch.tensor([0.05] + [1.0] * (train_params['num_classes'] - 1), device=device))
     criterion = DiceCELoss(
         include_background=True,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.05] + [1.0] * (train_params['num_classes'] - 1), device=device),
+        weight=torch.tensor([0.02] + [1.0] * (train_params['num_classes'] - 1), device=device),
         label_smoothing=0.1
     )
 
@@ -83,16 +81,33 @@ def training(model_params, train_params, output_dir, comments):
                       train_params, output_dir, device, comments)
     trainer.train(train_loader, val_loader)
 
+    # Test Last Model
+    test_loss, test_metrics = trainer.evaluate(val_loader)
+    test_results = {'test_loss': test_loss}
+    test_results.update(test_metrics)
+    with open(f'{output_dir}/results.txt', 'a') as f:
+        f.write(f'\nLast Model Test Performance:\n{json.dumps(test_results, indent=4)}')
+    print(f'Last Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}, Jaccard: {test_metrics["jaccard"]:.5f}')
+    
+    # Test Best Model
+    trainer.model.load_state_dict(torch.load(f'{output_dir}/best_model.pth', weights_only=True))
+    test_loss, test_metrics = trainer.evaluate(val_loader)
+    test_results = {'test_loss': test_loss}
+    test_results.update(test_metrics)
+    with open(f'{output_dir}/results.txt', 'a') as f:
+        f.write(f'\nBest Model Test Performance:\n{json.dumps(test_results, indent=4)}')
+    print(f'Best Model Performance - Test Loss: {test_loss:.5f}, Dice: {test_metrics["dice"]:.5f}, Jaccard: {test_metrics["jaccard"]:.5f}')
+
 
 
 if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 200,
+        'epochs': 100,
         'batch_size': 4,
         'aggregation': 1,
-        'learning_rate': 1e-3,
+        'learning_rate': 2e-3,
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (192, 192, 192),
