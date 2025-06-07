@@ -3,8 +3,7 @@ import json
 import torch
 import numpy as np
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset
-from torch.utils.data import DataLoader
+from monai.data import PersistentDataset, DataLoader
 from monai.losses import DiceCELoss
 
 from utils import Trainer, get_transforms, get_data_files
@@ -43,6 +42,7 @@ def training(model_params, train_params, output_dir, comments):
         batch_size=train_params['batch_size'],
         shuffle=True,
         num_workers=30,
+        prefetch_factor=3,
         pin_memory=True,
         persistent_workers=True)
     val_loader = DataLoader(
@@ -50,7 +50,7 @@ def training(model_params, train_params, output_dir, comments):
         batch_size=1,
         shuffle=False,
         num_workers=25,
-        prefech_factor=2,
+        prefetch_factor=2,
         persistent_workers=True)
 
 
