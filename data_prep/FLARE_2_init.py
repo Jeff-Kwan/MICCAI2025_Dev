@@ -1,6 +1,7 @@
 import os
 from huggingface_hub import snapshot_download
 import subprocess
+import shutil
 
 '''
 Make sure we have 7z first:
@@ -32,6 +33,9 @@ subprocess.run([
 ], check=True)
 os.remove(file2)
 
+# Get rid of unpacking artifacts
+shutil.rmtree("data/FLARE-Task2-LaptopSeg/.cache")
+shutil.rmtree("data/FLARE-Task2-LaptopSeg/train_pseudo_label/__MACOSX")
 
 # Recursively rename files to replace "_0000." with "."
 def rename_files(directory):
@@ -42,3 +46,7 @@ def rename_files(directory):
                 os.rename(os.path.join(root, filename), os.path.join(root, new_filename))
 
 rename_files("./data")
+
+for i in range(1, 10):
+    os.rename(f"data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo/Case{i}.nii.gz",
+        f"data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo/Case_0000{i}.nii.gz")

@@ -1,98 +1,55 @@
 import os
+import json
 import torch
+import numpy as np
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, ThreadDataLoader
+from monai.data import PersistentDataset, DataLoader
 from monai.losses import DiceFocalLoss
-import monai.transforms as mt
-from utils import Trainer
+
+from utils import Trainer, get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 
-def get_transforms(device, shape, norm_clip, pixdim):
-    train_transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"],
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True,
-            ),
-            mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=pixdim,
-                mode=("bilinear", "nearest"),
-            ),
-            mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=False),
-            mt.RandCropByPosNegLabeld(
-                keys=["image", "label"],
-                label_key="label",
-                spatial_size=shape,
-                pos=1,
-                neg=1,
-                image_key="image",
-                image_threshold=0,
-            ),
-            mt.RandAxisFlip(
-                prob=0.10,
-            ),
-            mt.RandRotate90d(
-                keys=["image", "label"],
-                prob=0.10,
-                max_k=3,
-            ),
-            mt.RandShiftIntensityd(
-                keys=["image"],
-                offsets=0.10,
-                prob=0.50,
-            ),
-            # mt.RandAffined(
-            #     keys=["image", "label"],
-            #     mode=("bilinear", "nearest"),
-            #     prob=0.5,
-            #     rotate_range=(0.1, 0.1, 0.1),
-            #     scale_range=(0.2, 0.2, 0.2),
-            #     padding_mode="zeros"),
-            mt.RandGaussianNoised(
-                keys=["image"],
-                prob=0.1,
-                mean=0.0,
-                std=0.05,
-            ),
-        ]
-    )
-    val_transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.ScaleIntensityRanged(keys=["image"],
-                                    a_min=norm_clip[0],
-                                    a_max=norm_clip[1],
-                                    b_min=norm_clip[2],
-                                    b_max=norm_clip[3],
-                                    clip=True),
-            mt.CropForegroundd(keys=["image", "label"], source_key="image", allow_smaller=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS"),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=pixdim,
-                mode=("bilinear", "nearest"),
-            ),
-            mt.EnsureTyped(keys=["image", "label"], device=device, track_meta=True),
-        ]
-    )
-    return train_transform, val_transform
+# For use of PersistentDataset
+torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
+                        np.ndarray, np.core.multiarray._reconstruct])
+
 
 def training(model_params, train_params, output_dir, comments):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(output_dir, exist_ok=True)
 
     # Data loading
-    transforms = get_transforms(device, model_params['shape'])
+    transforms = get_transforms(train_params['shape'],
+                                train_params['norm_clip'], 
+                                train_params['pixdim'])
 
     # Persistent dataset needs list of file paths?
+    train_dataset = PersistentDataset(
+        data = get_data_files(
+            images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+            labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
+        transform=transforms,
+        cache_dir="data/cache/gt_label")
+    val_dataset = PersistentDataset(
+        data = get_data_files(
+            images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
+            labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"),
+        transform=transforms,
+        cache_dir="data/cache/val")
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=train_params['batch_size'],
+        shuffle=True,
+        num_workers=32,
+        pin_memory=True,
+        persistent_workers=True)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=16,
+        persistent_workers=False)
 
 
     # Training setup
@@ -104,4 +61,24 @@ def training(model_params, train_params, output_dir, comments):
     # Trainer
     trainer = Trainer(model, optimizer, criterion, scheduler, 
                       train_params, output_dir, device, comments)
-    
+    trainer.train(train_loader, val_loader)
+
+
+
+if __name__ == "__main__":
+    model_params = json.load(open("configs/model/base.json"))
+
+    train_params = {
+        'epochs': 100,
+        'batch_size': 4,
+        'learning_rate': 3e-4,
+        'weight_decay': 1e-2,
+        'shape': (128, 128, 128),
+        'norm_clip': (-175, 250, -1.0, 1.0),
+        'pixdim': (1.0, 1.0, 1.0)
+    }
+
+    output_dir = "output"
+    comments = ["HarmonicSeg - 50 Gound Truth set training"]
+
+    training(model_params, train_params, output_dir, comments)
