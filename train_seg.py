@@ -39,8 +39,7 @@ def training(model_params, train_params, output_dir, comments):
         data=get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"),
-        transform=train_transform,
-    )
+        transform=train_transform)
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
@@ -70,9 +69,8 @@ def training(model_params, train_params, output_dir, comments):
         include_background=True,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.02] + [1.0] * (train_params['num_classes'] - 1), device=device),
-        label_smoothing=0.1
-    )
+        weight=torch.tensor([0.02] + [1.0] * 13, device=device),
+        label_smoothing=0.05)
 
     # Compilation acceleration
     if train_params.get('compile', False):
