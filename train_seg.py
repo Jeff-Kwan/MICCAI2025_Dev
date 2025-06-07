@@ -3,7 +3,8 @@ import json
 import torch
 import numpy as np
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader
+from monai.data import PersistentDataset
+from torch.utils.data import DataLoader
 from monai.losses import DiceCELoss
 
 from utils import Trainer, get_transforms, get_data_files
