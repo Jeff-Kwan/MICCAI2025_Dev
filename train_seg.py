@@ -126,6 +126,6 @@ if __name__ == "__main__":
     }
 
     output_dir = "Pseudo-Aladdin-128x3"
-    comments = ["HarmonicSeg - 50 Gound Truth set training"]
+    comments = ["HarmonicSeg - 50 Gound Truth set training", "DiceCE, No data augmentation"]
 
     training(model_params, train_params, output_dir, comments)
