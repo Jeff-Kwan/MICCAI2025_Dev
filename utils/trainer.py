@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 import monai.metrics as mm
-from monai.metrics.surface_distance import SurfaceDistanceMetric
+# from monai.metrics.surface_distance import SurfaceDistanceMetric
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 
@@ -45,10 +45,10 @@ class Trainer():
         #  - reduction=MEAN_BATCH → average over classes & batch
         #  - distance_metric="euclidean" → Euclidean distance in voxel units
         #  - symmetric=True → average pred→GT and GT→pred distances
-        self.surface_dist_metric = SurfaceDistanceMetric(
-            include_background=False,
-            # symmetric=True
-        )
+        # self.surface_dist_metric = SurfaceDistanceMetric(
+        #     include_background=False,
+        #     # symmetric=True
+        # )
 
         self.start_time = None
 
@@ -113,7 +113,7 @@ class Trainer():
 
         # Reset MONAI metrics
         self.dice_metric.reset()
-        self.surface_dist_metric.reset()
+        # self.surface_dist_metric.reset()
 
         with torch.inference_mode():
             p_bar = tqdm.tqdm(data_loader, desc='Validation')
@@ -157,7 +157,7 @@ class Trainer():
                 self.dice_metric(y_pred=pred_onehot, y=masks_onehot)
 
                 # Compute Surface Distance (mean symmetric)
-                self.surface_dist_metric(y_pred=pred_onehot, y=masks_onehot)
+                # self.surface_dist_metric(y_pred=pred_onehot, y=masks_onehot)
 
         # Aggregate loss over batches
         mean_val_loss = loss_total / len(data_loader)
@@ -166,10 +166,10 @@ class Trainer():
         dice_score = self.dice_metric.aggregate().item()
         self.dice_metric.reset()
 
-        surf_dist_score = self.surface_dist_metric.aggregate().item()
-        self.surface_dist_metric.reset()
+        # surf_dist_score = self.surface_dist_metric.aggregate().item()
+        # self.surface_dist_metric.reset()
 
-        return mean_val_loss, {'dice': dice_score, 'surf_dist': surf_dist_score}
+        return mean_val_loss, {'dice': dice_score}
 
     def save_checkpoint(self, epoch, val_metrics):
         torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'model.pth'))
@@ -241,16 +241,17 @@ class Trainer():
         )
 
         # Create a twin y-axis for Surface Distance
-        ax_metric2 = ax_metric.twinx()  # share the same x-axis
-        ax_metric2.set_ylabel('Val Surface Distance')
-        # Plot Val Surface Distance on the right y-axis
-        line2, = ax_metric2.plot(
-            epochs, self.val_metrics['surf_dist'],
-            label='Val Surface Distance', color='tab:green'
-        )
+        # ax_metric2 = ax_metric.twinx()  # share the same x-axis
+        # ax_metric2.set_ylabel('Val Surface Distance')
+        # # Plot Val Surface Distance on the right y-axis
+        # line2, = ax_metric2.plot(
+        #     epochs, self.val_metrics['surf_dist'],
+        #     label='Val Surface Distance', color='tab:green'
+        # )
 
         # Combine legends from both axes
-        lines = [line1, line2]
+        # lines = [line1, line2]
+        lines = [line1]
         labels = [l.get_label() for l in lines]
         ax_metric.legend(lines, labels, loc='upper right')
         ax_metric.set_title('Val Metrics')
