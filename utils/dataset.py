@@ -13,7 +13,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
-                mode=("bicubic", "nearest"),
+                mode=("bilinear", "nearest"),
                 lazy=True
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
@@ -21,7 +21,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.Resized(
                 keys=["image", "label"], 
                 spatial_size=shape, 
-                mode=("bicubic", "nearest"),
+                mode=("bilinear", "nearest"),
                 lazy=True
             ),
             mt.EnsureTyped(
@@ -69,7 +69,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
-                mode=("bicubic", "nearest"),
+                mode=("bilinear", "nearest"),
                 lazy=True
             ),
             mt.CropForegroundd(keys=["image", "label"], source_key="label", 
@@ -77,7 +77,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.Resized(
                 keys=["image", "label"], 
                 spatial_size=shape, 
-                mode=("bicubic", "nearest"),
+                mode=("bilinear", "nearest"),
                 lazy=True
             ),
             mt.EnsureTyped(
