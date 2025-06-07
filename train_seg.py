@@ -48,15 +48,16 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=train_params['batch_size'],
         shuffle=False,
-        num_workers=16,
-        persistent_workers=False)
+        num_workers=8,
+        persistent_workers=True)
 
 
     # Training setup
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    criterion = DiceFocalLoss(softmax=True, include_background=False, to_onehot_y=True)
+    criterion = DiceFocalLoss(softmax=True, include_background=True, to_onehot_y=True,
+                weight=torch.tensor([0.01] + [1.0] * (train_params['num_classes'] - 1), device=device))
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -83,11 +84,12 @@ if __name__ == "__main__":
         'learning_rate': 1e-3,
         'weight_decay': 5e-2,
         'num_classes': 14,
-        'shape': (224, 224, 224),
+        'shape': (128, 128, 128),
         'norm_clip': (-200, 400, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
-        'sw_batch_size': 128,
+        'autocast': True,
+        'sw_batch_size': 16,
         'sw_overlap': 0.5
     }
 
