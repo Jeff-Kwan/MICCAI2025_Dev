@@ -116,7 +116,8 @@ class Trainer():
         self.surface_dist_metric.reset()
 
         with torch.inference_mode():
-            for dict in data_loader:
+            p_bar = tqdm.tqdm(data_loader, desc='Validation')
+            for dict in p_bar:
                 # Move data to device
                 imgs = dict["image"].to(self.device, non_blocking=True)       # [B, C_img, H, W, D]
                 masks = dict["label"].to(self.device, non_blocking=True)     # [B, H, W, D] (integer labels)
