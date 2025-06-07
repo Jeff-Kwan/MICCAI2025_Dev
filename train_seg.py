@@ -2,6 +2,7 @@ import os
 import json
 import torch
 import numpy as np
+from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader
 from monai.losses import DiceCELoss
@@ -16,6 +17,10 @@ torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
 
 def training(model_params, train_params, output_dir, comments):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    timestamp = datetime.now().strftime("%H-%M")
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    output_dir = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
     os.makedirs(output_dir, exist_ok=True)
 
     # Data loading
@@ -84,13 +89,13 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 100,
+        'epochs': 200,
         'batch_size': 4,
         'aggregation': 1,
         'learning_rate': 1e-3,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (192, 192, 192),
         'norm_clip': (-200, 400, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
@@ -99,7 +104,7 @@ if __name__ == "__main__":
         'sw_overlap': 0.2
     }
 
-    output_dir = "output"
+    output_dir = "HarmonicSeg-50GT"
     comments = ["HarmonicSeg - 50 Gound Truth set training"]
 
     training(model_params, train_params, output_dir, comments)
