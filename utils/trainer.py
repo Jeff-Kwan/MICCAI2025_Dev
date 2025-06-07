@@ -133,12 +133,12 @@ class Trainer():
                     # Perform sliding window inference on this single volume
                     logits_patch = sliding_window_inference(
                         inputs=single_img,
-                        roi_size=self.train_params['roi_size'],        # e.g. (128,128,64)
+                        roi_size=self.train_params['shape'],        # e.g. (128,128,64)
                         sw_batch_size=self.train_params.get('sw_batch_size', 1),
                         predictor=lambda x: self.model(x),
                         overlap=self.train_params.get('sw_overlap', 0.25),
-                        mode=self.train_params.get('sw_blend_mode', "gaussian")
-                    )  # output: [1, num_classes, H, W, D] :contentReference[oaicite:7]{index=7}
+                        mode="gaussian"
+                    )  # output: [1, num_classes, H, W, D]
                     aggregated_logits[b] = logits_patch
 
                 # Compute loss using aggregated logits
@@ -152,7 +152,7 @@ class Trainer():
                 # Compute Dice (averaged across classes & batch)
                 self.dice_metric(y_pred=pred_onehot, y=masks)
 
-                # Compute Surface Distance (mean symmetric) :contentReference[oaicite:8]{index=8}
+                # Compute Surface Distance (mean symmetric)
                 self.surface_dist_metric(y_pred=pred_onehot, y=masks)
 
         # Aggregate loss over batches
@@ -207,7 +207,7 @@ class Trainer():
         # Create a figure with 1 row, 2 columns
         fig, (ax_loss, ax_metric) = plt.subplots(
             1, 2, figsize=(12, 5)
-        )  # 1 row, 2 columns layout :contentReference[oaicite:2]{index=2}
+        )  # 1 row, 2 columns layout
 
         # -----------------------------
         # Left panel: Train & Val Loss
@@ -237,7 +237,7 @@ class Trainer():
         )
 
         # Create a twin y-axis for Surface Distance
-        ax_metric2 = ax_metric.twinx()  # share the same x-axis :contentReference[oaicite:3]{index=3}
+        ax_metric2 = ax_metric.twinx()  # share the same x-axis
         ax_metric2.set_ylabel('Val Surface Distance')
         # Plot Val Surface Distance on the right y-axis
         line2, = ax_metric2.plot(

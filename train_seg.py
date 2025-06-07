@@ -71,11 +71,15 @@ if __name__ == "__main__":
     train_params = {
         'epochs': 100,
         'batch_size': 4,
+        'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
+        'num_classes': 14,
         'shape': (128, 128, 128),
         'norm_clip': (-175, 250, -1.0, 1.0),
-        'pixdim': (1.0, 1.0, 1.0)
+        'pixdim': (1.0, 1.0, 1.0),
+        'sw_batch_size': 8,
+        'sw_overlap': 0.25
     }
 
     output_dir = "output"

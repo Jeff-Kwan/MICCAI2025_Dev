@@ -237,6 +237,7 @@ class HarmonicSeg(nn.Module):
             raise ValueError("All lists must be length 3.")
         
         # Native Resolution
+        self.in_conv = nn.Conv3d(1, in_c, 2, 2, 0, bias=False)
         self.init_convs = nn.ModuleList(
             [ConvBlock(in_c, in_c, in_c, dropout=dropout) for _ in range(2)])
         
@@ -285,10 +286,8 @@ class HarmonicSeg(nn.Module):
 
         
     def forward(self, x):
-        B, S1, S2, S3 = x.shape
-        x = x.view(B, 4, S1//4, 4, S2//4, S3)  # Patchify 16x16 
-        x = x.permute(0, 1, 3, 2, 4, 5)
-        x = x.reshape(B, 16, S1//4, S2//4, S3)  # (B, C, S1, S2, S3)
+        B, _, S1, S2, S3 = x.shape
+        x = self.in_conv(x)
 
         # Initial convolutions
         for conv in self.init_convs:
@@ -343,7 +342,7 @@ class HarmonicSeg(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 512, 512, 128
+    B, S1, S2, S3 = 1, 128, 128, 128
     params = {
         "in_channels":  16,
         "out_channels": 14,
@@ -356,7 +355,7 @@ if __name__ == "__main__":
         "stochastic_depth": 0.1,
     }
 
-    x = torch.randn(B, S1, S2, S3).to(device)
+    x = torch.randn(B, 1, S1, S2, S3).to(device)
     model = HarmonicSeg(params).to(device)
 
     # Profile the forward and backward pass
