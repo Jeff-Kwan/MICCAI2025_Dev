@@ -114,6 +114,121 @@ def get_transforms(shape, norm_clip, pixdim):
     return train_transform, val_transform
 
 
+def get_mim_transforms(shape, norm_clip, pixdim):
+    train_transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
+            mt.Orientationd(keys=["image"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["image"],
+                pixdim=pixdim,
+                mode=("bilinear", "nearest"),
+                lazy=True),
+            mt.RandSpatialCropSamplesd(
+                keys=["image"], 
+                roi_size=shape,
+                num_samples=16,
+                lazy=True),
+            mt.SpatialPadd(
+                keys=["image"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
+            mt.RandAffined(
+                keys=["image"],
+                prob=0.8,
+                spatial_size=shape,
+                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
+                scale_range=(0.1,0.1,0.1),                   # ±10%
+                mode=("bilinear","nearest"),
+                padding_mode="border",
+                lazy=True),
+            mt.ScaleIntensityRanged(
+                keys=["image"], 
+                a_min=norm_clip[0],
+                a_max=norm_clip[1],
+                b_min=norm_clip[2],
+                b_max=norm_clip[3],
+                clip=True),
+            mt.EnsureTyped(
+                keys=["image"], 
+                dtype=[torch.float32],
+                track_meta=False),
+            ### ~~~ Split into two image / label from here on ~~~ ###
+            mt.CopyItemsd(      # Masked image modelling copy whole image
+                keys=["image"],
+                times=1,
+                names=["label"]),
+            mt.RandBiasFieldd(
+                keys=["image"],
+                prob=0.30,
+                coeff_range=(0.05, 0.15),
+                spatial_size=shape,
+                mode="gaussian",
+                allow_smaller=True),
+            mt.RandGaussianNoised(
+                keys=["image"],
+                prob=0.30,
+                mean=0.0,
+                std=0.10),
+            mt.RandGaussianSmoothd(
+                keys=["image"],
+                prob=0.50),
+            mt.RandCoarseDropoutd(
+                keys=["image"],
+                prob=1.0,
+                fill_value=(norm_clip[2], norm_clip[3]),
+                holes=2,
+                max_holes=4,
+                spatial_size=(48, 48, 48),
+                max_spatial_size=(64, 64, 64)),
+            mt.RandCoarseDropoutd(
+                keys=["image"],
+                prob=1.0,
+                fill_value=(norm_clip[2], norm_clip[3]),
+                holes=3,
+                max_holes=6,
+                spatial_size=(32, 32, 32),
+                max_spatial_size=(48, 48, 48)),
+            mt.RandCoarseDropoutd(
+                keys=["image"],
+                prob=1.0,
+                fill_value=(norm_clip[2], norm_clip[3]),
+                holes=4,
+                max_holes=8,
+                spatial_size=(16, 16, 16),
+                max_spatial_size=(32, 32, 32)),
+        ]
+    )
+    val_transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
+            mt.Orientationd(keys=["image"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["image"],
+                pixdim=pixdim,
+                mode=("bilinear", "nearest"),
+                lazy=True),
+            mt.ScaleIntensityRanged(
+                keys=["image"], 
+                a_min=norm_clip[0],
+                a_max=norm_clip[1],
+                b_min=norm_clip[2],
+                b_max=norm_clip[3],
+                clip=True),
+            mt.EnsureTyped(
+                keys=["image"], 
+                dtype=[torch.float32],
+                track_meta=False),
+            ### ~~~ Split into two image / label from here on ~~~ ###
+            mt.CopyItemsd(      # Masked image modelling copy whole image
+                keys=["image"],
+                times=1,
+                names=["label"]),
+        ]
+    )
+    return train_transform, val_transform
+
 def get_data_files(
     images_dir: str,
     labels_dir: str,
@@ -167,6 +282,34 @@ def get_data_files(
     ]
 
 
+def get_mim_data_files(
+    images_dir: str,
+    extension: str = ".nii.gz"
+    ) -> List[Dict[str, str]]:
+    """
+    Returns a list of dicts with file paths for images.
+    Each dict has the key "image".
+
+    Raises:
+        FileNotFoundError: if the directory does not exist.
+        RuntimeError: if no files with the given extension are found.
+    """
+    images_dir = Path(images_dir)
+
+    if not images_dir.is_dir():
+        raise FileNotFoundError(f"Image directory not found: {images_dir!r}")
+
+    # Scan image directory
+    image_names = sorted(
+        entry.name
+        for entry in os.scandir(images_dir)
+        if entry.is_file() and entry.name.endswith(extension)
+    )
+    if not image_names:
+        raise RuntimeError(f"No '{extension}' files found in {images_dir!r}")
+
+    # Build result list
+    return [{"image": str(images_dir / name)} for name in image_names]
 
 
 if __name__ == "__main__":
