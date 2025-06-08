@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
-from monai.losses import DiceFocalLoss
+from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import Trainer, get_transforms, get_data_files
@@ -39,9 +39,14 @@ def training(model_params, train_params, output_dir, comments):
     #     transform=train_transform,
     #     cache_dir="data/cache/gt_label")
     train_dataset = Dataset(
-        data=get_data_files(
+        data=# Combine both pseudo-label datasets
+            get_data_files(
             images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"),
+            labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")\
+            +\
+            get_data_files(
+            images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22"),
         transform=train_transform)
     val_dataset = PersistentDataset(
         data = get_data_files(
@@ -70,11 +75,12 @@ def training(model_params, train_params, output_dir, comments):
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    criterion = DiceFocalLoss(
+    criterion = DiceCELoss(
         include_background=True,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.02] + [1.0] * 13, device=device))
+        weight=torch.tensor([0.01] + [1.0] * 13, device=device),
+        label_smoothing=0.1)
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -114,9 +120,9 @@ if __name__ == "__main__":
     train_params = {
         'epochs': 50,
         'batch_size': 1,
-        'aggregation': 2,
+        'aggregation': 4,
         'learning_rate': 1e-3,
-        'weight_decay': 1e-2,
+        'weight_decay': 5e-2,
         'num_classes': 14,
         'shape': (96, 96, 96),
         'norm_clip': (-325, 325, -1.0, 1.0),
@@ -128,9 +134,9 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "Pseudo-Aladdin-96x3"
-    comments = ["HarmonicSeg - 50 Gound Truth set training",
+    output_dir = "PseudolabelsAll-96x3"
+    comments = ["HarmonicSeg - 2000 x2 Pseudolabels training",
         "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
-        "DiceCE, 16-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
+        "DiceCE, 16-sample rand crop + a lot of augmentations"]
 
     training(model_params, train_params, output_dir, comments)

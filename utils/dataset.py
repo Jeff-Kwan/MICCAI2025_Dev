@@ -61,27 +61,44 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.RandFlipd(
+                keys=["image", "label"],
+                prob=0.50,
+                lazy=True),
+            mt.RandRotate90d(
+                keys=["image", "label"],
+                prob=0.50,
+                spatial_axes=(0, 1),  # Rotate in XY plane
+                lazy=True),
             mt.RandAffined(
                 keys=["image","label"],
                 prob=1.0,
                 spatial_size=shape,
                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                scale_range=(0.1,0.1,0.1),                   # ±10%
+                scale_range=(0.2, 0.2, 0.2),                 # ±10%
+                shear_range=(0.1, 0.1, 0.1),                # ±10%
                 mode=("bilinear","nearest"),
                 padding_mode="border",
                 lazy=True),
-            # mt.RandShiftIntensityd(
-            #     keys=["image"],
-            #     prob=0.30,
-            #     offsets=0.20,),
+            mt.Rand3DElasticd(
+                keys=["image", "label"],
+                prob=0.50,
+                spatial_size=shape,
+                sigma_range=(0.5, 7.0),
+                magnitude_range=(0.1, 2.0),
+                rotate_range=(np.pi/18, np.pi/18, np.pi/18),    # ±10°
+                shear_range=(0.1, 0.1, 0.1),  # ±10%
+                scale_range=(0.1, 0.1, 0.1),  
+                mode=("bilinear", "nearest"),
+                padding_mode="border"),
+            mt.RandGaussianSmoothd(
+                keys=["image"],
+                prob=0.30),
             mt.RandGaussianNoised(
                 keys=["image"],
                 prob=0.30,
                 mean=0.0,
                 std=0.10),
-            mt.RandGaussianSmoothd(
-                keys=["image"],
-                prob=0.40),
             mt.RandBiasFieldd(
                 keys=["image"],
                 prob=0.30),
@@ -89,10 +106,10 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image"],
                 prob=0.5,
                 fill_value=(norm_clip[2], norm_clip[3]),
-                holes=1,
-                max_holes=4,
-                spatial_size=(24, 24, 24),
-                max_spatial_size=(48, 48, 48)),
+                holes=2,
+                max_holes=8,
+                spatial_size=(32, 32, 32),
+                max_spatial_size=(64, 64, 64)),
         ]
     )
     val_transform = mt.Compose(
