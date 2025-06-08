@@ -79,10 +79,10 @@ def training(model_params, train_params, output_dir, comments):
         include_background=False, 
         to_onehot_y=True, 
         softmax=True, 
-        weights=torch.tensor([0.01] + [1.0] * 13, device=device),
+        weight=torch.tensor([0.01] + [1.0] * 13, device=device),
         label_smoothing=0.2,
-        lambda_ce=0.5,
-        lambda_dice=1.0,)
+        lambda_ce=0.4,
+        lambda_dice=0.6,)
 
     # Compilation acceleration
     if train_params.get('compile', False):
