@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=64,
+        num_workers=72,
         prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True)
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         'batch_size': 1,
         'aggregation': 2,
         'learning_rate': 1e-3,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (96, 96, 96),
         'norm_clip': (-325, 325, -1.0, 1.0),
