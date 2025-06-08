@@ -42,6 +42,11 @@ def get_transforms(shape, norm_clip, pixdim):
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
+            mt.RandSpatialCropSamplesd(
+                keys=["image", "label"], 
+                roi_size=shape,
+                num_samples=32,
+                lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
                 a_min=norm_clip[0],
@@ -56,11 +61,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.RandSpatialCropSamplesd(
-                keys=["image", "label"], 
-                roi_size=shape,
-                num_samples=16,
-                lazy=True),
             mt.RandAffined(
                 keys=["image","label"],
                 prob=1.0,

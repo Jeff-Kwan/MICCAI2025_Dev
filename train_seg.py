@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader, Dataset
-from monai.losses import DiceCELoss
+from monai.losses import DiceFocalLoss
 
 from utils import Trainer, get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=80,
+        num_workers=64,
         prefetch_factor=1,
         pin_memory=True,
         persistent_workers=False)
@@ -67,12 +67,11 @@ def training(model_params, train_params, output_dir, comments):
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    criterion = DiceCELoss(
+    criterion = DiceFocalLoss(
         include_background=True,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.02] + [1.0] * 13, device=device),
-        label_smoothing=0.1)
+        weight=torch.tensor([0.02] + [1.0] * 13, device=device))
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -120,13 +119,14 @@ if __name__ == "__main__":
         'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
-        'autocast': True,
+        'autocast': False,
         'sw_batch_size': 64,
         'sw_overlap': 0.1
     }
+    torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
     output_dir = "Pseudo-Aladdin-128x3"
     comments = ["HarmonicSeg - 50 Gound Truth set training", 
-        "DiceCE, 16-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
+        "DiceCE, 32-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
 
     training(model_params, train_params, output_dir, comments)
