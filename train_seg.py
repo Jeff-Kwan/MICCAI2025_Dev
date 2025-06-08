@@ -54,13 +54,13 @@ def training(model_params, train_params, output_dir, comments):
         num_workers=64,
         prefetch_factor=2,
         pin_memory=True,
-        persistent_workers=False)
+        persistent_workers=True)
     val_loader = DataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=32,
-        persistent_workers=False)
+        num_workers=25,
+        persistent_workers=True)
 
 
     # Training setup
