@@ -28,7 +28,8 @@ class MapLabelsToZeroOutsideRange(MapTransform):
 def get_transforms(shape, norm_clip, pixdim):
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.LoadImaged(keys=["image", "label"]),
+            mt.EnsureChannelFirstd(keys=["image", "label"]),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
             mt.Spacingd(
                 keys=["image", "label"],
@@ -57,10 +58,6 @@ def get_transforms(shape, norm_clip, pixdim):
             MapLabelsToZeroOutsideRange(
                 keys=["label"],
                 valid_labels=list(range(14))),  # Valid labels: 0 through 13
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.RandFlipd(
                 keys=["image", "label"],
                 prob=0.50,
@@ -99,6 +96,10 @@ def get_transforms(shape, norm_clip, pixdim):
                 max_holes=8,
                 spatial_size=(32, 32, 32),
                 max_spatial_size=(64, 64, 64)),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
         ]
     )
     val_transform = mt.Compose(
