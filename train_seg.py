@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=64,
+        num_workers=80,
         prefetch_factor=1,
         pin_memory=True,
         persistent_workers=False)
@@ -59,7 +59,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=24,
+        num_workers=32,
         persistent_workers=False)
 
 

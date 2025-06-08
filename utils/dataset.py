@@ -37,15 +37,15 @@ def get_transforms(shape, norm_clip, pixdim):
                 lazy=True),
             # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
             #                     allow_smaller=True, lazy=True),
-            mt.SpatialPadd(
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
                 num_samples=24,
+                lazy=True),
+            mt.SpatialPadd(
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
                 lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
