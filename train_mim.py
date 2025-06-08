@@ -4,14 +4,17 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader, Dataset
+from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
+from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import MIM_Trainer, get_mim_transforms, get_mim_data_files
 from model.Harmonics import HarmonicSeg
 
 # For use of PersistentDataset
-torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
-                        np.ndarray, np.core.multiarray._reconstruct])
+torch.serialization.add_safe_globals([np.dtype, np.ndarray, np.core.multiarray._reconstruct, 
+    np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType, np.dtypes.UInt8DType,
+    np.dtypes.Float32DType, np.dtypes.Float64DType,
+    meta_tensor.MetaTensor, MetaKeys, SpaceKeys, TraceKeys])
 
 
 def training(model_params, train_params, output_dir, comments):
@@ -29,20 +32,15 @@ def training(model_params, train_params, output_dir, comments):
 
     # Persistent dataset needs list of file paths?
     train_dataset = PersistentDataset(
-        data = get_mim_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
+        data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr"),
         transform=train_transform,
         cache_dir="data/cache/gt_label")
     # train_dataset = Dataset(
     #     data=get_mim_data_files(
-    #         images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-    #         labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"),
+    #         images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr"),
     #     transform=train_transform)
     val_dataset = PersistentDataset(
-        data = get_mim_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-            labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"),
+        data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"),
         transform=val_transform,
         cache_dir="data/cache/val")
 
@@ -58,7 +56,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=8,
+        num_workers=16,
         persistent_workers=True)
 
 
@@ -101,7 +99,7 @@ def training(model_params, train_params, output_dir, comments):
 
 
 if __name__ == "__main__":
-    model_params = json.load(open("configs/model/base.json"))
+    model_params = json.load(open("configs/model/mim_base.json"))
 
     train_params = {
         'epochs': 50,
@@ -120,9 +118,9 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "MIM-GT50-96x3"
+    output_dir = "MIM-GT50-128x3"
     comments = ["HarmonicSeg - 50 Gound Truth Masked Image Modelling",
-        "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
+        "(128, 128, 128) shape, 1.0mm pixdim ", 
         "MSE, 16-sample rand crop + affine, bias field, noise, smooth, small med large dropouts"]
 
     training(model_params, train_params, output_dir, comments)

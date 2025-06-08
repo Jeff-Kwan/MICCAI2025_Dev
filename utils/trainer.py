@@ -324,7 +324,7 @@ class MIM_Trainer():
                     # If B>1 with mixed sizes, you might loop over each sample. For simplicity:
                     B, C, H, W, D = imgs.shape
                     # Create placeholder for aggregated logits
-                    aggregated_logits = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
+                    aggregated_logits = torch.zeros((B, 1, H, W, D), device=self.device)
                     for b in range(B):
                         single_img = imgs[b:b+1]  # [1, C, H, W, D]
                         # Perform sliding window inference on this single volume

@@ -122,7 +122,7 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.Spacingd(
                 keys=["image"],
                 pixdim=pixdim,
-                mode=("bilinear", "nearest"),
+                mode="bilinear",
                 lazy=True),
             mt.RandSpatialCropSamplesd(
                 keys=["image"], 
@@ -132,7 +132,7 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.SpatialPadd(
                 keys=["image"],
                 spatial_size=shape,
-                mode=("edge", "edge"),
+                mode="edge",
                 lazy=True),
             mt.RandAffined(
                 keys=["image"],
@@ -140,7 +140,7 @@ def get_mim_transforms(shape, norm_clip, pixdim):
                 spatial_size=shape,
                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
                 scale_range=(0.1,0.1,0.1),                   # ±10%
-                mode=("bilinear","nearest"),
+                mode="bilinear",
                 padding_mode="border",
                 lazy=True),
             mt.ScaleIntensityRanged(
@@ -161,11 +161,7 @@ def get_mim_transforms(shape, norm_clip, pixdim):
                 names=["label"]),
             mt.RandBiasFieldd(
                 keys=["image"],
-                prob=0.30,
-                coeff_range=(0.05, 0.15),
-                spatial_size=shape,
-                mode="gaussian",
-                allow_smaller=True),
+                prob=0.30),
             mt.RandGaussianNoised(
                 keys=["image"],
                 prob=0.30,
@@ -207,7 +203,7 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.Spacingd(
                 keys=["image"],
                 pixdim=pixdim,
-                mode=("bilinear", "nearest"),
+                mode="bilinear",
                 lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
