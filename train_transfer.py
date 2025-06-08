@@ -95,6 +95,12 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
         torch.set_float32_matmul_precision('medium')
         model = torch.compile(model)
 
+    # First, only train output layer
+    for param in model.parameters():
+        param.requires_grad = False
+    for param in model.out_conv.parameters():
+        param.requires_grad = True
+
     # Trainer
     trainer = Trainer(model, optimizer, criterion, scheduler, 
                       train_params, output_dir, device, comments)
@@ -121,14 +127,14 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
 
 if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
-    pretrained_path = "output/2025-06-08/09-04-MIM-GT50-96x3/model.pth"
+    pretrained_path = "output/2025-06-08/09-49-MIM-2000-96x3/model.pth"
 
     train_params = {
         'epochs': 10,
         'batch_size': 1,
         'aggregation': 2,
-        'learning_rate': 5e-4,
-        'weight_decay': 1e-3,
+        'learning_rate': 1e-3,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (96, 96, 96),
         'norm_clip': (-325, 325, -1.0, 1.0),
@@ -140,8 +146,8 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "Transfer-GT50-96x3"
-    comments = ["HarmonicSeg - 50 GT MIM -> Segmentation 20 epochs",
+    output_dir = "Transfer-2000-GT50-96x3"
+    comments = ["HarmonicSeg output layer - 2000 MIM -> 50GT Segmentation 10 epochs",
         "(96, 96, 96) shape, 1.5mm pixdim ", 
         "DiceFocal"]
 
