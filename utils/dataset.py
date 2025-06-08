@@ -80,17 +80,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 mode=("bilinear","nearest"),
                 padding_mode="border",
                 lazy=True),
-            mt.Rand3DElasticd(
-                keys=["image", "label"],
-                prob=0.50,
-                spatial_size=shape,
-                sigma_range=(0.5, 7.0),
-                magnitude_range=(0.1, 2.0),
-                rotate_range=(np.pi/18, np.pi/18, np.pi/18),    # ±10°
-                shear_range=(0.1, 0.1, 0.1),  # ±10%
-                scale_range=(0.1, 0.1, 0.1),  
-                mode=("bilinear", "nearest"),
-                padding_mode="border"),
             mt.RandGaussianSmoothd(
                 keys=["image"],
                 prob=0.30),

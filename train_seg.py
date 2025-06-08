@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
-from monai.losses import GeneralizedDiceFocalLoss
+from monai.losses import NACLLoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import Trainer, get_transforms, get_data_files
@@ -75,11 +75,9 @@ def training(model_params, train_params, output_dir, comments):
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    criterion = GeneralizedDiceFocalLoss(
-        include_background=True,
-        to_onehot_y=True,
-        softmax=True,
-        weight=torch.tensor([0.1] + [1.0] * 13, device=device))
+    criterion = NACLLoss(
+        classes=14,
+        dim=3)
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -136,6 +134,6 @@ if __name__ == "__main__":
     output_dir = "PseudolabelsAll-96x3"
     comments = ["HarmonicSeg - 2000 x2 Pseudolabels training",
         "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
-        "DiceCE, 16-sample rand crop + a lot of augmentations"]
+        "NACL?, 16-sample rand crop + a lot of augmentations"]
 
     training(model_params, train_params, output_dir, comments)
