@@ -45,7 +45,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=32,
+                num_samples=24,
                 lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 

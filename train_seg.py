@@ -127,6 +127,6 @@ if __name__ == "__main__":
 
     output_dir = "Pseudo-Aladdin-128x3"
     comments = ["HarmonicSeg - 50 Gound Truth set training", 
-        "DiceCE, 32-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
+        "DiceCE, 24-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
 
     training(model_params, train_params, output_dir, comments)
