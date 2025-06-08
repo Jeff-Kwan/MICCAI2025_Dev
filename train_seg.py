@@ -51,8 +51,8 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=80,
-        prefetch_factor=1,
+        num_workers=64,
+        prefetch_factor=2,
         pin_memory=True,
         persistent_workers=False)
     val_loader = DataLoader(
@@ -111,13 +111,13 @@ if __name__ == "__main__":
     train_params = {
         'epochs': 50,
         'batch_size': 1,
-        'aggregation': 4,
+        'aggregation': 2,
         'learning_rate': 1e-3,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (96, 96, 96),
         'norm_clip': (-325, 325, -1.0, 1.0),
-        'pixdim': (1.0, 1.0, 1.0),
+        'pixdim': (1.5, 1.5, 1.5),
         'compile': True,
         'autocast': True,
         'sw_batch_size': 64,
@@ -125,8 +125,9 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "Pseudo-Aladdin-128x3"
-    comments = ["HarmonicSeg - 50 Gound Truth set training", 
+    output_dir = "Pseudo-Aladdin-96x3"
+    comments = ["HarmonicSeg - 50 Gound Truth set training",
+        "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
         "DiceCE, 16-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
 
     training(model_params, train_params, output_dir, comments)
