@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
-from monai.losses import DiceCELoss
+from monai.losses import GeneralizedDiceFocalLoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import Trainer, get_transforms, get_data_files
@@ -59,28 +59,27 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=72,
-        prefetch_factor=2,
+        num_workers=80,
+        prefetch_factor=1,
         pin_memory=True,
-        persistent_workers=True)
+        persistent_workers=False)
     val_loader = DataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=25,
-        persistent_workers=True)
+        num_workers=32,
+        persistent_workers=False)
 
 
     # Training setup
     model = HarmonicSeg(model_params)
     optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
     scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-    criterion = DiceCELoss(
+    criterion = GeneralizedDiceFocalLoss(
         include_background=True,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.01] + [1.0] * 13, device=device),
-        label_smoothing=0.1)
+        weight=torch.tensor([0.1] + [1.0] * 13, device=device))
 
     # Compilation acceleration
     if train_params.get('compile', False):
