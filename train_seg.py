@@ -59,8 +59,8 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=64,
-        prefetch_factor=2,
+        num_workers=80,
+        prefetch_factor=1,
         pin_memory=True,
         persistent_workers=True)
     val_loader = DataLoader(
