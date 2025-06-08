@@ -51,14 +51,16 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=64,
+        num_workers=80,
+        prefetch_factor=1,
         pin_memory=True,
-        persistent_workers=True)
+        persistent_workers=False)
     val_loader = DataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=24)
+        num_workers=24,
+        persistent_workers=False)
 
 
     # Training setup
@@ -70,7 +72,7 @@ def training(model_params, train_params, output_dir, comments):
         to_onehot_y=True,
         softmax=True,
         weight=torch.tensor([0.02] + [1.0] * 13, device=device),
-        label_smoothing=0.05)
+        label_smoothing=0.1)
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -108,13 +110,13 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 100,
+        'epochs': 50,
         'batch_size': 1,
-        'aggregation': 8,
+        'aggregation': 4,
         'learning_rate': 1e-3,
-        'weight_decay': 1e-2,
+        'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (160, 160, 160),
+        'shape': (128, 128, 128),
         'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
@@ -123,7 +125,8 @@ if __name__ == "__main__":
         'sw_overlap': 0.1
     }
 
-    output_dir = "Pseudo-Aladdin-160x3"
-    comments = ["HarmonicSeg - 50 Gound Truth set training", "DiceCE, No data augmentation except rand crop"]
+    output_dir = "Pseudo-Aladdin-128x3"
+    comments = ["HarmonicSeg - 50 Gound Truth set training", 
+        "DiceCE, 16-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
 
     training(model_params, train_params, output_dir, comments)

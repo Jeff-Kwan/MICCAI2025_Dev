@@ -56,31 +56,32 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.RandSpatialCropd(
+            mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
+                num_samples=16,
                 lazy=True),
-            # mt.RandAffined(
-            #     keys=["image","label"],
-            #     prob=1.0,
-            #     spatial_size=shape,
-            #     rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-            #     scale_range=(0.1,0.1,0.1),                   # ±10%
-            #     mode=("bilinear","nearest"),
-            #     padding_mode="border",
-            #     lazy=True),
+            mt.RandAffined(
+                keys=["image","label"],
+                prob=1.0,
+                spatial_size=shape,
+                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
+                scale_range=(0.1,0.1,0.1),                   # ±10%
+                mode=("bilinear","nearest"),
+                padding_mode="border",
+                lazy=True),
             # mt.RandShiftIntensityd(
             #     keys=["image"],
             #     prob=0.30,
             #     offsets=0.20,),
-            # mt.RandGaussianNoised(
-            #     keys=["image"],
-            #     prob=0.20,
-            #     mean=0.0,
-            #     std=0.10),
-            # mt.RandGaussianSmoothd(
-            #     keys=["image"],
-            #     prob=0.20)
+            mt.RandGaussianNoised(
+                keys=["image"],
+                prob=0.30,
+                mean=0.0,
+                std=0.10),
+            mt.RandGaussianSmoothd(
+                keys=["image"],
+                prob=0.20)
         ]
     )
     val_transform = mt.Compose(
