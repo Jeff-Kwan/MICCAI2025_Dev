@@ -81,7 +81,18 @@ def get_transforms(shape, norm_clip, pixdim):
                 std=0.10),
             mt.RandGaussianSmoothd(
                 keys=["image"],
-                prob=0.20)
+                prob=0.40),
+            mt.RandBiasFieldd(
+                keys=["image"],
+                prob=0.30),
+            mt.RandCoarseDropoutd(
+                keys=["image"],
+                prob=0.5,
+                fill_value=(norm_clip[2], norm_clip[3]),
+                holes=1,
+                max_holes=4,
+                spatial_size=(24, 24, 24),
+                max_spatial_size=(48, 48, 48)),
         ]
     )
     val_transform = mt.Compose(

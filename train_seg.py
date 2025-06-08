@@ -4,15 +4,18 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader, Dataset
+from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
 from monai.losses import DiceFocalLoss
+from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import Trainer, get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 
 # For use of PersistentDataset
-torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
-                        np.ndarray, np.core.multiarray._reconstruct])
+torch.serialization.add_safe_globals([np.dtype, np.ndarray, np.core.multiarray._reconstruct, 
+    np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType, np.dtypes.UInt8DType,
+    np.dtypes.Float32DType, np.dtypes.Float64DType,
+    meta_tensor.MetaTensor, MetaKeys, SpaceKeys, TraceKeys])
 
 
 def training(model_params, train_params, output_dir, comments):

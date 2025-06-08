@@ -4,16 +4,18 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader, Dataset
+from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
 from monai.losses import DiceFocalLoss
+from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import Trainer, get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 
 # For use of PersistentDataset
-torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
-                        np.ndarray, np.core.multiarray._reconstruct])
-
+torch.serialization.add_safe_globals([np.dtype, np.ndarray, np.core.multiarray._reconstruct, 
+    np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType, np.dtypes.UInt8DType,
+    np.dtypes.Float32DType, np.dtypes.Float64DType,
+    meta_tensor.MetaTensor, MetaKeys, SpaceKeys, TraceKeys])
 
 def training(model_params, train_params, output_dir, comments, pretrained_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,7 +53,7 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=72,
+        num_workers=16,
         prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True)
@@ -59,7 +61,7 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=25,
+        num_workers=16,
         persistent_workers=True)
 
 
@@ -73,7 +75,7 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
         softmax=True,
         weight=torch.tensor([0.02] + [1.0] * 13, device=device))
 
-    # Load pretrained weights if provided
+    # Load pretrained weights
     print(f'Loading pretrained weights from {pretrained_path}')
     raw = torch.load(pretrained_path)
     state_dict = raw.get('state_dict', raw)
@@ -81,11 +83,8 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
     clean_state_dict = {
         (k[len("_orig_mod."): ] if k.startswith("_orig_mod.") else k): v
         for k, v in state_dict.items()}
-    # remove self.out_conv - different channels
-    if 'out_conv.weight' in clean_state_dict:
-        del clean_state_dict['out_conv.weight']
-    if 'out_conv.bias' in clean_state_dict:
-        del clean_state_dict['out_conv.bias']
+    # if key contains self.out_conv, remove it (different output channels)
+    clean_state_dict = {k: v for k, v in clean_state_dict.items() if 'out_conv' not in k}
     model.load_state_dict(clean_state_dict, strict=False)
 
     # Compilation acceleration
@@ -125,10 +124,10 @@ if __name__ == "__main__":
     pretrained_path = "output/2025-06-08/09-04-MIM-GT50-96x3/model.pth"
 
     train_params = {
-        'epochs': 50,
+        'epochs': 10,
         'batch_size': 1,
-        'aggregation': 4,
-        'learning_rate': 2e-4,
+        'aggregation': 2,
+        'learning_rate': 5e-4,
         'weight_decay': 1e-3,
         'num_classes': 14,
         'shape': (96, 96, 96),
@@ -141,7 +140,7 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "Pseudo-Aladdin-96x3"
+    output_dir = "Transfer-GT50-96x3"
     comments = ["HarmonicSeg - 50 GT MIM -> Segmentation 20 epochs",
         "(96, 96, 96) shape, 1.5mm pixdim ", 
         "DiceFocal"]
