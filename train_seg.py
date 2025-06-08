@@ -79,7 +79,7 @@ def training(model_params, train_params, output_dir, comments):
         torch.backends.cudnn.benchmark = True
         torch.backends.cudnn.allow_tf32 = True
         torch.set_float32_matmul_precision('medium')
-        # model = torch.compile(model)
+        model = torch.compile(model)
 
     # Trainer
     trainer = Trainer(model, optimizer, criterion, scheduler, 
