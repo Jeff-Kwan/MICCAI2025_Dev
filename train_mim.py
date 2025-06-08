@@ -50,7 +50,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=32,
+        num_workers=16,
         prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True)
@@ -58,7 +58,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=25,
+        num_workers=8,
         persistent_workers=True)
 
 
@@ -109,10 +109,10 @@ if __name__ == "__main__":
         'aggregation': 2,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
-        'num_classes': 14,
-        'shape': (96, 96, 96),
+        'num_classes': 1,
+        'shape': (128, 128, 128),
         'norm_clip': (-325, 325, -1.0, 1.0),
-        'pixdim': (1.5, 1.5, 1.5),
+        'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
         'autocast': True,
         'sw_batch_size': 64,
