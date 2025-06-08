@@ -28,8 +28,7 @@ class MapLabelsToZeroOutsideRange(MapTransform):
 def get_transforms(shape, norm_clip, pixdim):
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"]),
-            mt.EnsureChannelFirstd(keys=["image", "label"]),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
             mt.Spacingd(
                 keys=["image", "label"],
@@ -38,16 +37,6 @@ def get_transforms(shape, norm_clip, pixdim):
                 lazy=True),
             # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
             #                     allow_smaller=True, lazy=True),
-            mt.RandSpatialCropSamplesd(
-                keys=["image", "label"], 
-                roi_size=shape,
-                num_samples=16,
-                lazy=True),
-            mt.SpatialPadd(
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
                 a_min=norm_clip[0],
@@ -58,6 +47,16 @@ def get_transforms(shape, norm_clip, pixdim):
             MapLabelsToZeroOutsideRange(
                 keys=["label"],
                 valid_labels=list(range(14))),  # Valid labels: 0 through 13
+            mt.RandSpatialCropSamplesd(
+                keys=["image", "label"], 
+                roi_size=shape,
+                num_samples=16,
+                lazy=True),
+            mt.SpatialPadd(
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.RandFlipd(
                 keys=["image", "label"],
                 prob=0.50,
