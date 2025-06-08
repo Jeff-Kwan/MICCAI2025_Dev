@@ -119,7 +119,7 @@ if __name__ == "__main__":
         'norm_clip': (-325, 325, -1.0, 1.0),
         'pixdim': (1.0, 1.0, 1.0),
         'compile': True,
-        'autocast': False,
+        'autocast': True,
         'sw_batch_size': 64,
         'sw_overlap': 0.1
     }
