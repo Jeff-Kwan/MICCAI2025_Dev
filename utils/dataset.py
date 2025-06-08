@@ -40,7 +40,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=24,
+                num_samples=16,
                 lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],

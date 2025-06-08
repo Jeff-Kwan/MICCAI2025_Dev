@@ -51,7 +51,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=80,
+        num_workers=96,
         prefetch_factor=1,
         pin_memory=True,
         persistent_workers=False)
@@ -127,6 +127,6 @@ if __name__ == "__main__":
 
     output_dir = "Pseudo-Aladdin-128x3"
     comments = ["HarmonicSeg - 50 Gound Truth set training", 
-        "DiceCE, 24-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
+        "DiceCE, 16-sample rand crop + rand affine + 0.3 0.1std noise + 0.2 smooth"]
 
     training(model_params, train_params, output_dir, comments)
