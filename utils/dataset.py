@@ -57,15 +57,29 @@ def get_transforms(shape, norm_clip, pixdim):
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
-            mt.RandFlipd(
-                keys=["image", "label"],
-                prob=0.50,
-                lazy=True),
-            mt.RandRotate90d(
-                keys=["image", "label"],
-                prob=0.50,
-                spatial_axes=(0, 1),  # Rotate in XY plane
-                lazy=True),
+            mt.OneOf(
+                transforms=[
+                    mt.Identityd(keys=["image", "label"]),
+                    mt.RandFlipd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        lazy=True),
+                    mt.RandRotate90d(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        spatial_axes=(0, 1),  # Rotate in XY plane
+                        lazy=True),
+                    mt.Rand3DElasticd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        sigma_range=(0.5, 5.0),
+                        magnitude_range=(0.5, 5.0),
+                        spatial_size=shape,
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
+                        scale_range=(0.2, 0.2, 0.2),                 # ±10%
+                        shear_range=(0.1, 0.1, 0.1),                # ±10%
+                        mode=("bilinear", "nearest"))],
+                weights=[1, 1, 1, 1], lazy=True),
             mt.RandAffined(
                 keys=["image","label"],
                 prob=1.0,
@@ -76,23 +90,27 @@ def get_transforms(shape, norm_clip, pixdim):
                 mode=("bilinear","nearest"),
                 padding_mode="border",
                 lazy=True),
-            mt.RandGaussianSmoothd(
-                keys=["image"],
-                prob=0.30),
-            mt.RandGaussianNoised(
-                keys=["image"],
-                prob=0.30,
-                mean=0.0,
-                std=0.10),
-            mt.RandBiasFieldd(
-                keys=["image"],
-                prob=0.30),
+            mt.OneOf(
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandGaussianSmoothd(
+                        keys=["image"],
+                        prob=1.0),
+                    mt.RandGaussianNoised(
+                        keys=["image"],
+                        prob=1.0,
+                        mean=0.0,
+                        std=0.10),
+                    mt.RandBiasFieldd(
+                        keys=["image"],
+                        prob=1.0)],
+                weights=[1, 1, 1, 1]),
             mt.RandCoarseDropoutd(
                 keys=["image"],
                 prob=0.5,
                 fill_value=(norm_clip[2], norm_clip[3]),
                 holes=2,
-                max_holes=8,
+                max_holes=6,
                 spatial_size=(32, 32, 32),
                 max_spatial_size=(64, 64, 64)),
             mt.EnsureTyped(
