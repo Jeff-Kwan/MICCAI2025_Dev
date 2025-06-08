@@ -31,14 +31,14 @@ def training(model_params, train_params, output_dir, comments):
                                 train_params['pixdim'])
 
     # Persistent dataset needs list of file paths?
-    train_dataset = PersistentDataset(
-        data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr"),
-        transform=train_transform,
-        cache_dir="data/cache/gt_label")
-    # train_dataset = Dataset(
-    #     data=get_mim_data_files(
-    #         images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr"),
-    #     transform=train_transform)
+    # train_dataset = PersistentDataset(
+    #     data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr"),
+    #     transform=train_transform,
+    #     cache_dir="data/cache/gt_label")
+    train_dataset = Dataset(
+        data=get_mim_data_files(
+            images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr"),
+        transform=train_transform)
     val_dataset = PersistentDataset(
         data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"),
         transform=val_transform,
@@ -48,7 +48,7 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=16,
+        num_workers=32,
         prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True)
@@ -56,7 +56,7 @@ def training(model_params, train_params, output_dir, comments):
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=16,
+        num_workers=32,
         persistent_workers=True)
 
 
@@ -103,8 +103,8 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 50,
-        'batch_size': 1,
-        'aggregation': 2,
+        'batch_size': 2,
+        'aggregation': 4,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 1,
@@ -118,8 +118,8 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "MIM-GT50-96x3"
-    comments = ["HarmonicSeg - 50 Gound Truth Masked Image Modelling",
+    output_dir = "MIM-2000-96x3"
+    comments = ["HarmonicSeg - 2000 img Masked Image Modelling",
         "(96, 96, 96) shape, 1.5mm pixdim ", 
         "MSE, 16-sample rand crop + affine, bias field, noise, smooth, small med large dropouts"]
 
