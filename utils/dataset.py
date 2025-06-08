@@ -196,34 +196,8 @@ def get_mim_transforms(shape, norm_clip, pixdim):
                 max_spatial_size=(32, 32, 32)),
         ]
     )
-    val_transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["image"],
-                pixdim=pixdim,
-                mode="bilinear",
-                lazy=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"], 
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True),
-            mt.EnsureTyped(
-                keys=["image"], 
-                dtype=[torch.float32],
-                track_meta=False),
-            ### ~~~ Split into two image / label from here on ~~~ ###
-            mt.CopyItemsd(      # Masked image modelling copy whole image
-                keys=["image"],
-                times=1,
-                names=["label"]),
-        ]
-    )
-    return train_transform, val_transform
+    # Same transform, test performance on different datasets for generalization
+    return train_transform, train_transform     
 
 def get_data_files(
     images_dir: str,
