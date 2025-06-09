@@ -110,6 +110,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 output_ext=".nii.gz",
                 separate_folder=False,
                 output_dtype=torch.float32,
+                print_log=False,
             ),
             mt.SaveImaged(
                 keys=["label"],
@@ -118,6 +119,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 output_ext=".nii.gz",
                 separate_folder=False,
                 output_dtype=torch.uint8,
+                print_log=False,
             ),
         ]
     )
@@ -168,6 +170,7 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
                 output_ext=".nii.gz",
                 separate_folder=False,
                 output_dtype=torch.uint8,
+                print_log=False,
             ),
         ]
     )
