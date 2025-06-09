@@ -70,7 +70,7 @@ def get_transforms(shape, num_crops, device):
                     mt.RandBiasFieldd(keys='image', prob=1.0),
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
                     mt.RandGaussianSharpend(keys='image', prob=1.0)],
-                weights=[3, 1, 1, 1, 1, 1, 1]),
+                weights=[2, 1, 1, 1, 1, 1]),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
