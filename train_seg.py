@@ -42,11 +42,7 @@ def training(model_params, train_params, output_dir, comments):
         data=# Combine both pseudo-label datasets
             get_data_files(
             images_dir="data/preprocessed/train_pseudo/images",
-            labels_dir="data/preprocessed/train_pseudo/aladdin5")\
-            +\
-            get_data_files(
-            images_dir="data/preprocessed/train_pseudo/images",
-            labels_dir="data/preprocessed/train_pseudo/blackbean"),
+            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
         transform=train_transform)
     val_dataset = PersistentDataset(
         data = get_data_files(
@@ -135,7 +131,7 @@ if __name__ == "__main__":
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll-128x3"
-    comments = ["HarmonicSeg SMALL - 2000 x2 Pseudolabels training",
+    comments = ["HarmonicSeg SMALL - 2000 Aladdin Pseudolabels training",
         "(128, 128, 128) shape", 
         "DiceCE, 8-sample rand crop + a lot of augmentations"]
 
