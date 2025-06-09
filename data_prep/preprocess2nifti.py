@@ -107,6 +107,7 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
                 b_max=norm_clip[3],
                 clip=True,
             ),
+            mt.NormalizeIntensityd(keys=["image"]),
             MapLabelsToZeroOutsideRange(
                 keys=["label"],
                 valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
@@ -145,14 +146,22 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
 
 
 if __name__ == "__main__":
-    images_dir = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
-    labels_dir = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"
-    out_image_dir = "data/preprocessed/val/images"
-    out_label_dir = "data/preprocessed/val/labels"
     pixdim = (0.8, 0.8, 1.0)
     norm_clip = (-1024, 1024, -1024, 1024)
+    dir_list = [
+        (
+            "data/FLARE-Task2-LaptopSeg/training/Training-Public-Images",
+            "data/FLARE-Task2-LaptopSeg/training/Training-Public-Labels",
+            "data/preprocessed/train/images",
+            "data/preprocessed/train/labels",
+        ),
+        (
+            "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
+            "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
+            "data/preprocessed/val/images",
+            "data/preprocessed/val/labels",
+        ),
+    ]
 
-    main(images_dir, labels_dir,
-        out_image_dir, out_label_dir,
-        pixdim, norm_clip
-    )
+    for dirs in dir_list:
+        main(*dirs, pixdim, norm_clip)
