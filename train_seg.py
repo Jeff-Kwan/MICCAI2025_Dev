@@ -116,7 +116,7 @@ def training(model_params, train_params, output_dir, comments):
 
 
 if __name__ == "__main__":
-    model_params = json.load(open("configs/model/base.json"))
+    model_params = json.load(open("configs/model/small.json"))
 
     train_params = {
         'epochs': 50,
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "PseudolabelsAll-96x3"
-    comments = ["HarmonicSeg - 2000 x2 Pseudolabels training",
+    output_dir = "PseudolabelsAll-128x3"
+    comments = ["HarmonicSeg SMALL - 2000 x2 Pseudolabels training",
         "(128, 128, 128) shape", 
         "DiceCE, 8-sample rand crop + a lot of augmentations"]
 
