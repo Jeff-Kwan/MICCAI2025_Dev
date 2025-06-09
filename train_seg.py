@@ -75,9 +75,9 @@ def training(model_params, train_params, output_dir, comments):
         to_onehot_y=True, 
         softmax=True, 
         weight=torch.tensor([0.01] + [1.0] * 13, device=device),
-        label_smoothing=0.2,
-        lambda_ce=0.4,
-        lambda_dice=0.6,)
+        label_smoothing=0.1,
+        lambda_ce=0.34,
+        lambda_dice=0.66,)
 
     # Compilation acceleration
     if train_params.get('compile', False):
@@ -112,10 +112,10 @@ def training(model_params, train_params, output_dir, comments):
 
 
 if __name__ == "__main__":
-    model_params = json.load(open("configs/model/small.json"))
+    model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
-        'epochs': 50,
+        'epochs': 100,
         'batch_size': 1,
         'aggregation': 8,
         'learning_rate': 1e-3,
