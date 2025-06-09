@@ -32,15 +32,18 @@ def get_data_files(images_dir, extension = ".nii.gz"):
         raise RuntimeError(f"No '{extension}' files found in {images_dir!r}")
 
     # Build result list
-    return [str(images_dir / name) for name in image_names]
+    return [
+        {"image": str(images_dir / name)} for name in image_names
+    ]
 
 
 def get_thresholds():
     # Load transforms
     transform = mt.Compose(
         [
-            mt.LoadImage(),
-            mt.EnsureType(
+            mt.LoadImaged(keys=["image"]),
+            mt.EnsureTyped(
+                keys=["image"],
                 dtype=[torch.float32],
                 track_meta=False)
         ]
