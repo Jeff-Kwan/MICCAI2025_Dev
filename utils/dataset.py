@@ -17,7 +17,7 @@ def get_transforms(shape, num_crops, device):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                allow_smaller=False,
+                allow_smaller=True,
                 lazy=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
@@ -103,7 +103,7 @@ def get_transforms(shape, num_crops, device):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                allow_smaller=False,
+                allow_smaller=True,
                 lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],
