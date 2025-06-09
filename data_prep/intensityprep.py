@@ -61,8 +61,8 @@ def get_thresholds():
 
     td = TDigest()
 
-    for img in tqdm(dataloader, desc="Threshold"):
-        td.update(img.numpy().ravel())
+    for data in tqdm(dataloader, desc="Threshold"):
+        td.update(data["image"].numpy().ravel())
 
     p_low  = td.percentile(0.5)   # 0.5th percentile
     p_high = td.percentile(99.5)  # 99.5th percentile
