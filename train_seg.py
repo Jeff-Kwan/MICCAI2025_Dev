@@ -32,19 +32,19 @@ def training(model_params, train_params, output_dir, comments):
                                 device)
 
     # Persistent dataset needs list of file paths?
-    # train_dataset = PersistentDataset(
-    #     data = get_data_files(
-    #         images_dir="data/preprocessed/train_gt/images",
-    #         labels_dir="data/preprocessed/train_gt/labels"),
-    #     transform=train_transform,
-    #     cache_dir="data/cache/gt_label")
     train_dataset = PersistentDataset(
-        data=# Combine both pseudo-label datasets
-            get_data_files(
-            images_dir="data/preprocessed/train_pseudo/images",
-            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+        data = get_data_files(
+            images_dir="data/preprocessed/train_gt/images",
+            labels_dir="data/preprocessed/train_gt/labels"),
         transform=train_transform,
-        cache_dir="data/cache/pseudo_label")
+        cache_dir="data/cache/gt_label")
+    # train_dataset = PersistentDataset(
+    #     data=# Combine both pseudo-label datasets
+    #         get_data_files(
+    #         images_dir="data/preprocessed/train_pseudo/images",
+    #         labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+    #     transform=train_transform,
+    #     cache_dir="data/cache/pseudo_label")
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/preprocessed/val/images",
