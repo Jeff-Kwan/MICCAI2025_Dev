@@ -40,7 +40,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=16,
+                num_samples=8,
                 lazy=True),
             mt.ScaleIntensityRanged(
                 keys=["image"], 
@@ -65,9 +65,8 @@ def get_transforms(shape, norm_clip, pixdim):
                 keys=["image","label"],
                 prob=1.0,
                 spatial_size=shape,
-                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                scale_range=(0.2, 0.2, 0.2),                 # ±10%
-                shear_range=(0.1, 0.1, 0.1),                # ±10%
+                rotate_range=(np.pi/6, np.pi/6, np.pi/6),
+                scale_range=(0.1, 0.1, 0.1),
                 mode=("bilinear","nearest"),
                 padding_mode="border",
                 lazy=True),
@@ -77,6 +76,7 @@ def get_transforms(shape, norm_clip, pixdim):
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
+                        spatial_axes=(0, 1),  # Flip in XY plane
                         lazy=True),
                     mt.RandRotate90d(
                         keys=["image", "label"],
@@ -86,14 +86,15 @@ def get_transforms(shape, norm_clip, pixdim):
                     mt.Rand3DElasticd(
                         keys=["image", "label"],
                         prob=1.0,
-                        sigma_range=(0.5, 5.0),
-                        magnitude_range=(0.5, 5.0),
+                        sigma_range=(2.0, 5.0),
+                        magnitude_range=(1.0, 3.0),
                         spatial_size=shape,
-                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                        scale_range=(0.2, 0.2, 0.2),                 # ±10%
-                        shear_range=(0.1, 0.1, 0.1),                # ±10%
-                        mode=("bilinear", "nearest"))],
-                weights=[1, 1, 1, 1], lazy=True),
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
+                        scale_range=(0.1, 0.1, 0.1),                # ±10%
+                        shear_range=(0.0, 0.0, 0.0),               # no shear
+                        mode=("bilinear", "nearest")
+                    )],
+                weights=[2, 1, 1, 1], lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -101,8 +102,9 @@ def get_transforms(shape, norm_clip, pixdim):
                     mt.RandGaussianNoised(keys='image', prob=1.0),
                     mt.RandBiasFieldd(keys='image', prob=1.0),
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
-                    mt.RandBiasFieldd(keys='image', prob=1.0)],
-                weights=[1, 1, 1, 1, 1, 1]),
+                    mt.RandGaussianSharpend(keys='image', prob=1.0),
+                    mt.RandHistogramShiftd(keys='image', prob=1.0)],
+                weights=[3, 1, 1, 1, 1, 1, 1]),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -111,13 +113,13 @@ def get_transforms(shape, norm_clip, pixdim):
                         prob=1.0,
                         fill_value=(norm_clip[2], norm_clip[3]),
                         holes=2,
-                        max_holes=6,
-                        spatial_size=(32, 32, 32),
-                        max_spatial_size=(64, 64, 64)),
+                        max_holes=4,
+                        spatial_size=(24, 24, 24),
+                        max_spatial_size=(48, 48, 48)),
                     mt.RandCoarseShuffled(
                         keys=["image"],
                         prob=1.0,
-                        holes=4, max_holes=16,
+                        holes=4, max_holes=8,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
                 weights=[1, 1, 1]),

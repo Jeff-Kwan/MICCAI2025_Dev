@@ -124,7 +124,7 @@ if __name__ == "__main__":
         'batch_size': 1,
         'aggregation': 8,
         'learning_rate': 1e-3,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (96, 96, 96),
         'norm_clip': (-325, 325, -1.0, 1.0),
@@ -132,13 +132,13 @@ if __name__ == "__main__":
         'compile': True,
         'autocast': True,
         'sw_batch_size': 64,
-        'sw_overlap': 0.1
+        'sw_overlap': 1/8
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll-96x3"
     comments = ["HarmonicSeg - 2000 x2 Pseudolabels training",
         "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
-        "DiceCE, 16-sample rand crop + a lot of augmentations"]
+        "DiceCE, 8-sample rand crop + a lot of augmentations"]
 
     training(model_params, train_params, output_dir, comments)
