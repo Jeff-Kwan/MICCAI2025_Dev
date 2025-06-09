@@ -1,31 +1,9 @@
 import os
 from pathlib import Path
 from tqdm import tqdm
-import numpy as np
 import torch
 import monai.transforms as mt
 from monai.data import Dataset, ThreadDataLoader
-import multiprocessing as mp
-
-from monai.transforms import MapTransform
-from typing import Hashable, Sequence, Union
-class MapLabelsToZeroOutsideRange(MapTransform):
-    def __init__(
-        self,
-        keys: Union[Sequence[Hashable], Hashable],
-        valid_labels: Sequence[int],
-        allow_missing_keys: bool = False,
-    ):
-        super().__init__(keys, allow_missing_keys)
-        self.valid_labels = set(valid_labels)
-
-    def __call__(self, data):
-        for key in self.keys:
-            # Create a boolean mask where labels are not in the valid set
-            invalid_mask = ~np.isin(data[key], list(self.valid_labels))
-            # Set invalid labels to 0
-            data[key][invalid_mask] = 0
-        return data
 
 
 def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
@@ -99,9 +77,23 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 dtype=[torch.float32, torch.uint8],
                 track_meta=True,
             ),
-            MapLabelsToZeroOutsideRange(
+            mt.ThresholdIntensityd(
                 keys=["label"],
-                valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
+                above=True,
+                threshold=14,   # 14 classes
+                cval=0,
+            ),
+            mt.ThresholdIntensityd( # upper bound 99.5%
+                keys=["image"],
+                above=True,
+                threshold=295.0,
+                cval=295.0,
+            ),
+            mt.ThresholdIntensityd( # lower bound 0.5%
+                keys=["image"],
+                above=False,
+                threshold=-974.0, 
+                cval=-974.0,
             ),
             mt.SaveImaged(
                 keys=["image"],
@@ -129,7 +121,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=64,
+        num_workers=32,
     )
 
 
@@ -159,9 +151,11 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
                 dtype=[torch.uint8],
                 track_meta=True,
             ),
-            MapLabelsToZeroOutsideRange(
+            mt.ThresholdIntensityd(
                 keys=["label"],
-                valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
+                above=True,
+                threshold=14,   # 14 classes
+                cval=0,
             ),
             mt.SaveImaged(
                 keys=["label"],
@@ -180,7 +174,7 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=64,
+        num_workers=32,
     )
 
 
