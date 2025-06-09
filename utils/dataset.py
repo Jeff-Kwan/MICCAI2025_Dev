@@ -14,11 +14,6 @@ def get_transforms(shape, num_crops, device):
                 dtype=[torch.float32, torch.long],
                 device=device,
                 track_meta=False),
-            mt.CropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                allow_smaller=True,
-                lazy=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -100,16 +95,15 @@ def get_transforms(shape, num_crops, device):
                 dtype=[torch.float32, torch.long],
                 device=device,
                 track_meta=False),
-            mt.CropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                allow_smaller=True,
-                lazy=True),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
+            mt.CenterSpatialCrop(   # Hardcoded max size just in case
+                keys=["image", "label"],
+                roi_size=(512, 512, 512),
+                lazy=True)
         ]
     )
     return train_transform, val_transform
