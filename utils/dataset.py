@@ -12,7 +12,7 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                device=device,
+                # device=device,
                 track_meta=False),
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
@@ -93,7 +93,7 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                device=device,
+                # device=device,
                 track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
@@ -112,7 +112,7 @@ def get_mim_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
-                device=device,
+                # device=device,
                 track_meta=False),
             mt.CropForegroundd(
                 keys=["image"],
