@@ -76,7 +76,7 @@ def get_transforms(shape, norm_clip, pixdim):
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
-                        spatial_axes=(0, 1),  # Flip in XY plane
+                        spatial_axis=(0, 1),  # Flip in XY plane
                         lazy=True),
                     mt.RandRotate90d(
                         keys=["image", "label"],
