@@ -9,16 +9,16 @@ def get_transforms(shape, num_crops, device):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                # device=device,
-                track_meta=False),
-            mt.RandSpatialCropSamplesd(
+            mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                device=device,
+                track_meta=False),
             mt.RandAffined(     # Small affine perturbation
                 keys=["image","label"],
                 prob=1.0,
@@ -93,7 +93,7 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                # device=device,
+                device=device,
                 track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
@@ -112,7 +112,7 @@ def get_mim_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
-                # device=device,
+                device=device,
                 track_meta=False),
             mt.CropForegroundd(
                 keys=["image"],
