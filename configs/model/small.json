@@ -1,0 +1,11 @@
+{
+"in_channels":  16,
+"out_channels": 14,
+"channels":     [32, 64, 128],
+"convs":        [32, 32, 32],
+"attns":        [[128, 4], [128, 4], [128, 4]],
+"mlps":         [64, 128, 256],
+"layers":       [2, 2, 2],
+"dropout":      0.1,
+"stochastic_depth": 0.1
+}
