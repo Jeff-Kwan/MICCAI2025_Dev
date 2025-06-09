@@ -85,3 +85,12 @@ if __name__ == "__main__":
     )
     print(f"Mean of clipped intensities = {mean_clip:.4f}")
     print(f"Std  of clipped intensities = {std_clip:.4f}")
+
+
+'''
+On spatially preprocessed data, 100000 bins
+0.5th percentile = -3023.9445
+99.5th percentile = 497.6330
+Mean of clipped intensities = -582.4940
+Std  of clipped intensities = 561.3401
+'''
