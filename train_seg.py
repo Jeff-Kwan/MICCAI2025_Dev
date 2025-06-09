@@ -32,19 +32,19 @@ def training(model_params, train_params, output_dir, comments):
                                 device)
 
     # Persistent dataset needs list of file paths?
-    train_dataset = PersistentDataset(
-        data = get_data_files(
-            images_dir="data/preprocessed/train_gt/images",
-            labels_dir="data/preprocessed/train_gt/labels"),
-        transform=train_transform,
-        cache_dir="data/cache/gt_label")
     # train_dataset = PersistentDataset(
-    #     data=# Combine both pseudo-label datasets
-    #         get_data_files(
-    #         images_dir="data/preprocessed/train_pseudo/images",
-    #         labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+    #     data = get_data_files(
+    #         images_dir="data/preprocessed/train_gt/images",
+    #         labels_dir="data/preprocessed/train_gt/labels"),
     #     transform=train_transform,
-    #     cache_dir="data/cache/pseudo_label")
+    #     cache_dir="data/cache/gt_label")
+    train_dataset = PersistentDataset(
+        data=# Combine both pseudo-label datasets
+            get_data_files(
+            images_dir="data/preprocessed/train_pseudo/images",
+            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+        transform=train_transform,
+        cache_dir="data/cache/pseudo_label")
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/preprocessed/val/images",
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll-128x3"
-    comments = ["HarmonicSeg SMALL - 2000 Aladdin Pseudolabels training",
+    comments = ["HarmonicSeg Base - 2000 Aladdin Pseudolabels training",
         "(128, 128, 128) shape", 
         "DiceCE, 8-sample rand crop + a lot of augmentations"]
 

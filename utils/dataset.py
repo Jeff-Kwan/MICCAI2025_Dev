@@ -13,6 +13,11 @@ def get_transforms(shape, num_crops, device):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.CropForegroundd(  # Crop foreground from label
+                keys=["image", "label"],
+                source_key="label",
+                margin=8,
+                allow_smaller=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -98,6 +103,11 @@ def get_transforms(shape, num_crops, device):
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
+            mt.CropForegroundd(  # Crop foreground from label
+                keys=["image", "label"],
+                source_key="label",
+                margin=8,
+                allow_smaller=False),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
