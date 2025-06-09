@@ -6,4 +6,4 @@ nibabel
 tqdm
 monai
 scipy
-tdigest
+matplotlib
