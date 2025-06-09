@@ -38,12 +38,13 @@ def training(model_params, train_params, output_dir, comments):
     #         labels_dir="data/preprocessed/train_gt/labels"),
     #     transform=train_transform,
     #     cache_dir="data/cache/gt_label")
-    train_dataset = Dataset(
+    train_dataset = PersistentDataset(
         data=# Combine both pseudo-label datasets
             get_data_files(
             images_dir="data/preprocessed/train_pseudo/images",
             labels_dir="data/preprocessed/train_pseudo/aladdin5"),
-        transform=train_transform)
+        transform=train_transform,
+        cache_dir="data/cache/pseudo_label")
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/preprocessed/val/images",
@@ -55,14 +56,14 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=32,
+        num_workers=24,
         pin_memory=True,
         persistent_workers=True)
     val_loader = ThreadDataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=32,
+        num_workers=24,
         persistent_workers=False)
 
 
@@ -116,8 +117,8 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 100,
-        'batch_size': 1,
-        'aggregation': 8,
+        'batch_size': 2,
+        'aggregation': 4,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
@@ -125,7 +126,7 @@ if __name__ == "__main__":
         'num_crops': 8,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 64,
+        'sw_batch_size': 16,
         'sw_overlap': 1/8
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
