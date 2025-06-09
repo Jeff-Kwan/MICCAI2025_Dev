@@ -126,7 +126,7 @@ if __name__ == "__main__":
         'num_crops': 8,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 8,
+        'sw_batch_size': 32,
         'sw_overlap': 1/8
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
