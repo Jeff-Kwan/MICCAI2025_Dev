@@ -119,7 +119,7 @@ if __name__ == "__main__":
         'epochs': 100,
         'batch_size': 2,
         'aggregation': 4,
-        'learning_rate': 2e-4,
+        'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (128, 128, 128),
