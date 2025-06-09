@@ -77,7 +77,7 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
         for name in image_names
     ]
 
-def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip):
+def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs
     os.makedirs(out_image_dir, exist_ok=True)
     os.makedirs(out_label_dir, exist_ok=True)
@@ -99,15 +99,6 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
                 dtype=[torch.float32, torch.uint8],
                 track_meta=True,
             ),
-            mt.ScaleIntensityRanged(
-                keys=["image"],
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True,
-            ),
-            mt.NormalizeIntensityd(keys=["image"]),
             MapLabelsToZeroOutsideRange(
                 keys=["label"],
                 valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
@@ -145,15 +136,64 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
         pass
 
 
+def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
+    # create output dirs
+    os.makedirs(out_label_dir, exist_ok=True)
+
+    # define the validation transform
+    transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["label"], ensure_channel_first=True),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.SqueezeDimd(keys=["label"],dim=0),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode=("nearest"),
+                lazy=True,
+            ),
+            mt.EnsureTyped(
+                keys=["label"],
+                dtype=[torch.uint8],
+                track_meta=True,
+            ),
+            MapLabelsToZeroOutsideRange(
+                keys=["label"],
+                valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
+            ),
+            mt.SaveImaged(
+                keys=["label"],
+                output_dir=out_label_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.uint8,
+            ),
+        ]
+    )
+
+    # build the MONAI dataset
+    dataset = Dataset(data=get_data_files(images_dir, labels_dir), transform=transform)
+    dataloader = ThreadDataLoader(
+        dataset,
+        batch_size=1,
+        num_workers=mp.cpu_count(),
+    )
+
+
+    # iterate, transform, and save
+    for batch in tqdm(dataloader, desc="Processing images"):
+        pass
+
+
 if __name__ == "__main__":
     pixdim = (0.8, 0.8, 1.0)
-    norm_clip = (-1024, 1024, -1024, 1024)
     dir_list = [
         (
-            "data/FLARE-Task2-LaptopSeg/training/Training-Public-Images",
-            "data/FLARE-Task2-LaptopSeg/training/Training-Public-Labels",
-            "data/preprocessed/train/images",
-            "data/preprocessed/train/labels",
+            "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+            "data/preprocessed/train_gt/images",
+            "data/preprocessed/train_gt/labels",
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
@@ -161,7 +201,20 @@ if __name__ == "__main__":
             "data/preprocessed/val/images",
             "data/preprocessed/val/labels",
         ),
+        (
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+            "data/preprocessed/train_pseudo/images",
+            "data/preprocessed/train_pseudo/aladdin5",
+        ),
     ]
 
     for dirs in dir_list:
-        main(*dirs, pixdim, norm_clip)
+        process_dataset(*dirs, pixdim)
+
+    process_labels(*(
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+            "data/preprocessed/train_pseudo/images",
+            "data/preprocessed/train_pseudo/blackbean",
+        ), dirs[3], pixdim)
