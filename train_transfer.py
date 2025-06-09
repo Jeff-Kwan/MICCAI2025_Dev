@@ -31,21 +31,26 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
                                 device)
 
     # Persistent dataset needs list of file paths?
-    train_dataset = PersistentDataset(
-        data = get_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"),
-        transform=train_transform,
-        cache_dir="data/cache/gt_label")
-    # train_dataset = Dataset(
-    #     data=get_data_files(
-    #         images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-    #         labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"),
-    #     transform=train_transform)
+    # train_dataset = PersistentDataset(
+    #     data = get_data_files(
+    #         images_dir="data/preprocessed/train_gt/images",
+    #         labels_dir="data/preprocessed/train_gt/labels"),
+    #     transform=train_transform,
+    #     cache_dir="data/cache/gt_label")
+    train_dataset = Dataset(
+        data=# Combine both pseudo-label datasets
+            get_data_files(
+            images_dir="data/preprocessed/train_pseudo/images",
+            labels_dir="data/preprocessed/train_pseudo/aladdin5")\
+            +\
+            get_data_files(
+            images_dir="data/preprocessed/train_pseudo/images",
+            labels_dir="data/preprocessed/train_pseudo/blackbean"),
+        transform=train_transform)
     val_dataset = PersistentDataset(
         data = get_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-            labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"),
+            images_dir="data/preprocessed/val/images",
+            labels_dir="data/preprocessed/val/labels"),
         transform=val_transform,
         cache_dir="data/cache/val")
 

@@ -31,18 +31,7 @@ def training(model_params, train_params, output_dir, comments):
                                 device)
 
     # Persistent dataset needs list of file paths?
-    # train_dataset = PersistentDataset(
-    #     data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr"),
-    #     transform=train_transform,
-    #     cache_dir="data/cache/gt_label")
-    train_dataset = Dataset(
-        data=get_mim_data_files(
-            images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr"),
-        transform=train_transform)
-    val_dataset = PersistentDataset(
-        data = get_mim_data_files(images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"),
-        transform=val_transform,
-        cache_dir="data/cache/val")
+
 
     train_loader = ThreadDataLoader(
         train_dataset,

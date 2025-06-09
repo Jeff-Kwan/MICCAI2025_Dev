@@ -14,11 +14,6 @@ def get_transforms(shape, num_crops, device):
                 dtype=[torch.float32, torch.long],
                 # device=device,
                 track_meta=False),
-            mt.SpatialPadd(
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -58,6 +53,11 @@ def get_transforms(shape, num_crops, device):
                         mode=("bilinear", "nearest")
                     )],
                 weights=[2, 1, 1, 1], lazy=True),
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -114,15 +114,13 @@ def get_mim_transforms(shape, num_crops, device):
                 dtype=[torch.float32],
                 # device=device,
                 track_meta=False),
+            mt.CropForegroundd(
+                keys=["image"],
+                source_key="label"),
             mt.RandSpatialCropSamplesd(
                 keys=["image"], 
                 roi_size=shape,
                 num_samples=num_crops,
-                lazy=True),
-            mt.SpatialPadd(
-                keys=["image"],
-                spatial_size=shape,
-                mode="edge",
                 lazy=True),
             mt.RandAffined(
                 keys=["image"],
@@ -132,6 +130,11 @@ def get_mim_transforms(shape, num_crops, device):
                 scale_range=(0.1,0.1,0.1),                   # ±10%
                 mode="bilinear",
                 padding_mode="border",
+                lazy=True),
+            mt.SpatialPadd(
+                keys=["image"],
+                spatial_size=shape,
+                mode="edge",
                 lazy=True),
             ### ~~~ Split into two image / label from here on ~~~ ###
             mt.CopyItemsd(      # Masked image modelling copy whole image
