@@ -19,7 +19,7 @@ torch.serialization.add_safe_globals([np.dtype, np.ndarray, np.core.multiarray._
 
 
 def training(model_params, train_params, output_dir, comments):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
 
     timestamp = datetime.now().strftime("%H-%M")
     date_str = datetime.now().strftime("%Y-%m-%d")

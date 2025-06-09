@@ -263,7 +263,7 @@ if __name__ == "__main__":
     from tqdm import tqdm
     torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
                                           np.ndarray, np.core.multiarray._reconstruct])
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     shape = (128, 128, 128)
 
     # Deterministic transforms
