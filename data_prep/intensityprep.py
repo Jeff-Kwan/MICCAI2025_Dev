@@ -54,9 +54,10 @@ def compute_clipped_stats_from_hist(hist, edges, p_low, p_high):
     return mean, std
 
 if __name__ == "__main__":
-    image_paths = get_file_paths("data/preprocessed/train_gt/images")
+    image_paths = get_file_paths("data/preprocessed/train_gt/images") +\
+                    get_file_paths("data/preprocessed/train_pseudo/images")
     mn, mx = compute_global_min_max(image_paths)
-    hist, edges = compute_histogram(image_paths, mn, mx, bins=1000000)
+    hist, edges = compute_histogram(image_paths, mn, mx, bins=100000)
 
     p_low, p_high = extract_percentiles(hist, edges)
     print(f"0.5th percentile = {p_low:.4f}")
