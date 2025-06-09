@@ -120,8 +120,8 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 50,
-        'batch_size': 4,
-        'aggregation': 1,
+        'batch_size': 1,
+        'aggregation': 8,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
