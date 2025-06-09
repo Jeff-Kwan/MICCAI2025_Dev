@@ -79,19 +79,19 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
             ),
             mt.ThresholdIntensityd(
                 keys=["label"],
-                above=True,
+                above=False,
                 threshold=14,   # 14 classes
                 cval=0,
             ),
             mt.ThresholdIntensityd( # upper bound 99.5%
                 keys=["image"],
-                above=True,
+                above=False,
                 threshold=295.0,
                 cval=295.0,
             ),
             mt.ThresholdIntensityd( # lower bound 0.5%
                 keys=["image"],
-                above=False,
+                above=True,
                 threshold=-974.0, 
                 cval=-974.0,
             ),

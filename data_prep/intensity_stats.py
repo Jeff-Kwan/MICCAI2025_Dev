@@ -7,27 +7,6 @@ import monai.transforms as mt
 from monai.data import Dataset, ThreadDataLoader
 import multiprocessing as mp
 
-from monai.transforms import MapTransform
-from typing import Hashable, Sequence, Union
-class MapLabelsToZeroOutsideRange(MapTransform):
-    def __init__(
-        self,
-        keys: Union[Sequence[Hashable], Hashable],
-        valid_labels: Sequence[int],
-        allow_missing_keys: bool = False,
-    ):
-        super().__init__(keys, allow_missing_keys)
-        self.valid_labels = set(valid_labels)
-
-    def __call__(self, data):
-        for key in self.keys:
-            # Create a boolean mask where labels are not in the valid set
-            invalid_mask = ~np.isin(data[key], list(self.valid_labels))
-            # Set invalid labels to 0
-            data[key][invalid_mask] = 0
-        return data
-
-
 def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
     """
     Returns a list of dicts with file paths for images and labels.
@@ -82,15 +61,15 @@ def process_dataset(datafiles):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.ThresholdIntensityd(
+                keys=["label"],
+                above=False,
+                threshold=14,   # 14 classes
+                cval=0),
             mt.EnsureTyped(
                 keys=["image", "label"],
                 dtype=[torch.float32, torch.uint8],
-                track_meta=True,
-            ),
-            MapLabelsToZeroOutsideRange(
-                keys=["label"],
-                valid_labels=list(range(14)),  # Assuming labels are binary (0 and 1)
-            ),
+                track_meta=True),
         ]
     )
 
