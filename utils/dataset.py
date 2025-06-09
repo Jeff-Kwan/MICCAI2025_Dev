@@ -19,28 +19,23 @@ def get_transforms(shape, num_crops, device):
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                # # device=device,
+                device=device,
                 track_meta=False),
+            mt.RandAffined(     # Small affine perturbation
+                keys=["image","label"],
+                prob=1.0,
+                spatial_size=shape,
+                rotate_range=(np.pi/6, np.pi/6, np.pi/6),
+                scale_range=(0.1, 0.1, 0.1),
+                mode=("bilinear","nearest"),
+                padding_mode="border",
+                lazy=True),
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
-                    mt.RandAffined(     # Small affine perturbation
-                        keys=["image","label"],
-                        prob=1.0,
-                        spatial_size=shape,
-                        rotate_range=(np.pi/6, np.pi/6, np.pi/6),
-                        scale_range=(0.1, 0.1, 0.1),
-                        mode=("bilinear","nearest"),
-                        padding_mode="border",
-                        lazy=True),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -62,7 +57,12 @@ def get_transforms(shape, num_crops, device):
                         shear_range=(0.0, 0.0, 0.0),               # no shear
                         mode=("bilinear", "nearest")
                     )],
-                weights=[1, 1, 1, 1, 1], lazy=True),
+                weights=[2, 1, 1, 1], lazy=True),
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -70,8 +70,9 @@ def get_transforms(shape, num_crops, device):
                     mt.RandGaussianNoised(keys='image', prob=1.0),
                     mt.RandBiasFieldd(keys='image', prob=1.0),
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
-                    mt.RandGaussianSharpend(keys='image', prob=1.0)],
-                weights=[2, 1, 1, 1, 1, 1]),
+                    mt.RandGaussianSharpend(keys='image', prob=1.0),
+                    mt.RandHistogramShiftd(keys='image', prob=1.0)],
+                weights=[3, 1, 1, 1, 1, 1, 1]),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -107,7 +108,7 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                # device=device,
+                device=device,
                 track_meta=False),
         ]
     )
@@ -121,12 +122,11 @@ def get_mim_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
-                # device=device,
+                device=device,
                 track_meta=False),
             mt.CropForegroundd(
                 keys=["image"],
-                source_key="label",
-                allow_smaller=False),
+                source_key="label"),
             mt.RandSpatialCropSamplesd(
                 keys=["image"], 
                 roi_size=shape,
