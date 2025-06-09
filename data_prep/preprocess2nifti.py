@@ -215,9 +215,8 @@ if __name__ == "__main__":
     for dirs in dir_list:
         process_dataset(*dirs, pixdim)
 
-    process_labels(*(
-            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            "data/preprocessed/train_pseudo/images",
-            "data/preprocessed/train_pseudo/blackbean",
-        ), pixdim)
+    process_labels(
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+        "data/preprocessed/train_pseudo/blackbean",
+        pixdim)
