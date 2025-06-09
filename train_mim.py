@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
+from monai.data import PersistentDataset, ThreadDataLoader, Dataset, meta_tensor
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import MIM_Trainer, get_mim_transforms, get_mim_data_files
@@ -27,8 +27,8 @@ def training(model_params, train_params, output_dir, comments):
 
     # Data loading
     train_transform, val_transform = get_mim_transforms(train_params['shape'],
-                                train_params['norm_clip'], 
-                                train_params['pixdim'])
+                                train_params['num_crops'], 
+                                device)
 
     # Persistent dataset needs list of file paths?
     # train_dataset = PersistentDataset(
@@ -44,20 +44,19 @@ def training(model_params, train_params, output_dir, comments):
         transform=val_transform,
         cache_dir="data/cache/val")
 
-    train_loader = DataLoader(
+    train_loader = ThreadDataLoader(
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
         num_workers=32,
-        prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True)
-    val_loader = DataLoader(
+    val_loader = ThreadDataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
         num_workers=32,
-        persistent_workers=True)
+        persistent_workers=False)
 
 
     # Training setup
@@ -109,8 +108,7 @@ if __name__ == "__main__":
         'weight_decay': 1e-2,
         'num_classes': 1,
         'shape': (96, 96, 96),
-        'norm_clip': (-325, 325, -1.0, 1.0),
-        'pixdim': (1.5, 1.5, 1.5),
+        'num_crops': 8,
         'compile': True,
         'autocast': True,
         'sw_batch_size': 64,
@@ -120,7 +118,7 @@ if __name__ == "__main__":
 
     output_dir = "MIM-2000-96x3"
     comments = ["HarmonicSeg - 2000 img Masked Image Modelling",
-        "(96, 96, 96) shape, 1.5mm pixdim ", 
+        "(96, 96, 96) shape", 
         "MSE, 16-sample rand crop + affine, bias field, noise, smooth, small med large dropouts"]
 
     training(model_params, train_params, output_dir, comments)

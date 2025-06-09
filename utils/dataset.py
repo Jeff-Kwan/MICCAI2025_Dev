@@ -5,51 +5,14 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
-from monai.transforms import MapTransform
-from typing import Hashable, Sequence, Union
-class MapLabelsToZeroOutsideRange(MapTransform):
-    def __init__(
-        self,
-        keys: Union[Sequence[Hashable], Hashable],
-        valid_labels: Sequence[int],
-        allow_missing_keys: bool = False,
-    ):
-        super().__init__(keys, allow_missing_keys)
-        self.valid_labels = set(valid_labels)
-
-    def __call__(self, data):
-        for key in self.keys:
-            # Create a boolean mask where labels are not in the valid set
-            invalid_mask = ~np.isin(data[key], list(self.valid_labels))
-            # Set invalid labels to 0
-            data[key][invalid_mask] = 0
-        return data
-
-def get_transforms(shape, norm_clip, pixdim):
+def get_transforms(shape, num_crops, device):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=pixdim,
-                mode=("bilinear", "nearest"),
-                lazy=True),
-            # mt.CropForegroundd(keys=["image", "label"], source_key="label", 
-            #                     allow_smaller=True, lazy=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"], 
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True),
-            MapLabelsToZeroOutsideRange(
-                keys=["label"],
-                valid_labels=list(range(14))),  # Valid labels: 0 through 13
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
+                device=device,
                 track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
@@ -59,7 +22,7 @@ def get_transforms(shape, norm_clip, pixdim):
             mt.RandSpatialCropSamplesd(
                 keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=8,
+                num_samples=num_crops,
                 lazy=True),
             mt.RandAffined(     # Small affine perturbation
                 keys=["image","label"],
@@ -111,7 +74,6 @@ def get_transforms(shape, norm_clip, pixdim):
                     mt.RandCoarseDropoutd(
                         keys=["image"],
                         prob=1.0,
-                        fill_value=(norm_clip[2], norm_clip[3]),
                         holes=2,
                         max_holes=4,
                         spatial_size=(24, 24, 24),
@@ -128,47 +90,34 @@ def get_transforms(shape, norm_clip, pixdim):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["image", "label"],
-                pixdim=pixdim,
-                mode=("bilinear", "nearest"),
-                lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                device=device,
+                track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"], 
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False)
         ]
     )
     return train_transform, val_transform
 
 
-def get_mim_transforms(shape, norm_clip, pixdim):
+def get_mim_transforms(shape, num_crops, device):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["image"],
-                pixdim=pixdim,
-                mode="bilinear",
-                lazy=True),
+            mt.EnsureTyped(
+                keys=["image"], 
+                dtype=[torch.float32],
+                device=device,
+                track_meta=False),
             mt.RandSpatialCropSamplesd(
                 keys=["image"], 
                 roi_size=shape,
-                num_samples=16,
+                num_samples=num_crops,
                 lazy=True),
             mt.SpatialPadd(
                 keys=["image"],
@@ -184,17 +133,6 @@ def get_mim_transforms(shape, norm_clip, pixdim):
                 mode="bilinear",
                 padding_mode="border",
                 lazy=True),
-            mt.ScaleIntensityRanged(
-                keys=["image"], 
-                a_min=norm_clip[0],
-                a_max=norm_clip[1],
-                b_min=norm_clip[2],
-                b_max=norm_clip[3],
-                clip=True),
-            mt.EnsureTyped(
-                keys=["image"], 
-                dtype=[torch.float32],
-                track_meta=False),
             ### ~~~ Split into two image / label from here on ~~~ ###
             mt.CopyItemsd(      # Masked image modelling copy whole image
                 keys=["image"],
@@ -214,7 +152,6 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.RandCoarseDropoutd(
                 keys=["image"],
                 prob=1.0,
-                fill_value=(norm_clip[2], norm_clip[3]),
                 holes=2,
                 max_holes=4,
                 spatial_size=(48, 48, 48),
@@ -222,7 +159,6 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.RandCoarseDropoutd(
                 keys=["image"],
                 prob=1.0,
-                fill_value=(norm_clip[2], norm_clip[3]),
                 holes=3,
                 max_holes=6,
                 spatial_size=(32, 32, 32),
@@ -230,7 +166,6 @@ def get_mim_transforms(shape, norm_clip, pixdim):
             mt.RandCoarseDropoutd(
                 keys=["image"],
                 prob=1.0,
-                fill_value=(norm_clip[2], norm_clip[3]),
                 holes=4,
                 max_holes=8,
                 spatial_size=(16, 16, 16),
@@ -329,15 +264,13 @@ if __name__ == "__main__":
     torch.serialization.add_safe_globals([np.dtype, np.dtypes.Int64DType,
                                           np.ndarray, np.core.multiarray._reconstruct])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    norm_clip = (-175, 250, -1.0, 1.0)
-    pixdim = (1.0, 1.0, 1.0)
     shape = (128, 128, 128)
 
     # Deterministic transforms
     transforms, _ = get_transforms(
         shape=shape,
-        norm_clip=norm_clip,
-        pixdim=pixdim)
+        num_crops=8,
+        device=device)
     
     # Instantiate datasets
     dataset = PersistentDataset(

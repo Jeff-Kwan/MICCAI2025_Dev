@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset, DataLoader, Dataset, meta_tensor
+from monai.data import PersistentDataset, ThreadDataLoader, Dataset, meta_tensor
 from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
@@ -28,8 +28,8 @@ def training(model_params, train_params, output_dir, comments):
 
     # Data loading
     train_transform, val_transform = get_transforms(train_params['shape'],
-                                train_params['norm_clip'], 
-                                train_params['pixdim'])
+                                train_params['num_crops'], 
+                                device)
 
     # Persistent dataset needs list of file paths?
     # train_dataset = PersistentDataset(
@@ -55,15 +55,14 @@ def training(model_params, train_params, output_dir, comments):
         transform=val_transform,
         cache_dir="data/cache/val")
 
-    train_loader = DataLoader(
+    train_loader = ThreadDataLoader(
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=80,
-        prefetch_factor=1,
+        num_workers=48,
         pin_memory=True,
         persistent_workers=True)
-    val_loader = DataLoader(
+    val_loader = ThreadDataLoader(
         val_dataset,
         batch_size=1,
         shuffle=False,
@@ -121,14 +120,13 @@ if __name__ == "__main__":
 
     train_params = {
         'epochs': 50,
-        'batch_size': 1,
-        'aggregation': 8,
+        'batch_size': 4,
+        'aggregation': 1,
         'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (96, 96, 96),
-        'norm_clip': (-325, 325, -1.0, 1.0),
-        'pixdim': (1.5, 1.5, 1.5),
+        'shape': (128, 128, 128),
+        'num_crops': 8,
         'compile': True,
         'autocast': True,
         'sw_batch_size': 64,
@@ -138,7 +136,7 @@ if __name__ == "__main__":
 
     output_dir = "PseudolabelsAll-96x3"
     comments = ["HarmonicSeg - 2000 x2 Pseudolabels training",
-        "(96, 96, 96) shape, 1.5mm pixdim for faster training?", 
+        "(128, 128, 128) shape", 
         "DiceCE, 8-sample rand crop + a lot of augmentations"]
 
     training(model_params, train_params, output_dir, comments)
