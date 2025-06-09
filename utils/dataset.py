@@ -12,7 +12,6 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                device=device,
                 track_meta=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
@@ -93,7 +92,6 @@ def get_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
-                device=device,
                 track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
@@ -102,7 +100,7 @@ def get_transforms(shape, num_crops, device):
                 lazy=True),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
-                roi_size=(512, 512, 200),
+                roi_size=(512, 512, 256),
                 lazy=True)
         ]
     )
@@ -116,7 +114,6 @@ def get_mim_transforms(shape, num_crops, device):
             mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
-                device=device,
                 track_meta=False),
             mt.CropForegroundd(
                 keys=["image"],
