@@ -220,4 +220,4 @@ if __name__ == "__main__":
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
             "data/preprocessed/train_pseudo/images",
             "data/preprocessed/train_pseudo/blackbean",
-        ), dirs[3], pixdim)
+        ), pixdim)
