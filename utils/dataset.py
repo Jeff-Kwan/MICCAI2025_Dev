@@ -11,7 +11,8 @@ def get_transforms(shape, num_crops, device):
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.CropForegroundd(  # Crop foreground based on label
                 keys=["image", "label"],
-                source_key="label"),
+                source_key="label",
+                allow_smaller=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
