@@ -50,8 +50,8 @@ def get_thresholds():
     )
 
     # build the MONAI dataset
-    datafiles = get_data_files("data/preprocessed/train_gt/images") +\
-                get_data_files("data/preprocessed/train_pseudo/images")
+    datafiles = get_data_files("data/preprocessed/train_gt/images") #+\
+                # get_data_files("data/preprocessed/train_pseudo/images")
     dataset = Dataset(data=datafiles, transform=transform)
     dataloader = DataLoader(
         dataset,
@@ -62,7 +62,7 @@ def get_thresholds():
     td = TDigest()
 
     for data in tqdm(dataloader, desc="Threshold"):
-        td.update(data["image"].numpy().ravel())
+        td.update(data["image"].numpy().ravel().tolist())
 
     p_low  = td.percentile(0.5)   # 0.5th percentile
     p_high = td.percentile(99.5)  # 99.5th percentile
