@@ -14,6 +14,11 @@ def get_transforms(shape, num_crops, device):
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                # # device=device,
+                track_meta=False),
             mt.RandAffined(     # Small affine perturbation
                 keys=["image","label"],
                 prob=1.0,
@@ -80,26 +85,21 @@ def get_transforms(shape, num_crops, device):
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
                 weights=[1, 1, 1]),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                device=device,
-                track_meta=False),
         ]
     )
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                # device=device,
+                track_meta=False),
             mt.SpatialPadd(
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                device=device,
-                track_meta=False),
         ]
     )
     return train_transform, val_transform
@@ -109,6 +109,11 @@ def get_mim_transforms(shape, num_crops, device):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image"], ensure_channel_first=True),
+            mt.EnsureTyped(
+                keys=["image"], 
+                dtype=[torch.float32],
+                # device=device,
+                track_meta=False),
             mt.CropForegroundd(
                 keys=["image"],
                 source_key="label"),
@@ -168,11 +173,7 @@ def get_mim_transforms(shape, num_crops, device):
                 max_holes=8,
                 spatial_size=(16, 16, 16),
                 max_spatial_size=(32, 32, 32)),
-            mt.EnsureTyped(
-                keys=["image"], 
-                dtype=[torch.float32],
-                device=device,
-                track_meta=False),]
+        ]
     )
     # Same transform, test performance on different datasets for generalization
     return train_transform, train_transform     
