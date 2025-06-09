@@ -23,18 +23,18 @@ def get_transforms(shape, num_crops, device):
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.RandAffined(     # Small affine perturbation
-                keys=["image","label"],
-                prob=1.0,
-                spatial_size=shape,
-                rotate_range=(np.pi/6, np.pi/6, np.pi/6),
-                scale_range=(0.1, 0.1, 0.1),
-                mode=("bilinear","nearest"),
-                padding_mode="border",
-                lazy=True),
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
+                    mt.RandAffined(     # Small affine perturbation
+                        keys=["image","label"],
+                        prob=1.0,
+                        spatial_size=shape,
+                        rotate_range=(np.pi/6, np.pi/6, np.pi/6),
+                        scale_range=(0.1, 0.1, 0.1),
+                        mode=("bilinear", "nearest"),
+                        padding_mode="border",
+                        lazy=True),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -56,7 +56,7 @@ def get_transforms(shape, num_crops, device):
                         shear_range=(0.0, 0.0, 0.0),               # no shear
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 1, 1, 1], lazy=True),
+                weights=[2, 2, 1, 1, 1], lazy=True),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
@@ -78,14 +78,14 @@ def get_transforms(shape, num_crops, device):
                     mt.RandCoarseDropoutd(
                         keys=["image"],
                         prob=1.0,
-                        holes=2,
-                        max_holes=4,
+                        holes=1,
+                        max_holes=2,
                         spatial_size=(24, 24, 24),
                         max_spatial_size=(48, 48, 48)),
                     mt.RandCoarseShuffled(
                         keys=["image"],
                         prob=1.0,
-                        holes=4, max_holes=8,
+                        holes=2, max_holes=4,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
                 weights=[1, 1, 1]),
