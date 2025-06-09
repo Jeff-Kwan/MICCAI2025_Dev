@@ -100,7 +100,7 @@ def get_transforms(shape, num_crops, device):
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
-            mt.CenterSpatialCrop(   # Hardcoded max size just in case
+            mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 512),
                 lazy=True)
