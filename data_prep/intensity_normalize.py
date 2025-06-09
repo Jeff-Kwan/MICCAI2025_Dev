@@ -53,8 +53,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     )
 
     # build the MONAI dataset
-    dataset = Dataset(data=get_file_paths(images_dir)
-                      , transform=transform)
+    dataset = Dataset(data=get_data_files(images_dir, labels_dir), transform=transform)
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
@@ -70,4 +69,33 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
 
 
 if __name__ == "__main__":
-    pass
+    pixdim = (0.8, 0.8, 1.0)
+    dir_list = [
+        (
+            "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+            "data/preprocessed/train_gt/images",
+            "data/preprocessed/train_gt/labels",
+        ),
+        (
+            "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
+            "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
+            "data/preprocessed/val/images",
+            "data/preprocessed/val/labels",
+        ),
+        (
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+            "data/preprocessed/train_pseudo/images",
+            "data/preprocessed/train_pseudo/aladdin5",
+        ),
+    ]
+
+    for dirs in dir_list:
+        process_dataset(*dirs, pixdim)
+
+    process_labels(
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+        "data/preprocessed/train_pseudo/blackbean",
+        pixdim)

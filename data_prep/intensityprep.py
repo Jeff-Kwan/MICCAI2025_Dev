@@ -93,4 +93,10 @@ On spatially preprocessed data, 100000 bins
 99.5th percentile = 497.6330
 Mean of clipped intensities = -582.4940
 Std  of clipped intensities = 561.3401
+
+On raw data, 100000 bins
+0.5th percentile = -3024.0832
+99.5th percentile = 518.9927
+Mean of clipped intensities = -574.6213
+Std  of clipped intensities = 560.0995
 '''
