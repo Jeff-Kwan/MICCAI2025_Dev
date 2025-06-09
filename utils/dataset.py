@@ -26,7 +26,7 @@ def get_transforms(shape, num_crops, device):
                 scale_range=(0.1, 0.1, 0.1),
                 mode=("bilinear","nearest"),
                 padding_mode="border",
-                lazy=True),
+                lazy=False),
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
@@ -34,12 +34,12 @@ def get_transforms(shape, num_crops, device):
                         keys=["image", "label"],
                         prob=1.0,
                         spatial_axis=(0, 1),  # Flip in XY plane
-                        lazy=True),
+                        lazy=False),
                     mt.RandRotate90d(
                         keys=["image", "label"],
                         prob=1.0,
                         spatial_axes=(0, 1),  # Rotate in XY plane
-                        lazy=True),
+                        lazy=False),
                     mt.Rand3DElasticd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -51,12 +51,12 @@ def get_transforms(shape, num_crops, device):
                         shear_range=(0.0, 0.0, 0.0),               # no shear
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 1, 1, 1], lazy=True),
+                weights=[2, 1, 1, 1], lazy=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
-                lazy=True),
+                lazy=False),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -98,7 +98,7 @@ def get_transforms(shape, num_crops, device):
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
-                lazy=True),
+                lazy=False),
         ]
     )
     return train_transform, val_transform
@@ -120,7 +120,7 @@ def get_mim_transforms(shape, num_crops, device):
                 keys=["image"], 
                 roi_size=shape,
                 num_samples=num_crops,
-                lazy=True),
+                lazy=False),
             mt.RandAffined(
                 keys=["image"],
                 prob=0.8,
@@ -129,12 +129,12 @@ def get_mim_transforms(shape, num_crops, device):
                 scale_range=(0.1,0.1,0.1),                   # ±10%
                 mode="bilinear",
                 padding_mode="border",
-                lazy=True),
+                lazy=False),
             mt.SpatialPadd(
                 keys=["image"],
                 spatial_size=shape,
                 mode="edge",
-                lazy=True),
+                lazy=False),
             ### ~~~ Split into two image / label from here on ~~~ ###
             mt.CopyItemsd(      # Masked image modelling copy whole image
                 keys=["image"],
