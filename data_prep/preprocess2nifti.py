@@ -85,8 +85,9 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
     # define the validation transform
     transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"]),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
+            mt.SqueezeDimd(keys=["image", "label"],dim=0),
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
@@ -115,7 +116,6 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
                 output_dir=out_image_dir,
                 output_postfix="",
                 output_ext=".nii.gz",
-                resample=False,
                 separate_folder=False,
                 output_dtype=torch.float32,
             ),
@@ -124,7 +124,6 @@ def main(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim, norm_clip
                 output_dir=out_label_dir,
                 output_postfix="",
                 output_ext=".nii.gz",
-                resample=False,
                 separate_folder=False,
                 output_dtype=torch.uint8,
             ),
