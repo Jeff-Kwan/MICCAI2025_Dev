@@ -6,3 +6,4 @@ nibabel
 tqdm
 monai
 scipy
+tdigest

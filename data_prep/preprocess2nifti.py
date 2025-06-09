@@ -129,7 +129,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=mp.cpu_count(),
+        num_workers=64,
     )
 
 
@@ -180,7 +180,7 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=mp.cpu_count(),
+        num_workers=64,
     )
 
 
