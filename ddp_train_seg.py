@@ -40,14 +40,12 @@ def main_worker(local_rank, world_size, model_params, train_params, base_output,
         rank=local_rank
     )
 
-    # 4) Broadcast output_dir
     if local_rank == 0:
         timestamp = datetime.now().strftime("%H-%M")
-        date_str = datetime.now().strftime("%Y-%m-%d")
+        date_str  = datetime.now().strftime("%Y-%m-%d")
         output_dir = os.path.join(base_output, date_str, timestamp)
     else:
         output_dir = None
-    output_dir = dist.broadcast_object_list([output_dir], src=0)[0]
 
     # Data transforms
     train_tf, val_tf = get_transforms(train_params['shape'],
