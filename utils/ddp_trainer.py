@@ -69,8 +69,7 @@ class DDPTrainer:
             self.start_time = None
 
     def train(self, train_loader, val_loader):
-        rank = dist.get_rank() if self.world_size > 1 else 0
-        if rank == 0:
+        if self.local_rank == 0:
             self.start_time = time.time()
 
         epochs = self.train_params['epochs']
@@ -85,7 +84,7 @@ class DDPTrainer:
             running_loss = 0.0
             grad_norm = torch.tensor(0.0, device=self.device)
 
-            loop = tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", disable=(rank!=0))
+            loop = tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", disable=(self.local_rank!=0))
             self.optimizer.zero_grad()
 
             for i, batch in enumerate(loop):
@@ -103,25 +102,22 @@ class DDPTrainer:
                     self.optimizer.step()
                     self.optimizer.zero_grad()
 
-                if rank == 0:
+                if self.local_rank == 0:
                     loop.set_postfix({'Norm': grad_norm.item(), 'Loss': loss.item()})
 
             self.scheduler.step()
 
             # Validation (only metrics computed on rank 0)
-            if rank == 0:
-                val_loss, metrics = self.evaluate(val_loader)
+            val_loss, metrics = self.evaluate(val_loader)
+            if self.local_rank == 0:
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
 
-                print(
-                    f"Epoch {epoch+1}/{epochs} | "
-                    f"Train Loss: {self.train_losses[-1]:.5f} | "
-                    f"Val Loss: {val_loss:.5f} | "
-                    f"Val Dice: {metrics['dice']:.5f}"
-                )
-
+                print(f"Epoch {epoch+1}/{epochs} | "
+                      f"Train Loss: {self.train_losses[-1]:.5f} | "
+                      f"Val Loss: {val_loss:.5f} | "
+                      f"Val Dice: {metrics['dice']:.5f}")
                 self.plot_results()
                 self.save_checkpoint(epoch, metrics)
 
@@ -135,7 +131,7 @@ class DDPTrainer:
         self.dice_metric.reset()
 
         with torch.inference_mode():
-            loop = tqdm.tqdm(data_loader, desc='Validation', disable=(dist.get_rank()!=0))
+            loop = tqdm.tqdm(data_loader, desc='Validation', disable=(self.local_rank!=0))
             for batch in loop:
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
