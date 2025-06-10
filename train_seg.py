@@ -32,19 +32,19 @@ def training(model_params, train_params, output_dir, comments):
                                 device)
 
     # Persistent dataset needs list of file paths?
-    # train_dataset = PersistentDataset(
-    #     data = get_data_files(
-    #         images_dir="data/preprocessed/train_gt/images",
-    #         labels_dir="data/preprocessed/train_gt/labels"),
-    #     transform=train_transform,
-    #     cache_dir="data/cache/gt_label")
     train_dataset = PersistentDataset(
-        data=# Combine both pseudo-label datasets
-            get_data_files(
-            images_dir="data/preprocessed/train_pseudo/images",
-            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+        data = get_data_files(
+            images_dir="data/preprocessed/train_gt/images",
+            labels_dir="data/preprocessed/train_gt/labels"),
         transform=train_transform,
-        cache_dir="data/cache/pseudo_label")
+        cache_dir="data/cache/gt_label")
+    # train_dataset = PersistentDataset(
+    #     data=# Combine both pseudo-label datasets
+    #         get_data_files(
+    #         images_dir="data/preprocessed/train_pseudo/images",
+    #         labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+    #     transform=train_transform,
+    #     cache_dir="data/cache/pseudo_label")
     val_dataset = PersistentDataset(
         data = get_data_files(
             images_dir="data/preprocessed/val/images",
@@ -113,14 +113,14 @@ def training(model_params, train_params, output_dir, comments):
 
 
 if __name__ == "__main__":
-    model_params = json.load(open("configs/model/base.json"))
+    model_params = json.load(open("configs/model/small.json"))
 
     train_params = {
-        'epochs': 100,
-        'batch_size': 2,
-        'aggregation': 4,
+        'epochs': 200,
+        'batch_size': 1,
+        'aggregation': 2,
         'learning_rate': 3e-4,
-        'weight_decay': 1e-2,
+        'weight_decay': 1e-3,
         'num_classes': 14,
         'shape': (128, 128, 128),
         'num_crops': 8,

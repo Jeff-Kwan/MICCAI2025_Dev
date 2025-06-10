@@ -30,7 +30,7 @@ def get_transforms(shape, num_crops, device):
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
-                        rotate_range=(np.pi/6, np.pi/6, np.pi/6),
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
                         padding_mode="border",
@@ -53,10 +53,9 @@ def get_transforms(shape, num_crops, device):
                         spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
-                        shear_range=(0.0, 0.0, 0.0),               # no shear
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 2, 1, 1, 1], lazy=True),
+                weights=[1, 1, 0, 0, 1], lazy=True),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
@@ -71,7 +70,7 @@ def get_transforms(shape, num_crops, device):
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
                     mt.RandGaussianSharpend(keys='image', prob=1.0),
                     mt.RandHistogramShiftd(keys='image', prob=1.0)],
-                weights=[3, 1, 1, 1, 1, 1, 1]),
+                weights=[3, 1, 1, 0, 1, 0, 0]),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -80,15 +79,15 @@ def get_transforms(shape, num_crops, device):
                         prob=1.0,
                         holes=1,
                         max_holes=2,
-                        spatial_size=(24, 24, 24),
-                        max_spatial_size=(48, 48, 48)),
+                        spatial_size=(16, 16, 16),
+                        max_spatial_size=(32, 32, 32)),
                     mt.RandCoarseShuffled(
                         keys=["image"],
                         prob=1.0,
-                        holes=2, max_holes=4,
+                        holes=1, max_holes=4,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
-                weights=[1, 1, 1]),
+                weights=[2, 1, 1]),
         ]
     )
     val_transform = mt.Compose(
