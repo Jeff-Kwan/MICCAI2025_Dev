@@ -25,14 +25,28 @@ torch.serialization.add_safe_globals([
 ])
 
 def main_worker(local_rank, world_size, model_params, train_params, base_output, comments):
-    # Construct unique output dir per run (only on rank 0)
+    # 1) tell torch which GPU this process should use
+    torch.cuda.set_device(local_rank)
+
+    # 2) (if not already set externally) define master for rendezvous
+    os.environ['MASTER_ADDR'] = os.environ.get('MASTER_ADDR', '127.0.0.1')
+    os.environ['MASTER_PORT'] = os.environ.get('MASTER_PORT', '29500')
+
+    # 3) initialize the default process group
+    dist.init_process_group(
+        backend='nccl',
+        init_method='env://',
+        world_size=world_size,
+        rank=local_rank
+    )
+
+    # 4) Broadcast output_dir
     if local_rank == 0:
         timestamp = datetime.now().strftime("%H-%M")
         date_str = datetime.now().strftime("%Y-%m-%d")
         output_dir = os.path.join(base_output, date_str, timestamp)
     else:
         output_dir = None
-    # Broadcast the output path string to all ranks
     output_dir = dist.broadcast_object_list([output_dir], src=0)[0]
 
     # Data transforms
@@ -75,7 +89,7 @@ def main_worker(local_rank, world_size, model_params, train_params, base_output,
         batch_size=4,
         sampler=val_sampler,
         shuffle=False,
-        num_workers=24,
+        num_workers=32,
         persistent_workers=False
     )
 
@@ -155,7 +169,7 @@ if __name__ == "__main__":
         'num_crops': 8,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 32,
+        'sw_batch_size': 16,
         'sw_overlap': 1/8
     }
     base_output = "PseudolabelsAll"
