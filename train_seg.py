@@ -56,7 +56,8 @@ def training(model_params, train_params, output_dir, comments):
         train_dataset,
         batch_size=train_params['batch_size'],
         shuffle=True,
-        num_workers=24,
+        num_workers=30,
+        prefetch_factor=1,
         pin_memory=True,
         persistent_workers=True)
     val_loader = ThreadDataLoader(
@@ -116,10 +117,10 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/large.json"))
 
     train_params = {
-        'epochs': 200,
+        'epochs': 100,
         'batch_size': 1,
         'aggregation': 4,
-        'learning_rate': 3e-4,
+        'learning_rate': 5e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
