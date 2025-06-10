@@ -49,8 +49,7 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
 
         # Data transforms
         train_tf, val_tf = get_transforms(train_params['shape'],
-                                        train_params['num_crops'],
-                                        device=f"cuda:{local_rank}")
+                                        train_params['num_crops'])
 
         # Datasets
         train_ds = PersistentDataset(

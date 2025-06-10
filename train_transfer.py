@@ -27,8 +27,7 @@ def training(model_params, train_params, output_dir, comments, pretrained_path):
 
     # Data loading
     train_transform, val_transform = get_transforms(train_params['shape'],
-                                train_params['num_crops'], 
-                                device)
+                                train_params['num_crops'])
 
     # Persistent dataset needs list of file paths?
     # train_dataset = PersistentDataset(

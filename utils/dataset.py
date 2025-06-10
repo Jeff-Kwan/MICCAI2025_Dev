@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
-def get_transforms(shape, num_crops, device):
+def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -116,7 +116,7 @@ def get_transforms(shape, num_crops, device):
     return train_transform, val_transform
 
 
-def get_mim_transforms(shape, num_crops, device):
+def get_mim_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image"], ensure_channel_first=True),
