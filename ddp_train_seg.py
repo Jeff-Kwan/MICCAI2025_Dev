@@ -65,7 +65,8 @@ def main_worker(local_rank, world_size, model_params, train_params, base_output,
         train_ds,
         batch_size=train_params['batch_size'],
         sampler=train_sampler,
-        num_workers=24,
+        num_workers=88,
+        prefetch_factor=1,
         pin_memory=True,
         persistent_workers=True
     )
@@ -150,18 +151,18 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (128, 128, 128),
+        'shape': (160, 160, 80),
         'num_crops': 8,
         'compile': True,
         'autocast': True,
         'sw_batch_size': 32,
         'sw_overlap': 1/8
     }
-    base_output = "output"
+    base_output = "PseudolabelsAll"
     comments = [
         "HarmonicSeg Base - 2000 Aladdin Pseudolabels training",
-        "(128, 128, 128) shape",
-        "DiceCE, 8-sample rand crop + heavy augmentations"
+        "DiceCE, 8-sample rand crop + fewer augmentations",
+        "Spatial [1, 1, 0, 0, 1]; Intensity [3, 1, 1, 0, 1, 0, 0]; Coarse [2, 1, 1]"
     ]
 
     mp.spawn(

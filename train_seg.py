@@ -131,7 +131,7 @@ if __name__ == "__main__":
     }
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    output_dir = "PseudolabelsAll-128x3"
+    output_dir = "PseudolabelsAll"
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
         "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
