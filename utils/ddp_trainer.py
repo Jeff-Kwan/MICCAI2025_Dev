@@ -13,9 +13,12 @@ from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 
 def setup_ddp(local_rank: int, world_size: int):
-    os.environ.setdefault("MASTER_ADDR", "localhost")
-    os.environ.setdefault("MASTER_PORT", "12355")
-    dist.init_process_group(backend="nccl", rank=local_rank, world_size=world_size)
+    if not dist.is_initialized():
+        os.environ.setdefault("MASTER_ADDR", "localhost")
+        os.environ.setdefault("MASTER_PORT", "12355")
+        dist.init_process_group(backend="nccl",
+                                rank=local_rank,
+                                world_size=world_size)
     torch.cuda.set_device(local_rank)
 
 class DDPTrainer:
