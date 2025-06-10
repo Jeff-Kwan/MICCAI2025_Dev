@@ -5,7 +5,7 @@
 "convs":        [64, 96, 128],
 "attns":        [[128, 6], [256, 8], [384, 12]],
 "mlps":         [256, 512, 1024],
-"layers":       [3, 3, 2],
+"layers":       [2, 2, 2],
 "dropout":      0.1,
-"stochastic_depth": 0.1
+"stochastic_depth": 0.05
 }
