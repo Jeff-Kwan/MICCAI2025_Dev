@@ -162,7 +162,7 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/base.json"))
     train_params = {
         'epochs': 100,
-        'batch_size': 4,
+        'batch_size': 1,    # 1 sample per GPU, effectively *4
         'aggregation': 2,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
