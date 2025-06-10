@@ -24,7 +24,7 @@ torch.serialization.add_safe_globals([
     MetaKeys, SpaceKeys, TraceKeys
 ])
 
-def main_worker(local_rank, world_size, model_params, train_params, base_output, comments):
+def main_worker(local_rank, world_size, model_params, train_params, output_dir, comments):
     # 1) tell torch which GPU this process should use
     torch.cuda.set_device(local_rank)
 
@@ -43,7 +43,7 @@ def main_worker(local_rank, world_size, model_params, train_params, base_output,
     if local_rank == 0:
         timestamp = datetime.now().strftime("%H-%M")
         date_str  = datetime.now().strftime("%Y-%m-%d")
-        output_dir = os.path.join(base_output, date_str, timestamp)
+        output_dir = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
     else:
         output_dir = None
 
@@ -54,17 +54,21 @@ def main_worker(local_rank, world_size, model_params, train_params, base_output,
 
     # Datasets
     train_ds = PersistentDataset(
-        data=get_data_files("data/preprocessed/train_pseudo/images",
-                            "data/preprocessed/train_pseudo/aladdin5"),
+        data = get_data_files(
+            images_dir="data/preprocessed/train_gt/images",
+            labels_dir="data/preprocessed/train_gt/labels"),
         transform=train_tf,
-        cache_dir="data/cache/pseudo_label"
-    )
+        cache_dir="data/cache/gt_label")
+    # train_ds = PersistentDataset(
+    #     data=get_data_files("data/preprocessed/train_pseudo/images",
+    #                         "data/preprocessed/train_pseudo/aladdin5"),
+    #     transform=train_tf,
+    #     cache_dir="data/cache/pseudo_label")
     val_ds = PersistentDataset(
         data=get_data_files("data/preprocessed/val/images",
                             "data/preprocessed/val/labels"),
         transform=val_tf,
-        cache_dir="data/cache/val"
-    )
+        cache_dir="data/cache/val")
 
     # Distributed sampler & loader
     train_sampler = torch.utils.data.DistributedSampler(
@@ -170,7 +174,7 @@ if __name__ == "__main__":
         'sw_batch_size': 16,
         'sw_overlap': 1/8
     }
-    base_output = "PseudolabelsAll"
+    output_dir= "PseudolabelsAll"
     comments = [
         "HarmonicSeg Base - 2000 Aladdin Pseudolabels training",
         "DiceCE, 8-sample rand crop + fewer augmentations",
@@ -179,7 +183,7 @@ if __name__ == "__main__":
 
     mp.spawn(
         main_worker,
-        args=(world_size, model_params, train_params, base_output, comments),
+        args=(world_size, model_params, train_params, output_dir, comments),
         nprocs=world_size,
         join=True
     )
