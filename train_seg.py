@@ -132,8 +132,9 @@ if __name__ == "__main__":
     torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll-128x3"
-    comments = ["HarmonicSeg Base - 2000 Aladdin Pseudolabels training",
+    comments = ["HarmonicSeg Small - 50 GT training",
         "(128, 128, 128) shape", 
-        "DiceCE, 8-sample rand crop + a lot of augmentations"]
+        "DiceCE, 8-sample rand crop + fewer augmentations",
+        "Spatial [1, 1, 0, 0, 1]; Intensity [3, 1, 1, 0, 1, 0, 0]; Coarse [2, 1, 1]"]
 
     training(model_params, train_params, output_dir, comments)
