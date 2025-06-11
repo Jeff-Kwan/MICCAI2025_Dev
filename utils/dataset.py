@@ -5,14 +5,18 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
+def foreground_threshold(x):
+    '''Define foreground from image with above smallest GT foreground intensity'''
+    return x > -7.3988347
+
 def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.CropForegroundd( # Define foreground from image with above smallest GT intensity
+            mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="image",
-                select_fn=lambda x: x > -7.3988347,
+                select_fn=foreground_threshold,
                 allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
@@ -94,10 +98,10 @@ def get_transforms(shape, num_crops):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.CropForegroundd( # Define foreground from image with above smallest GT intensity
+            mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="image",
-                select_fn=lambda x: x > -7.3988347,
+                select_fn=foreground_threshold,
                 allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
