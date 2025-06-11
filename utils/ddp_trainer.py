@@ -9,22 +9,6 @@ import matplotlib.pyplot as plt
 import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
-import numpy as np
-from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
-from monai.data.meta_tensor import MetaTensor
-
-class SafeGlobalsDecorator:
-    def __init__(self, func):
-        self.func = func
-
-    def __call__(self, *args, **kwargs):
-        torch.serialization.add_safe_globals([
-            np.dtype, np.ndarray, np.core.multiarray._reconstruct,
-            np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
-            np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-            MetaKeys, SpaceKeys, TraceKeys, MetaTensor
-        ])
-        return self.func(*args, **kwargs)
 
 class DDPTrainer:
     def __init__(
@@ -85,7 +69,6 @@ class DDPTrainer:
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
 
-    @SafeGlobalsDecorator
     def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
             self.start_time = time.time()
@@ -142,7 +125,6 @@ class DDPTrainer:
         if self.world_size > 1:
             dist.barrier()
 
-    @SafeGlobalsDecorator
     def evaluate(self, data_loader):
         self.model.eval()
         # local accumulators
