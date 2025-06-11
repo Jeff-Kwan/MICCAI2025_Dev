@@ -95,6 +95,11 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 threshold=-974.0, 
                 cval=-974.0,
             ),
+            mt.NormalizeIntensityd( # z-score normalization
+                keys=["image"],
+                subtrahend=77.515,
+                divisor=142.119,
+            ),
             mt.SaveImaged(
                 keys=["image"],
                 output_dir=out_image_dir,
