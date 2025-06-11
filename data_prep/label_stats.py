@@ -83,7 +83,7 @@ def process_labels(datafiles, num_classes=14):
 
         # Print the name if it only contains label 0
         if np.all(label == 0):
-            print("All labels are zero for image:", label.meta['filename_or_obj'])
+            print("All labels are zero for image:", data['label'][0].meta['filename_or_obj'])
 
     # Plot the histogram
     classes = np.arange(num_classes)
