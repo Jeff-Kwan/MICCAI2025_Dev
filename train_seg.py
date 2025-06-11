@@ -38,8 +38,7 @@ def training(model_params, train_params, output_dir, comments):
     #     transform=train_transform,
     #     cache_dir="data/cache/gt_label")
     train_dataset = PersistentDataset(
-        data=# Combine both pseudo-label datasets
-            get_data_files(
+        data=get_data_files(
             images_dir="data/preprocessed/train_pseudo/images",
             labels_dir="data/preprocessed/train_pseudo/aladdin5"),
         transform=train_transform,

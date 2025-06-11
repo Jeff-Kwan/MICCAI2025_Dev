@@ -57,9 +57,12 @@ def main_worker(rank: int,
 
     # Datasets
     train_ds = Dataset(
+        # data=get_data_files(
+        #     images_dir="data/preprocessed/train_gt/images",
+        #     labels_dir="data/preprocessed/train_gt/labels"),
         data=get_data_files(
-            images_dir="data/preprocessed/train_gt/images",
-            labels_dir="data/preprocessed/train_gt/labels"),
+            images_dir="data/preprocessed/train_pseudo/images",
+            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
         transform=train_tf)
     val_ds = Dataset(
         data=get_data_files(
@@ -76,7 +79,7 @@ def main_worker(rank: int,
         train_ds,
         batch_size=train_params['batch_size'],
         sampler=train_sampler,
-        num_workers=16,
+        num_workers=24,
         prefetch_factor=1,
         pin_memory=True,
         persistent_workers=True)
@@ -84,25 +87,21 @@ def main_worker(rank: int,
         val_ds,
         batch_size=1,
         sampler=val_sampler,
-        num_workers=16,
+        num_workers=24,
         persistent_workers=False)
 
     # Model, optimizer, scheduler, loss
     model = HarmonicSeg(model_params)
-    optimizer = AdamW(
-        model.parameters(),
-        lr=train_params['learning_rate'],
-        weight_decay=train_params['weight_decay'])
-    scheduler = lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=train_params['epochs'])
+    optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
+    scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
     criterion = DiceCELoss(
-        include_background=False,
-        to_onehot_y=True,
-        softmax=True,
-        weight=torch.tensor([0.01] + [1.0]*13, device=f"cuda:{rank}"),
+        include_background=False, 
+        to_onehot_y=True, 
+        softmax=True, 
+        weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
         label_smoothing=0.1,
         lambda_ce=0.34,
-        lambda_dice=0.66)
+        lambda_dice=0.66,)
 
     # Optional compile & cuDNN tweaks
     if train_params.get('compile', False):
@@ -155,26 +154,25 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/large.json"))
     train_params = {
-        'epochs': 100,
+        'epochs': 200,
         'batch_size': 1,
-        'aggregation': 2,
-        'learning_rate': 3e-4,
+        'aggregation': 6,
+        'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
-        'compile': False,   # Can switch on if desired
+        'compile': True,
         'autocast': True,
-        'sw_batch_size': 16,
+        'sw_batch_size': 32,
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
-    comments = [
-        "HarmonicSeg Base - 2000 Aladdin Pseudolabels training",
+    comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
+        "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [1, 1, 0, 0, 1]; Intensity [3, 1, 1, 0, 1, 0, 0]; Coarse [2, 1, 1]"
-    ]
-    torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
+        "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
+    torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     mp.spawn(
         main_worker,
