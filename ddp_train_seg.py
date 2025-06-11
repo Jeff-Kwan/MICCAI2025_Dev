@@ -144,12 +144,12 @@ def main_worker(rank: int,
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Load configs
-    model_params = json.load(open("configs/model/large.json"))
+    model_params = json.load(open("configs/model/base.json"))
     train_params = {
         'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 1e-3,
+        'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
-    comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
+    comments = ["HarmonicSeg Base - 2000 Aladdin5 training",
         "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
         "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
