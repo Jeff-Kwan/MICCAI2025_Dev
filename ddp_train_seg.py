@@ -1,5 +1,3 @@
-# ddp_train_seg_spawn.py
-
 import os
 import json
 import torch

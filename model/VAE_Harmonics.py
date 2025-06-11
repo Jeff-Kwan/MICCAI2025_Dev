@@ -28,9 +28,8 @@ class LayerNormTranspose(nn.Module):
 class HyperEdgeAttention(nn.Module):
     """Hyper-edge partitioning + MHA   (3-D version)."""
     def __init__(self, channels: int, edges: int, heads: int,
-                 bias: bool = False, dropout: float = 0.0, checkpoint=False):
+                 bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.checkpoint = checkpoint
         if channels % heads:
             raise ValueError(f"{channels=} not divisible by {heads=}")
         
@@ -58,7 +57,7 @@ class HyperEdgeAttention(nn.Module):
         tokens = self.in_norm(tokens)
 
         scale = self.edges / S1 / S2 / S3
-        if self.training and x.requires_grad and self.checkpoint:
+        if self.training and x.requires_grad:
             z = checkpoint.checkpoint(self._compute_edges, tokens, scale, use_reentrant=False)
         else:
             z = self._compute_edges(tokens, scale)
@@ -74,9 +73,8 @@ class HyperEdgeAttention(nn.Module):
 class ConvBlock(nn.Module):
     """Local + dilated block."""
     def __init__(self, in_c: int, h_c: int, out_c: int,
-                 bias: bool = False, dropout: float = 0.0, checkpoint=False):
+                 bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.checkpoint = checkpoint
         self.in_conv = nn.Sequential(
             LayerNormTranspose(1, in_c),
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
@@ -95,7 +93,7 @@ class ConvBlock(nn.Module):
         return x
 
     def forward(self, x):
-        if self.training and x.requires_grad and self.checkpoint:
+        if self.training and x.requires_grad:
             return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
         else:
             return self._inner(x)
@@ -103,9 +101,8 @@ class ConvBlock(nn.Module):
 class SwiGLU(nn.Module):
     """Channel-wise SwiGLU MLP."""
     def __init__(self, in_c: int, h_c: int, out_c: int,
-                 bias: bool = False, dropout: float = 0.0, checkpoint=False):
+                 bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.checkpoint = checkpoint
         self.in_norm = LayerNormTranspose(1, in_c)
         self.conv1 = nn.Conv3d(in_c, h_c * 2, 1, 1, 0, bias=bias)
         self.act = nn.SiLU()
@@ -119,7 +116,7 @@ class SwiGLU(nn.Module):
 
     def forward(self, x):
         x = self.in_norm(x)
-        if self.training and x.requires_grad and self.checkpoint:
+        if self.training and x.requires_grad:
             return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
         else:
             return self._inner(x)
@@ -157,14 +154,13 @@ class Upsampling(nn.Module):
 
 class Layer(nn.Module):
     def __init__(self, in_c: int, conv: int, attn: list | int, mlp: int,
-                 bias: bool = False, dropout: float = 0.0, sto_depth: float = 0.0,
-                 checkpoint: bool = False):
+                 bias: bool = False, dropout: float = 0.0, sto_depth: float = 0.0):
         super().__init__()
         self.sto_depth = sto_depth
         edge_n, heads = attn if isinstance(attn, (list, tuple)) else (attn, 1)
-        self.conv = ConvBlock(in_c, conv, in_c, bias, dropout, checkpoint)
-        self.attn = HyperEdgeAttention(in_c, edge_n, heads, bias, dropout, checkpoint)
-        self.mlp  = SwiGLU(in_c, mlp, in_c, bias, dropout, checkpoint)
+        self.conv = ConvBlock(in_c, conv, in_c, bias, dropout)
+        self.attn = HyperEdgeAttention(in_c, edge_n, heads, bias, dropout)
+        self.mlp  = SwiGLU(in_c, mlp, in_c, bias, dropout)
 
     def forward(self, x):
         x = x + stochastic_depth(self.conv(x), self.sto_depth, 'row', self.training)
@@ -226,6 +222,73 @@ class PositionEmbedding(nn.Module):
 
 # ---------- full model --------------------------------------------------------
 
+class HarmonicEncoder(nn.Module):
+    def __init__(self, p: dict):
+        super().__init__()
+        self.model_params = p
+        in_c = p["in_channels"]
+        channels = p["channels"]
+        convs = p["convs"]
+        attns = p["attns"]
+        mlps = p["mlps"]
+        layers = p["layers"]
+        dropout = p.get("dropout", 0.0)
+        sto_depth = p.get("stochastic_depth", 0.0)
+        
+        # Down Once Scale
+        self.position_embed = PositionEmbedding(channels[0])
+        self.down1 = Downsampling(in_c, channels[0])
+        self.encoder1 = nn.ModuleList(
+            [Layer(channels[0], convs[0], attns[0], mlps[0], dropout=dropout, sto_depth=sto_depth)
+            for _ in range(layers[0])])
+
+        # Down Twice Scale
+        self.down2 = Downsampling(channels[0], channels[1])
+        self.encoder2 = nn.ModuleList(
+            [Layer(channels[1], convs[1], attns[1], mlps[1], dropout=dropout, sto_depth=sto_depth)
+            for _ in range(layers[1])])
+        
+        # Down Thrice Scale
+        self.down3 = Downsampling(channels[1], channels[2])
+        self.encoder3 = nn.ModuleList(
+            [Layer(channels[2], convs[2], attns[2], mlps[2], dropout=dropout, sto_depth=sto_depth)
+            for _ in range(layers[2])])
+        
+    def forward(self, x, skips=False):
+        B, _, S1, S2, S3 = x.shape
+
+        if skips:
+            skips = [x]
+
+        x = self.down1(x)
+        x = self.position_embed(x)
+        for layer in self.encoder1:
+            x = layer(x)
+
+        if skips:
+            skips.append(x)
+        
+        x = self.down2(x)
+        for layer in self.encoder2:
+            x = layer(x)
+
+        if skips:
+            skips.append(x)
+
+        x = self.down3(x)
+        for layer in self.encoder3:
+            x = layer(x)
+        
+        if skips:
+            return x, skips
+        else:
+            return x
+
+
+class HarmonicDecoder(nn.Module):
+    
+
+
 class HarmonicSeg(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
@@ -239,18 +302,17 @@ class HarmonicSeg(nn.Module):
         layers = p["layers"]
         dropout = p.get("dropout", 0.0)
         sto_depth = p.get("stochastic_depth", 0.0)
-        checkpoint = p.get("checkpoint", False)
         if not (len(channels) == len(convs) == len(attns) == len(mlps) == len(layers) == 3):
             raise ValueError("All lists must be length 3.")
         
         # Native Resolution
         self.in_conv = nn.Conv3d(1, in_c, 2, 2, 0, bias=False)
         self.init_convs = nn.ModuleList(
-            [ConvBlock(in_c, in_c, in_c, dropout=dropout, checkpoint=checkpoint) for _ in range(2)])
+            [ConvBlock(in_c, in_c, in_c, dropout=dropout) for _ in range(2)])
         
         self.merge_final = nn.Conv3d(in_c*2, in_c, 1, 1, 0, bias=False)
         self.final_convs = nn.ModuleList(
-            [ConvBlock(in_c, in_c, in_c, dropout=dropout, checkpoint=checkpoint) for _ in range(2)])
+            [ConvBlock(in_c, in_c, in_c, dropout=dropout) for _ in range(2)])
         self.out_conv = nn.Sequential(
             LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False),
             nn.Conv3d(in_c, out_c, 1, 1, 0, bias=False))
@@ -259,41 +321,35 @@ class HarmonicSeg(nn.Module):
         self.position_embed = PositionEmbedding(channels[0])
         self.down1 = Downsampling(in_c, channels[0])
         self.encoder1 = nn.ModuleList(
-            [Layer(channels[0], convs[0], attns[0], mlps[0], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[0], convs[0], attns[0], mlps[0], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[0])])
         
         self.merge1 = nn.Conv3d(channels[0]*2, channels[0], 1, 1, 0, bias=False)
         self.decoder1 = nn.ModuleList(
-            [Layer(channels[0], convs[0], attns[0], mlps[0], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[0], convs[0], attns[0], mlps[0], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[0])])
         self.up1 = Upsampling(channels[0], in_c)
 
         # Down Twice Scale
         self.down2 = Downsampling(channels[0], channels[1])
         self.encoder2 = nn.ModuleList(
-            [Layer(channels[1], convs[1], attns[1], mlps[1], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[1], convs[1], attns[1], mlps[1], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[1])])
         
         self.merge2 = nn.Conv3d(channels[1]*2, channels[1], 1, 1, 0, bias=False)
         self.decoder2 = nn.ModuleList(
-            [Layer(channels[1], convs[1], attns[1], mlps[1], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[1], convs[1], attns[1], mlps[1], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[1])])
         self.up2 = Upsampling(channels[1], channels[0])
         
         # Down Thrice Scale
         self.down3 = Downsampling(channels[1], channels[2])
         self.encoder3 = nn.ModuleList(
-            [Layer(channels[2], convs[2], attns[2], mlps[2], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[2], convs[2], attns[2], mlps[2], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[2])])
             # Effectively the bottleneck layer
         self.decoder3 = nn.ModuleList(
-            [Layer(channels[2], convs[2], attns[2], mlps[2], 
-                   dropout=dropout, sto_depth=sto_depth, checkpoint=checkpoint)
+            [Layer(channels[2], convs[2], attns[2], mlps[2], dropout=dropout, sto_depth=sto_depth)
             for _ in range(layers[2])])
         self.up3 = Upsampling(channels[2], channels[1])
 
