@@ -91,6 +91,8 @@ def main_worker(rank: int,
                     shuffle=False,
                     num_workers=24,
                     persistent_workers=False)
+            else:
+                val_loader = None
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)

@@ -46,7 +46,7 @@ class DDPTrainer:
         self.criterion = criterion
         self.scheduler = scheduler
         self.precision = torch.bfloat16 if train_params.get("autocast", False) else torch.float32
-        
+
         # Optimizations
         if train_params.get('autocast', False):
             torch.backends.cudnn.enabled = True
@@ -69,7 +69,7 @@ class DDPTrainer:
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
 
-    def train(self, train_loader, val_loader):
+    def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
             self.start_time = time.time()
 
@@ -109,7 +109,7 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            if self.local_rank == 0:
+            if self.local_rank == 0 and val_loader is not None:
                 val_loss, metrics = self.evaluate(val_loader)
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
