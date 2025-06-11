@@ -9,10 +9,6 @@ def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.CropForegroundd(  # Crop foreground from label
-                keys=["image", "label"],
-                source_key="label",
-                allow_smaller=False),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
