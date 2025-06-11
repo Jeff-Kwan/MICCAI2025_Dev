@@ -63,7 +63,7 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         train_ds,
         batch_size=train_params['batch_size'],
         sampler=train_sampler,
-        num_workers=88,
+        num_workers=64,
         prefetch_factor=1,
         pin_memory=True,
         persistent_workers=True)
