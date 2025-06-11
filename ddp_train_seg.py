@@ -68,30 +68,29 @@ def main_worker(rank: int,
                     labels_dir="data/preprocessed/train_pseudo/aladdin5"),
                 transform=train_tf,
                 cache_dir="data/cache/pseudo_label")
-            val_ds = PersistentDataset(
-                data=get_data_files(
-                    images_dir="data/preprocessed/val/images",
-                    labels_dir="data/preprocessed/val/labels"),
-                transform=val_tf,
-                cache_dir="data/cache/val")
-
-        # Distributed samplers & loaders
-        train_sampler = torch.utils.data.DistributedSampler(
-            train_ds, num_replicas=world_size, rank=rank, shuffle=True)
-        train_loader = DataLoader(
-            train_ds,
-            batch_size=train_params['batch_size'],
-            sampler=train_sampler,
-            num_workers=30,
-            prefetch_factor=1,
-            pin_memory=True,
-            persistent_workers=True)
-        val_loader = DataLoader(
-            val_ds,
-            batch_size=1,
-            shuffle=False,
-            num_workers=24,
-            persistent_workers=False)
+            train_sampler = torch.utils.data.DistributedSampler(
+                train_ds, num_replicas=world_size, rank=rank, shuffle=True)
+            train_loader = DataLoader(
+                train_ds,
+                batch_size=train_params['batch_size'],
+                sampler=train_sampler,
+                num_workers=30,
+                prefetch_factor=1,
+                pin_memory=True,
+                persistent_workers=True)
+            if rank == 0:
+                val_ds = PersistentDataset(
+                    data=get_data_files(
+                        images_dir="data/preprocessed/val/images",
+                        labels_dir="data/preprocessed/val/labels"),
+                    transform=val_tf,
+                    cache_dir="data/cache/val")
+                val_loader = DataLoader(
+                    val_ds,
+                    batch_size=1,
+                    shuffle=False,
+                    num_workers=24,
+                    persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
@@ -105,14 +104,6 @@ def main_worker(rank: int,
             label_smoothing=0.1,
             lambda_ce=0.34,
             lambda_dice=0.66,)
-
-        # Optional compile & cuDNN tweaks
-        if train_params.get('autocast', False):
-            torch.backends.cudnn.enabled = True
-            torch.backends.cudnn.benchmark = True
-            torch.backends.cudnn.allow_tf32 = True
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.set_float32_matmul_precision('medium')
 
         # Initialize trainer and start
         trainer = DDPTrainer(
@@ -160,7 +151,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
-        'compile': False,
+        'compile': True,
         'autocast': True,
         'sw_batch_size': 16,
         'sw_overlap': 1/8

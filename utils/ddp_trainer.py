@@ -46,6 +46,14 @@ class DDPTrainer:
         self.criterion = criterion
         self.scheduler = scheduler
         self.precision = torch.bfloat16 if train_params.get("autocast", False) else torch.float32
+        
+        # Optimizations
+        if train_params.get('autocast', False):
+            torch.backends.cudnn.enabled = True
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.allow_tf32 = True
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.set_float32_matmul_precision('medium')
         if train_params.get("compile", False):
             self.model = torch.compile(self.model, mode='default', fullgraph=True)
 
