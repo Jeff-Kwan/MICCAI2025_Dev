@@ -15,18 +15,20 @@ from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
 
-def safe_globals_decorator(func):
-    def wrapper(*args, **kwargs):
+class SafeGlobalsDecorator:
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
         torch.serialization.add_safe_globals([
             np.dtype, np.ndarray, np.core.multiarray._reconstruct,
             np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
             np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
             MetaKeys, SpaceKeys, TraceKeys, MetaTensor
         ])
-        return func(*args, **kwargs)
-    return wrapper
+        return self.func(*args, **kwargs)
 
-@safe_globals_decorator
+@SafeGlobalsDecorator
 def main_worker(rank: int,
                 world_size: int,
                 model_params: dict,
