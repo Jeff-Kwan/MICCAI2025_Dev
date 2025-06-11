@@ -120,7 +120,7 @@ if __name__ == "__main__":
         'batch_size': 1,
         'aggregation': 4,
         'learning_rate': 1e-3,
-        'weight_decay': 1e-2,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
@@ -135,6 +135,6 @@ if __name__ == "__main__":
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
         "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
+        "Spatial [2, 2, 0, 0, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [2, 1, 1]"]
 
     training(model_params, train_params, output_dir, comments)

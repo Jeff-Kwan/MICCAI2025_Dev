@@ -150,7 +150,7 @@ if __name__ == "__main__":
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 1e-3,
-        'weight_decay': 1e-2,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,

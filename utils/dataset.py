@@ -75,7 +75,7 @@ def get_transforms(shape, num_crops):
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
                     mt.RandGaussianSharpend(keys='image', prob=1.0),
                     mt.RandHistogramShiftd(keys='image', prob=1.0)],
-                weights=[3, 2, 1, 0, 1, 0, 0]),
+                weights=[2, 2, 1, 0.5, 1, 1, 0.5]),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -92,7 +92,7 @@ def get_transforms(shape, num_crops):
                         holes=1, max_holes=4,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
-                weights=[3, 1, 1]),
+                weights=[2, 1, 1]),
         ]
     )
     val_transform = mt.Compose(
