@@ -69,9 +69,9 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         persistent_workers=True)
     val_loader = ThreadDataLoader(
         val_ds,
-        batch_size=4,
+        batch_size=1,   # not broadcasted
         sampler=val_sampler,
-        num_workers=32,
+        num_workers=64,
         persistent_workers=False)
 
     # Model, optimizer, scheduler, loss
