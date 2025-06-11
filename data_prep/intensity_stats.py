@@ -118,4 +118,9 @@ Over 50 GT + 2000 Aladdin5 training set to get foreground intensities
 Total foreground intensities collected: 5177351249
 Final results: 0.5th percentile = -974.0, 99.5th percentile = 295.0, 
 Clipped mean = 77.51521301269531, Clipped std = 142.11891174316406
+
+Min and max of gt intensities after processing:
+-7.3988347 1.530302
+Mean and std of gt intensities after processing:
+0.12501192 0.9683901
 '''
