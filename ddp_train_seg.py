@@ -9,6 +9,7 @@ from torch.optim import AdamW, lr_scheduler
 from monai.data import PersistentDataset, DataLoader
 from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
+from monai.data.meta_tensor import MetaTensor
 
 from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
@@ -20,7 +21,7 @@ class SafeGlobalsContext:
             np.dtype, np.ndarray, np.core.multiarray._reconstruct,
             np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
             np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-            MetaKeys, SpaceKeys, TraceKeys
+            MetaKeys, SpaceKeys, TraceKeys, MetaTensor
         ])
 
     def __exit__(self, exc_type, exc_value, traceback):
