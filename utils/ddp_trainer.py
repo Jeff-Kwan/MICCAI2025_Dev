@@ -48,6 +48,7 @@ class DDPTrainer:
         self.precision = torch.bfloat16 if train_params.get("autocast", False) else torch.float32
 
         # Only rank 0 writes metrics
+        self.num_classes = train_params['num_classes']
         self.dice_metric = mm.DiceMetric(include_background=False)
         if self.local_rank == 0:
             os.makedirs(output_dir, exist_ok=True)
@@ -56,7 +57,6 @@ class DDPTrainer:
             self.val_metrics = {'dice': []}
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            self.num_classes = train_params['num_classes']
             self.start_time = None
 
     def train(self, train_loader, val_loader):
