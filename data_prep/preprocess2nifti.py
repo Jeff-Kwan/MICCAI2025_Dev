@@ -153,7 +153,7 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
             ),
             mt.ThresholdIntensityd(
                 keys=["label"],
-                above=True,
+                above=False,
                 threshold=14,   # 14 classes
                 cval=0,
             ),
