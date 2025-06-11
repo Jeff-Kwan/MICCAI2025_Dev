@@ -170,7 +170,8 @@ if __name__ == "__main__":
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
         "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
+        "Spatial [2, 2, 0, 0, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [2, 1, 1]"]
+
     torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     try:
