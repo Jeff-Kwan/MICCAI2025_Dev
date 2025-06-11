@@ -158,6 +158,7 @@ def main_worker(rank: int,
 
 
 if __name__ == "__main__":
+    # If needed:    pkill -f -- '--multiprocessing-fork'
     # Load configs
     model_params = json.load(open("configs/model/large.json"))
     train_params = {
