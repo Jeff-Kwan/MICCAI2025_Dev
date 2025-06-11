@@ -56,44 +56,51 @@ def main_worker(rank: int,
             os.makedirs(full_output, exist_ok=True)
         else:
             full_output = None
+        
+        torch.serialization.add_safe_globals([
+            np.dtype, np.ndarray, np.core.multiarray._reconstruct,
+            np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
+            np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
+            MetaKeys, SpaceKeys, TraceKeys, MetaTensor
+        ])
+
 
         # Datasets
         train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
-        with SafeGlobalsContext():
-            train_ds = PersistentDataset(
-                # data=get_data_files(
-                #     images_dir="data/preprocessed/train_gt/images",
-                #     labels_dir="data/preprocessed/train_gt/labels"),
+        train_ds = PersistentDataset(
+            # data=get_data_files(
+            #     images_dir="data/preprocessed/train_gt/images",
+            #     labels_dir="data/preprocessed/train_gt/labels"),
+            data=get_data_files(
+                images_dir="data/preprocessed/train_pseudo/images",
+                labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+            transform=train_tf,
+            cache_dir="data/cache/pseudo_label")
+        train_sampler = torch.utils.data.DistributedSampler(
+            train_ds, num_replicas=world_size, rank=rank, shuffle=True)
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=train_params['batch_size'],
+            sampler=train_sampler,
+            num_workers=30,
+            prefetch_factor=1,
+            pin_memory=True,
+            persistent_workers=True)
+        if rank == 0:
+            val_ds = PersistentDataset(
                 data=get_data_files(
-                    images_dir="data/preprocessed/train_pseudo/images",
-                    labels_dir="data/preprocessed/train_pseudo/aladdin5"),
-                transform=train_tf,
-                cache_dir="data/cache/pseudo_label")
-            train_sampler = torch.utils.data.DistributedSampler(
-                train_ds, num_replicas=world_size, rank=rank, shuffle=True)
-            train_loader = DataLoader(
-                train_ds,
-                batch_size=train_params['batch_size'],
-                sampler=train_sampler,
-                num_workers=30,
-                prefetch_factor=1,
-                pin_memory=True,
-                persistent_workers=True)
-            if rank == 0:
-                val_ds = PersistentDataset(
-                    data=get_data_files(
-                        images_dir="data/preprocessed/val/images",
-                        labels_dir="data/preprocessed/val/labels"),
-                    transform=val_tf,
-                    cache_dir="data/cache/val")
-                val_loader = DataLoader(
-                    val_ds,
-                    batch_size=1,
-                    shuffle=False,
-                    num_workers=24,
-                    persistent_workers=False)
-            else:
-                val_loader = None
+                    images_dir="data/preprocessed/val/images",
+                    labels_dir="data/preprocessed/val/labels"),
+                transform=val_tf,
+                cache_dir="data/cache/val")
+            val_loader = DataLoader(
+                val_ds,
+                batch_size=1,
+                shuffle=False,
+                num_workers=24,
+                persistent_workers=False)
+        else:
+            val_loader = None
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
