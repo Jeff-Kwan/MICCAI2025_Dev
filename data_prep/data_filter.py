@@ -2,84 +2,73 @@ import os
 from pathlib import Path
 from tqdm import tqdm
 import torch
-import monai.transforms as mt
+from monai.transforms import LoadImaged, EnsureTyped, Compose
 from monai.data import Dataset, ThreadDataLoader
+import multiprocessing
 
 def get_data_files(images_dir, labels_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
     labels_dir = Path(labels_dir)
-
     if not images_dir.is_dir():
         raise FileNotFoundError(f"Image directory not found: {images_dir!r}")
     if not labels_dir.is_dir():
         raise FileNotFoundError(f"Label directory not found: {labels_dir!r}")
 
-    image_names = sorted(
-        entry.name
-        for entry in os.scandir(images_dir)
-        if entry.is_file() and entry.name.endswith(extension)
-    )
-    if not image_names:
+    image_paths = sorted(images_dir.glob(f"*{extension}"))
+    if not image_paths:
         raise RuntimeError(f"No '{extension}' files found in {images_dir!r}")
 
-    label_names = {
-        entry.name
-        for entry in os.scandir(labels_dir)
-        if entry.is_file() and entry.name.endswith(extension)
-    }
-    if not label_names:
-        raise RuntimeError(f"No '{extension}' files found in {labels_dir!r}")
+    data_files = []
+    for img_path in image_paths:
+        lbl_path = labels_dir / img_path.name
+        if not lbl_path.exists():
+            raise ValueError(f"Missing label for image: {img_path.name!r}")
+        # strip off the full extension:
+        base = img_path.name[:-len(extension)]
+        data_files.append({
+            "image": str(img_path),
+            "label": str(lbl_path),
+            "base_name": base
+        })
+    return data_files
 
-    missing = [name for name in image_names if name not in label_names]
-    if missing:
-        missing_list = ", ".join(repr(n) for n in missing)
-        raise ValueError(f"Missing labels for images: {missing_list}")
+def filter_and_delete_zeros(data_files, num_workers=None):
+    num_workers = num_workers or min(32, multiprocessing.cpu_count())
+    # only load the label, leave base_name untouched
+    transform = Compose([
+        LoadImaged(keys=["label"]),
+        EnsureTyped(keys=["label"], dtype=torch.uint8, track_meta=True),
+    ])
 
-    return [
-        {"image": str(images_dir / name), "label": str(labels_dir / name),
-         "base_name": name.removesuffix(extension)}
-        for name in image_names
-    ]
+    ds = Dataset(data=data_files, transform=transform)
+    dl = ThreadDataLoader(ds, batch_size=1, num_workers=num_workers)
 
-def filter_and_delete_zeros(datafiles):
-    transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["label"]),
-            mt.EnsureTyped(keys=["label"], dtype=torch.uint8, track_meta=True),
-        ]
-    )
+    # build a quick lookup from base_name → entry
+    file_map = {d["base_name"]: d for d in data_files}
 
-    dataset = Dataset(data=datafiles, transform=transform)
-    dataloader = ThreadDataLoader(dataset, batch_size=1, num_workers=32)
-
-    for data in tqdm(dataloader, desc="Filtering zero-label images"):
-        label = data["label"][0].numpy().squeeze()
-
-        if (label == 0).all():
-            label_path = data['label'][0].meta['filename_or_obj']
-            base_name = Path(label_path).name
-            matching_files = [f for f in datafiles if Path(f['label']).name == base_name]
-            if matching_files:
-                image_path = matching_files[0]['image']
-                print(f"Deleting image and label with all-zero label:\n  Image: {image_path}\n  Label: {label_path}")
+    for batch in tqdm(dl, desc="Filtering zero‐label images"):
+        lbl = batch["label"][0].numpy().squeeze()
+        # fast “all zeros” check
+        if not lbl.any():
+            base = batch["base_name"][0]
+            entry = file_map[base]
+            img_p = Path(entry["image"])
+            lbl_p = Path(entry["label"])
+            print(f"Deleting all‐zero label pair:\n  Image: {img_p}\n  Label: {lbl_p}")
+            for p in (img_p, lbl_p):
                 try:
-                    os.remove(image_path)
-                    os.remove(label_path)
+                    p.unlink()
                 except Exception as e:
-                    print(f"Error deleting files: {e}")
+                    print(f"  ✖ Couldn’t delete {p}: {e}")
 
 if __name__ == "__main__":
-    datafiles = get_data_files(
-        "data/preprocessed/val/images",
-        "data/preprocessed/val/labels"
-    )
-    datafiles += get_data_files(
-        "data/preprocessed/train_gt/images",
-        "data/preprocessed/train_gt/labels"
-    )
-    datafiles += get_data_files(
-        "data/preprocessed/train_pseudo/images",
-        "data/preprocessed/train_pseudo/aladdin5"
-    )
+    splits = [
+        ("data/preprocessed/val/images",   "data/preprocessed/val/labels"),
+        ("data/preprocessed/train_gt/images",    "data/preprocessed/train_gt/labels"),
+        ("data/preprocessed/train_pseudo/images","data/preprocessed/train_pseudo/aladdin5"),
+    ]
+    all_files = []
+    for img_dir, lbl_dir in splits:
+        all_files.extend(get_data_files(img_dir, lbl_dir))
 
-    filter_and_delete_zeros(datafiles)
+    filter_and_delete_zeros(all_files)
