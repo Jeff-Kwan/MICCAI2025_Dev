@@ -96,7 +96,6 @@ def get_transforms(shape, num_crops):
             mt.CropForegroundd(  # Crop foreground from label
                 keys=["image", "label"],
                 source_key="label",
-                margin=8,
                 allow_smaller=False),
             mt.SpatialPadd(
                 keys=["image", "label"],

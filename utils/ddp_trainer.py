@@ -29,13 +29,16 @@ class DDPTrainer:
         self.train_params = train_params
         self.output_dir = output_dir
 
-        # Device for this process
-        self.device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+        # Device for this process (use local_rank directly)
+        if torch.cuda.is_available():
+            self.device = torch.device(f"cuda:{self.local_rank}")
+        else:
+            self.device = torch.device("cpu")
 
         # Wrap in DDP if using multiple GPUs
         model.to(self.device)
-        if world_size > 1:
-            self.model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+        if self.world_size > 1:
+            self.model = DDP(model, device_ids=[self.local_rank], output_device=self.local_rank)
         else:
             self.model = model
 
