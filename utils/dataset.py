@@ -9,19 +9,20 @@ def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.CropForegroundd( # Define foreground from image with above smallest GT intensity
                 keys=["image", "label"],
                 source_key="image",
-                select_fn=lambda x: x > -7.3988347),
+                select_fn=lambda x: x > -7.3988347,
+                allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -96,7 +97,8 @@ def get_transforms(shape, num_crops):
             mt.CropForegroundd( # Define foreground from image with above smallest GT intensity
                 keys=["image", "label"],
                 source_key="image",
-                select_fn=lambda x: x > -7.3988347),
+                select_fn=lambda x: x > -7.3988347,
+                allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
