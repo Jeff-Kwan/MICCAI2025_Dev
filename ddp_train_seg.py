@@ -14,6 +14,18 @@ from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
 
+class SafeGlobalsContext:
+    def __enter__(self):
+        torch.serialization.add_safe_globals([
+            np.dtype, np.ndarray, np.core.multiarray._reconstruct,
+            np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
+            np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
+            MetaKeys, SpaceKeys, TraceKeys
+        ])
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
 def main_worker(rank: int,
                 world_size: int,
                 model_params: dict,
@@ -43,31 +55,24 @@ def main_worker(rank: int,
     else:
         full_output = None
 
-    # Ensure safe pickling for PersistentDataset
-    torch.serialization.add_safe_globals([
-        np.dtype, np.ndarray, np.core.multiarray._reconstruct,
-        np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
-        np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-        MetaKeys, SpaceKeys, TraceKeys
-    ])
-
     # Datasets
     train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
-    train_ds = PersistentDataset(
-        # data=get_data_files(
-        #     images_dir="data/preprocessed/train_gt/images",
-        #     labels_dir="data/preprocessed/train_gt/labels"),
-        data=get_data_files(
-            images_dir="data/preprocessed/train_pseudo/images",
-            labels_dir="data/preprocessed/train_pseudo/aladdin5"),
-        transform=train_tf,
-        cache_dir="data/cache/pseudo_label")
-    val_ds = PersistentDataset(
-        data=get_data_files(
-            images_dir="data/preprocessed/val/images",
-            labels_dir="data/preprocessed/val/labels"),
-        transform=val_tf,
-        cache_dir="data/cache/val")
+    with SafeGlobalsContext():
+        train_ds = PersistentDataset(
+            # data=get_data_files(
+            #     images_dir="data/preprocessed/train_gt/images",
+            #     labels_dir="data/preprocessed/train_gt/labels"),
+            data=get_data_files(
+                images_dir="data/preprocessed/train_pseudo/images",
+                labels_dir="data/preprocessed/train_pseudo/aladdin5"),
+            transform=train_tf,
+            cache_dir="data/cache/pseudo_label")
+        val_ds = PersistentDataset(
+            data=get_data_files(
+                images_dir="data/preprocessed/val/images",
+                labels_dir="data/preprocessed/val/labels"),
+            transform=val_tf,
+            cache_dir="data/cache/val")
 
     # Distributed samplers & loaders
     train_sampler = torch.utils.data.DistributedSampler(
