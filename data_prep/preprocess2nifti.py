@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import numpy as np
 from tqdm import tqdm
 import torch
 import monai.transforms as mt
@@ -100,24 +101,6 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 subtrahend=77.515,
                 divisor=142.119,
             ),
-            mt.SaveImaged(
-                keys=["image"],
-                output_dir=out_image_dir,
-                output_postfix="",
-                output_ext=".nii.gz",
-                separate_folder=False,
-                output_dtype=torch.float32,
-                print_log=False,
-            ),
-            mt.SaveImaged(
-                keys=["label"],
-                output_dir=out_label_dir,
-                output_postfix="",
-                output_ext=".nii.gz",
-                separate_folder=False,
-                output_dtype=torch.uint8,
-                print_log=False,
-            ),
         ]
     )
 
@@ -128,11 +111,33 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         batch_size=1,
         num_workers=32,
     )
+    save = mt.Compose([
+            mt.SaveImaged(
+                keys=["image"],
+                output_dir=out_image_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.float32,
+                print_log=False),
+            mt.SaveImaged(
+                keys=["label"],
+                output_dir=out_label_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.uint8,
+                print_log=False),
+    ])
 
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
-        pass
+        label = batch["label"].numpy()
+        if np.all(label == 0):
+            continue  # Do not save empty labels data pair
+        else:
+            save(batch)
 
 
 def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
@@ -162,15 +167,6 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
                 threshold=14,   # 14 classes
                 cval=0,
             ),
-            mt.SaveImaged(
-                keys=["label"],
-                output_dir=out_label_dir,
-                output_postfix="",
-                output_ext=".nii.gz",
-                separate_folder=False,
-                output_dtype=torch.uint8,
-                print_log=False,
-            ),
         ]
     )
 
@@ -181,11 +177,23 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
         batch_size=1,
         num_workers=32,
     )
+    save = mt.SaveImaged(
+                keys=["label"],
+                output_dir=out_label_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.uint8,
+                print_log=False)
 
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
-        pass
+        label = batch["label"].numpy()
+        if np.all(label == 0):
+            continue
+        else:
+            save(batch)
 
 
 if __name__ == "__main__":
