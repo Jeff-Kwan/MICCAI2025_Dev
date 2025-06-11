@@ -13,10 +13,9 @@ def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.CropForegroundd(
+            mt.CropForegroundd( # Save training space with effective foreground
                 keys=["image", "label"],
-                source_key="image",
-                select_fn=foreground_threshold,
+                source_key="label",
                 allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
@@ -98,7 +97,7 @@ def get_transforms(shape, num_crops):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.CropForegroundd(
+            mt.CropForegroundd( # Validation you should not know true foreground
                 keys=["image", "label"],
                 source_key="image",
                 select_fn=foreground_threshold,
