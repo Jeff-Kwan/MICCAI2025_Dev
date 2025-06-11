@@ -18,15 +18,17 @@ def get_transforms(shape, num_crops):
                 source_key="label",
                 margin=8,
                 allow_smaller=False),
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.OneOf(       # Random spatial augmentations
-                transforms=[
-                    mt.Identityd(keys=["image", "label"]),
-                    mt.RandAffined(     # Small affine perturbation
+            mt.RandAffined(     # Small affine perturbation
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
@@ -35,6 +37,9 @@ def get_transforms(shape, num_crops):
                         mode=("bilinear", "nearest"),
                         padding_mode="border",
                         lazy=True),
+            mt.OneOf(       # Random spatial augmentations
+                transforms=[
+                    mt.Identityd(keys=["image", "label"]),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -55,12 +60,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[1, 1, 0, 0, 1], lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
+                weights=[2, 0, 0, 1], lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -97,16 +97,16 @@ def get_transforms(shape, num_crops):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.SpatialPadd(
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.CropForegroundd(  # Crop foreground from label
                 keys=["image", "label"],
                 source_key="label",
                 margin=8,
                 allow_smaller=False),
+            mt.SpatialPadd(
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
