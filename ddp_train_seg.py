@@ -15,7 +15,18 @@ from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
 
+def safe_globals_decorator(func):
+    def wrapper(*args, **kwargs):
+        torch.serialization.add_safe_globals([
+            np.dtype, np.ndarray, np.core.multiarray._reconstruct,
+            np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
+            np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
+            MetaKeys, SpaceKeys, TraceKeys, MetaTensor
+        ])
+        return func(*args, **kwargs)
+    return wrapper
 
+@safe_globals_decorator
 def main_worker(rank: int,
                 world_size: int,
                 model_params: dict,
@@ -108,28 +119,22 @@ def main_worker(rank: int,
             local_rank=rank,
             world_size=world_size,
             comments=comments)
-        
-        with torch.serialization.safe_globals([
-            np.dtype, np.ndarray, np.core.multiarray._reconstruct,
-            np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
-            np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-            MetaKeys, SpaceKeys, TraceKeys, MetaTensor]):
 
-            trainer.train(train_loader, val_loader)
+        trainer.train(train_loader, val_loader)
 
-            # Final evaluations on rank 0
-            if rank == 0:
-                test_loss, test_metrics = trainer.evaluate(val_loader)
-                with open(os.path.join(full_output, 'results.txt'), 'a') as f:
-                    f.write(f"\nLast Model Test: Loss={test_loss:.5f}, Dice={test_metrics['dice']:.5f}\n")
-                print(f"[Last] Test Loss: {test_loss:.5f}, Dice: {test_metrics['dice']:.5f}")
+        # Final evaluations on rank 0
+        if rank == 0:
+            test_loss, test_metrics = trainer.evaluate(val_loader)
+            with open(os.path.join(full_output, 'results.txt'), 'a') as f:
+                f.write(f"\nLast Model Test: Loss={test_loss:.5f}, Dice={test_metrics['dice']:.5f}\n")
+            print(f"[Last] Test Loss: {test_loss:.5f}, Dice: {test_metrics['dice']:.5f}")
 
-                # Load best and re-evaluate
-                trainer.model.load_state_dict(torch.load(os.path.join(full_output, 'best_model.pth')))
-                best_loss, best_metrics = trainer.evaluate(val_loader)
-                with open(os.path.join(full_output, 'results.txt'), 'a') as f:
-                    f.write(f"Best Model Test: Loss={best_loss:.5f}, Dice={best_metrics['dice']:.5f}\n")
-                print(f"[Best] Test Loss: {best_loss:.5f}, Dice: {best_metrics['dice']:.5f}")
+            # Load best and re-evaluate
+            trainer.model.load_state_dict(torch.load(os.path.join(full_output, 'best_model.pth')))
+            best_loss, best_metrics = trainer.evaluate(val_loader)
+            with open(os.path.join(full_output, 'results.txt'), 'a') as f:
+                f.write(f"Best Model Test: Loss={best_loss:.5f}, Dice={best_metrics['dice']:.5f}\n")
+            print(f"[Best] Test Loss: {best_loss:.5f}, Dice: {best_metrics['dice']:.5f}")
 
     except KeyboardInterrupt:
         print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
