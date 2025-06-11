@@ -44,7 +44,8 @@ class DDPTrainer:
         self.scheduler = scheduler
         self.precision = torch.bfloat16 if train_params.get("autocast", False) else torch.float32
 
-        # Only rank 0 tracks and writes metrics
+        # Only rank 0 writes metrics
+        self.dice_metric = mm.DiceMetric(include_background=False)
         if self.local_rank == 0:
             os.makedirs(output_dir, exist_ok=True)
             self.train_losses = []
@@ -53,7 +54,6 @@ class DDPTrainer:
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.num_classes = train_params['num_classes']
-            self.dice_metric = mm.DiceMetric(include_background=False)
             self.start_time = None
 
     def train(self, train_loader, val_loader):
@@ -96,8 +96,8 @@ class DDPTrainer:
 
             self.scheduler.step()
 
+            val_loss, metrics = self.evaluate(val_loader)
             if self.local_rank == 0:
-                val_loss, metrics = self.evaluate(val_loader)
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
@@ -114,45 +114,75 @@ class DDPTrainer:
 
     def evaluate(self, data_loader):
         self.model.eval()
+        # local accumulators
         loss_sum = 0.0
+        sample_count = 0
+        # reset MONAI dice
         self.dice_metric.reset()
 
         with torch.inference_mode():
-            loop = tqdm.tqdm(data_loader,
-                             desc='Validation',
-                             disable=(self.local_rank!=0))
-            for batch in loop:
+            # loop over your shard
+            for batch in tqdm.tqdm(
+                data_loader,
+                desc=f"[Rank {self.local_rank}] Validation",
+                disable=(self.local_rank != 0),
+            ):
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
-                B, C, H, W, D = imgs.shape
+                B = imgs.size(0)
+                sample_count += B
 
+                # sliding window inference as before
                 with torch.autocast(device_type='cuda', dtype=self.precision):
-                    aggregated = torch.zeros((B, self.num_classes, H, W, D),
-                                              device=self.device)
+                    aggregated = torch.zeros(
+                        (B, self.num_classes, *imgs.shape[2:]),
+                        device=self.device
+                    )
                     for b in range(B):
-                        single = imgs[b:b+1]
                         logits = sliding_window_inference(
-                            inputs=single,
+                            imgs[b:b+1],
                             roi_size=self.train_params['shape'],
                             sw_batch_size=self.train_params.get('sw_batch_size', 1),
                             predictor=lambda x: self.model(x),
                             overlap=self.train_params.get('sw_overlap', 0.25),
-                            mode="gaussian"
+                            mode="gaussian",
                         )
                         aggregated[b] = logits
 
                     loss = self.criterion(aggregated, masks)
-                loss_sum += loss.item()
+                # accumulate loss weighted by batch size
+                loss_sum += loss.item() * B
 
-                preds = one_hot(torch.argmax(aggregated, dim=1, keepdim=True),
-                                num_classes=self.num_classes)
-                gts   = one_hot(masks, num_classes=self.num_classes)
+                # one‐hot encode and update dice
+                preds = one_hot(
+                    torch.argmax(aggregated, dim=1, keepdim=True),
+                    num_classes=self.num_classes
+                )
+                gts = one_hot(masks, num_classes=self.num_classes)
                 self.dice_metric(y_pred=preds, y=gts)
 
-        mean_loss = loss_sum / len(data_loader)
-        dice_score = self.dice_metric.aggregate().item()
+        # after local loop, get local dice sum:
+        # MONAI's DiceMetric with default reduction='mean_batch' gives mean per batch,
+        # so to get a sum over all samples, multiply by sample_count:
+        local_dice_mean = self.dice_metric.aggregate().item()
+        local_dice_sum = local_dice_mean * sample_count
         self.dice_metric.reset()
-        return mean_loss, {'dice': dice_score}
+
+        # convert to tensors
+        loss_tensor = torch.tensor(loss_sum, device=self.device)
+        samples_tensor = torch.tensor(sample_count, device=self.device)
+        dice_tensor = torch.tensor(local_dice_sum, device=self.device)
+
+        # all‐reduce across ranks
+        dist.all_reduce(loss_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(samples_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(dice_tensor, op=dist.ReduceOp.SUM)
+
+        # compute global means
+        total_loss = loss_tensor.item() / samples_tensor.item()
+        total_dice = dice_tensor.item() / samples_tensor.item()
+
+        return total_loss, {'dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
         # Save last

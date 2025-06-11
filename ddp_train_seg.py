@@ -94,7 +94,7 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
 
     # Optional compile
     if train_params.get('compile', False):
-        model = torch.compile(model)
+        model = torch.compile(model, fullgraph=True)
     if train_params.get('autocast', False):
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
