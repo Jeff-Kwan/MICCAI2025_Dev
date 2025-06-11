@@ -9,10 +9,6 @@ def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.CropForegroundd(  # Crop foreground from label
                 keys=["image", "label"],
                 source_key="label",
@@ -23,6 +19,10 @@ def get_transforms(shape, num_crops):
                 spatial_size=shape,
                 mode=("edge", "edge"),
                 lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -93,10 +93,6 @@ def get_transforms(shape, num_crops):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.CropForegroundd(  # Crop foreground from label
                 keys=["image", "label"],
                 source_key="label",
@@ -110,7 +106,11 @@ def get_transforms(shape, num_crops):
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
-                lazy=True)
+                lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False)
         ]
     )
     return train_transform, val_transform
