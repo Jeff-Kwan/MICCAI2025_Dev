@@ -114,12 +114,6 @@ def main_worker(rank: int,
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.set_float32_matmul_precision('medium')
 
-        # Wrap in DDP
-        model.to(rank)
-        if world_size > 1:
-            model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[rank], output_device=rank)
-
         # Initialize trainer and start
         trainer = DDPTrainer(
             model=model,
