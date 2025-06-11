@@ -16,6 +16,7 @@ def get_transforms(shape, num_crops):
             mt.CropForegroundd( # Save training space with effective foreground
                 keys=["image", "label"],
                 source_key="label",
+                margin=8, # Keep some margin
                 allow_smaller=False),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
