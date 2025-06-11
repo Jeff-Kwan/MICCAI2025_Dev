@@ -6,14 +6,13 @@ import torch.multiprocessing as mp
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import Dataset, DataLoader
+from monai.data import PersistentDataset, DataLoader
 from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
 from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
-
 
 def main_worker(rank: int,
                 world_size: int,
@@ -24,14 +23,6 @@ def main_worker(rank: int,
     """
     Entry point for each spawned process.
     """
-    # Ensure safe pickling for PersistentDataset
-    torch.serialization.add_safe_globals([
-        np.dtype, np.ndarray, np.core.multiarray._reconstruct,
-        np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
-        np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-        MetaKeys, SpaceKeys, TraceKeys
-    ])
-
     # 1) Set the GPU device for this rank
     torch.cuda.set_device(rank)
 
@@ -52,11 +43,17 @@ def main_worker(rank: int,
     else:
         full_output = None
 
-    # Data transforms
-    train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
+    # Ensure safe pickling for PersistentDataset
+    torch.serialization.add_safe_globals([
+        np.dtype, np.ndarray, np.core.multiarray._reconstruct,
+        np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
+        np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
+        MetaKeys, SpaceKeys, TraceKeys
+    ])
 
     # Datasets
-    train_ds = Dataset(
+    train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
+    train_ds = PersistentDataset(
         # data=get_data_files(
         #     images_dir="data/preprocessed/train_gt/images",
         #     labels_dir="data/preprocessed/train_gt/labels"),
@@ -64,7 +61,7 @@ def main_worker(rank: int,
             images_dir="data/preprocessed/train_pseudo/images",
             labels_dir="data/preprocessed/train_pseudo/aladdin5"),
         transform=train_tf)
-    val_ds = Dataset(
+    val_ds = PersistentDataset(
         data=get_data_files(
             images_dir="data/preprocessed/val/images",
             labels_dir="data/preprocessed/val/labels"),
