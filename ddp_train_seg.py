@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import PersistentDataset
+from monai.data import Dataset
 from torch.utils.data import DataLoader
 from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
@@ -57,18 +57,16 @@ def main_worker(rank: int,
     train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
 
     # Datasets
-    train_ds = PersistentDataset(
+    train_ds = Dataset(
         data=get_data_files(
             images_dir="data/preprocessed/train_gt/images",
             labels_dir="data/preprocessed/train_gt/labels"),
-        transform=train_tf,
-        cache_dir="data/cache/gt_label")
-    val_ds = PersistentDataset(
+        transform=train_tf)
+    val_ds = Dataset(
         data=get_data_files(
             images_dir="data/preprocessed/val/images",
             labels_dir="data/preprocessed/val/labels"),
-        transform=val_tf,
-        cache_dir="data/cache/val")
+        transform=val_tf)
 
     # Distributed samplers & loaders
     train_sampler = torch.utils.data.DistributedSampler(
