@@ -66,7 +66,6 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
-            mt.SqueezeDimd(keys=["image", "label"],dim=0),
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
@@ -149,7 +148,6 @@ def process_labels(images_dir, labels_dir, out_label_dir, pixdim):
         [
             mt.LoadImaged(keys=["label"], ensure_channel_first=True),
             mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
-            mt.SqueezeDimd(keys=["label"],dim=0),
             mt.Spacingd(
                 keys=["label"],
                 pixdim=pixdim,
