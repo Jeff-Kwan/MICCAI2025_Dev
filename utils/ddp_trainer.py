@@ -1,5 +1,3 @@
-# ddp_trainer.py
-
 import os
 import json
 import time
@@ -34,12 +32,12 @@ class DDPTrainer:
         # Device for this process
         self.device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
 
-        # Initialize DDP if needed
+        # Wrap in DDP if using multiple GPUs
+        model.to(self.device)
         if world_size > 1:
-            model.to(self.device)
             self.model = DDP(model, device_ids=[local_rank], output_device=local_rank)
         else:
-            self.model = model.to(self.device)
+            self.model = model
 
         self.optimizer = optimizer
         self.criterion = criterion
@@ -66,22 +64,23 @@ class DDPTrainer:
         agg_steps = self.train_params['aggregation']
 
         for epoch in range(epochs):
-            # Shuffle sampler if distributed
-            if self.world_size > 1 and hasattr(train_loader, 'sampler'):
+            if self.world_size > 1:
                 train_loader.sampler.set_epoch(epoch)
 
             self.model.train()
             running_loss = 0.0
             grad_norm = torch.tensor(0.0, device=self.device)
 
-            loop = tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", disable=(self.local_rank!=0))
+            loop = tqdm.tqdm(train_loader,
+                             desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
+                             disable=(self.local_rank!=0))
             self.optimizer.zero_grad()
 
             for i, batch in enumerate(loop):
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
 
-                with torch.autocast('cuda', dtype=self.precision):
+                with torch.autocast(device_type='cuda', dtype=self.precision):
                     outputs = self.model(imgs)
                     loss = self.criterion(outputs, masks)
                 loss.backward()
@@ -98,10 +97,10 @@ class DDPTrainer:
             self.scheduler.step()
 
             val_loss, metrics = self.evaluate(val_loader)
-            self.train_losses.append(running_loss / len(train_loader))
-            self.val_losses.append(val_loss)
-            self.val_metrics['dice'].append(metrics['dice'])
             if self.local_rank == 0:
+                self.train_losses.append(running_loss / len(train_loader))
+                self.val_losses.append(val_loss)
+                self.val_metrics['dice'].append(metrics['dice'])
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"Train Loss: {self.train_losses[-1]:.5f} | "
                       f"Val Loss: {val_loss:.5f} | "
@@ -109,7 +108,7 @@ class DDPTrainer:
                 self.plot_results()
                 self.save_checkpoint(epoch, metrics)
 
-        # Clean up distributed state
+        # wait for all ranks before exit
         if self.world_size > 1:
             dist.barrier()
 
@@ -119,15 +118,17 @@ class DDPTrainer:
         self.dice_metric.reset()
 
         with torch.inference_mode():
-            loop = tqdm.tqdm(data_loader, desc='Validation', disable=(self.local_rank!=0))
+            loop = tqdm.tqdm(data_loader,
+                             desc='Validation',
+                             disable=(self.local_rank!=0))
             for batch in loop:
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
                 B, C, H, W, D = imgs.shape
 
-                with torch.autocast('cuda', dtype=self.precision):
-                    # Sliding window per-volume inference
-                    aggregated = torch.zeros((B, self.num_classes, H, W, D), device=self.device)
+                with torch.autocast(device_type='cuda', dtype=self.precision):
+                    aggregated = torch.zeros((B, self.num_classes, H, W, D),
+                                              device=self.device)
                     for b in range(B):
                         single = imgs[b:b+1]
                         logits = sliding_window_inference(
@@ -156,7 +157,6 @@ class DDPTrainer:
     def save_checkpoint(self, epoch: int, val_metrics: dict):
         # Save last
         torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'model.pth'))
-        # Save metrics history
         history = {
             'train_losses': self.train_losses,
             'val_losses': self.val_losses,
