@@ -86,7 +86,6 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
             val_ds,
             batch_size=4,
             sampler=val_sampler,
-            shuffle=False,
             num_workers=32,
             persistent_workers=False)
 
@@ -141,9 +140,6 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
             with open(os.path.join(output_dir, 'results.txt'), 'a') as f:
                 f.write(f"Best Model Test: Loss={best_loss:.5f}, Dice={best_metrics['dice']:.5f}\n")
             print(f"[Best] Test Loss: {best_loss:.5f}, Dice: {best_metrics['dice']:.5f}")
-
-        if world_size > 1:
-            dist.destroy_process_group()
         
     except KeyboardInterrupt:
         print(f"[Rank {local_rank}] KeyboardInterrupt received. Cleaning up...")

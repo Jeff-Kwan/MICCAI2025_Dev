@@ -12,15 +12,6 @@ import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 
-def setup_ddp(local_rank: int, world_size: int):
-    if not dist.is_initialized():
-        os.environ.setdefault("MASTER_ADDR", "localhost")
-        os.environ.setdefault("MASTER_PORT", "12355")
-        dist.init_process_group(backend="nccl",
-                                rank=local_rank,
-                                world_size=world_size)
-    torch.cuda.set_device(local_rank)
-
 class DDPTrainer:
     def __init__(
         self,
@@ -45,7 +36,6 @@ class DDPTrainer:
 
         # Initialize DDP if needed
         if world_size > 1:
-            setup_ddp(local_rank, world_size)
             model.to(self.device)
             self.model = DDP(model, device_ids=[local_rank], output_device=local_rank)
         else:
@@ -107,13 +97,11 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            # Validation (only metrics computed on rank 0)
             val_loss, metrics = self.evaluate(val_loader)
+            self.train_losses.append(running_loss / len(train_loader))
+            self.val_losses.append(val_loss)
+            self.val_metrics['dice'].append(metrics['dice'])
             if self.local_rank == 0:
-                self.train_losses.append(running_loss / len(train_loader))
-                self.val_losses.append(val_loss)
-                self.val_metrics['dice'].append(metrics['dice'])
-
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"Train Loss: {self.train_losses[-1]:.5f} | "
                       f"Val Loss: {val_loss:.5f} | "

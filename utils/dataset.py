@@ -12,13 +12,7 @@ def get_transforms(shape, num_crops):
             mt.CropForegroundd(  # Crop foreground from label
                 keys=["image", "label"],
                 source_key="label",
-                margin=8,
                 allow_smaller=False),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
@@ -28,7 +22,16 @@ def get_transforms(shape, num_crops):
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.RandAffined(     # Small affine perturbation
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
+            mt.RandAffined(keys=["image","label"], prob=0, spatial_size=shape), # Strange fix
+            mt.OneOf(       # Random spatial augmentations
+                transforms=[
+                    mt.Identityd(keys=["image", "label"]),
+                    mt.RandAffined(     # Small affine perturbation
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
@@ -37,9 +40,6 @@ def get_transforms(shape, num_crops):
                         mode=("bilinear", "nearest"),
                         padding_mode="border",
                         lazy=True),
-            mt.OneOf(       # Random spatial augmentations
-                transforms=[
-                    mt.Identityd(keys=["image", "label"]),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -60,7 +60,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 0, 0, 1], lazy=True),
+                weights=[2, 1, 0, 0, 1], lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
