@@ -56,15 +56,15 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
         for name in image_names
     ]
 
-def process_labels(datafiles, num_classes=15):
+def process_labels(datafiles, num_classes=14):
     """
     Process the label images, compute histogram of label frequencies,
     and plot the histogram.
     """
     transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-            mt.EnsureTyped(keys=["label"], dtype=torch.uint8, track_meta=True),
+            mt.LoadImaged(keys=["label"]),
+            mt.EnsureTyped(keys=["label"], dtype=torch.uint8, track_meta=False),
         ]
     )
 
@@ -81,6 +81,10 @@ def process_labels(datafiles, num_classes=15):
         counts = np.bincount(label.ravel(), minlength=num_classes)
         label_counts += counts
 
+    # Print the name if it only contains label 0
+    if np.all(label_counts == 0):
+        print("All labels are zero, no data to process.")
+
     # Plot the histogram
     classes = np.arange(num_classes)
     plt.bar(classes, label_counts)
@@ -95,11 +99,9 @@ def process_labels(datafiles, num_classes=15):
 if __name__ == "__main__":
     datafiles = get_data_files(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr"
-    )
-    datafiles += get_data_files(
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo"
-    )
+        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
+    # datafiles += get_data_files(
+    #     "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+    #     "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")
     label_histogram = process_labels(datafiles)
     print("Label frequencies:", label_histogram)
