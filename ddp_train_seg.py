@@ -6,8 +6,7 @@ import torch.multiprocessing as mp
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import Dataset
-from torch.utils.data import DataLoader
+from monai.data import Dataset, DataLoader
 from monai.losses import DiceCELoss
 from monai.utils.enums import MetaKeys, SpaceKeys, TraceKeys
 
