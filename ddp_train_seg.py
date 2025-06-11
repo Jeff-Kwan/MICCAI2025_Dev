@@ -93,11 +93,13 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
 
     # Optional compile
     if train_params.get('compile', False):
+        model = torch.compile(model)
+    if train_params.get('autocast', False):
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
         torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cuda.matmul.allow_tf32 = True
         torch.set_float32_matmul_precision('medium')
-        model = torch.compile(model)
 
     # Initialize and run DDP trainer
     trainer = DDPTrainer(

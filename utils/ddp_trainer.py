@@ -96,8 +96,8 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            val_loss, metrics = self.evaluate(val_loader)
             if self.local_rank == 0:
+                val_loss, metrics = self.evaluate(val_loader)
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])

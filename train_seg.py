@@ -81,11 +81,13 @@ def training(model_params, train_params, output_dir, comments):
 
     # Compilation acceleration
     if train_params.get('compile', False):
+        model = torch.compile(model)
+    if train_params.get('autocast', False):
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
         torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cuda.matmul.allow_tf32 = True
         torch.set_float32_matmul_precision('medium')
-        model = torch.compile(model)
 
     # Trainer
     trainer = Trainer(model, optimizer, criterion, scheduler, 
