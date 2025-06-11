@@ -69,7 +69,7 @@ def process_labels(datafiles, num_classes=14):
     )
 
     dataset = Dataset(data=datafiles, transform=transform)
-    dataloader = ThreadDataLoader(dataset, batch_size=1, num_workers=64)
+    dataloader = ThreadDataLoader(dataset, batch_size=1, num_workers=128)
 
     label_counts = np.zeros(num_classes, dtype=np.int64)
 
@@ -98,10 +98,10 @@ def process_labels(datafiles, num_classes=14):
 
 if __name__ == "__main__":
     datafiles = get_data_files(
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
+        "data/preprocessed/val/images",
+        "data/preprocessed/val/labels")
     datafiles += get_data_files(
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")
+        "data/preprocessed/train_pseudo/images",
+        "data/preprocessed/train_pseudo/aladdin5")
     label_histogram = process_labels(datafiles)
     print("Label frequencies:", label_histogram)
