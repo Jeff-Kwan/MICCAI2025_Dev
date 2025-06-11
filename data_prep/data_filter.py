@@ -74,6 +74,10 @@ if __name__ == "__main__":
         "data/preprocessed/val/labels"
     )
     datafiles += get_data_files(
+        "data/preprocessed/train_gt/images",
+        "data/preprocessed/train_gt/labels"
+    )
+    datafiles += get_data_files(
         "data/preprocessed/train_pseudo/images",
         "data/preprocessed/train_pseudo/aladdin5"
     )
