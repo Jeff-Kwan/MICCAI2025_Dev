@@ -60,12 +60,14 @@ def main_worker(rank: int,
         data=get_data_files(
             images_dir="data/preprocessed/train_pseudo/images",
             labels_dir="data/preprocessed/train_pseudo/aladdin5"),
-        transform=train_tf)
+        transform=train_tf,
+        cache_dir="data/cache/pseudo_label")
     val_ds = PersistentDataset(
         data=get_data_files(
             images_dir="data/preprocessed/val/images",
             labels_dir="data/preprocessed/val/labels"),
-        transform=val_tf)
+        transform=val_tf,
+        cache_dir="data/cache/val")
 
     # Distributed samplers & loaders
     train_sampler = torch.utils.data.DistributedSampler(
