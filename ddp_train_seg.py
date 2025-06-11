@@ -162,7 +162,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
-        'compile': True,
+        'compile': False,
         'autocast': True,
         'sw_batch_size': 32,
         'sw_overlap': 1/8
