@@ -22,11 +22,6 @@ def get_transforms(shape, num_crops):
                 source_key="label",
                 margin=8, # Keep some margin
                 allow_smaller=False),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -66,6 +61,11 @@ def get_transforms(shape, num_crops):
                         mode=("bilinear", "nearest")
                     )],
                 weights=[2, 2, 0, 0, 1], lazy=True),
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                mode=("edge", "edge"),
+                lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -107,14 +107,14 @@ def get_transforms(shape, num_crops):
                 source_key="image",
                 select_fn=foreground_threshold,
                 allow_smaller=False),
+            mt.CenterSpatialCropd(   # Hardcoded max size just in case
+                keys=["image", "label"],
+                roi_size=(512, 512, 256),
+                lazy=True),
             mt.SpatialPadd(     # In case too small
                 keys=["image", "label"],
                 spatial_size=shape,
                 mode=("edge", "edge"),
-                lazy=True),
-            mt.CenterSpatialCropd(   # Hardcoded max size just in case
-                keys=["image", "label"],
-                roi_size=(512, 512, 256),
                 lazy=True)
         ]
     )
