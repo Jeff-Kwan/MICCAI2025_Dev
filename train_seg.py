@@ -117,25 +117,25 @@ if __name__ == "__main__":
     model_params = json.load(open("configs/model/large.json"))
 
     train_params = {
-        'epochs': 100,
+        'epochs': 200,
         'batch_size': 1,
-        'aggregation': 4,
-        'learning_rate': 5e-4,
+        'aggregation': 6,
+        'learning_rate': 1e-3,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 16,
+        'sw_batch_size': 32,
         'sw_overlap': 1/8
     }
-    torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
+    torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll"
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
         "(160, 160, 80) shape", 
         "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [1, 1, 0, 0, 1]; Intensity [3, 1, 1, 0, 1, 0, 0]; Coarse [2, 1, 1]"]
+        "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
 
     training(model_params, train_params, output_dir, comments)

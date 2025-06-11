@@ -7,6 +7,6 @@
 "mlps":         [256, 512, 1024],
 "layers":       [2, 2, 2],
 "dropout":      0.1,
-"stochastic_depth": 0.05,
+"stochastic_depth": 0.1,
 "checkpoint":   false
 }
