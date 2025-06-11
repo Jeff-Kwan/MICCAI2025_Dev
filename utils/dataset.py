@@ -7,7 +7,7 @@ import monai.transforms as mt
 
 def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
-    return x > -7.3988347
+    return x >= -7.3988347
 
 def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
