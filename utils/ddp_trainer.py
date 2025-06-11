@@ -46,12 +46,14 @@ class DDPTrainer:
         self.criterion = criterion
         self.scheduler = scheduler
         self.precision = torch.bfloat16 if train_params.get("autocast", False) else torch.float32
+        if train_params.get("compile", False):
+            self.model = torch.compile(self.model, mode='default', fullgraph=True)
 
         # Only rank 0 writes metrics
-        self.num_classes = train_params['num_classes']
-        self.dice_metric = mm.DiceMetric(include_background=False)
         if self.local_rank == 0:
             os.makedirs(output_dir, exist_ok=True)
+            self.num_classes = train_params['num_classes']
+            self.dice_metric = mm.DiceMetric(include_background=False)
             self.train_losses = []
             self.val_losses = []
             self.val_metrics = {'dice': []}
@@ -99,8 +101,8 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            val_loss, metrics = self.evaluate(val_loader)
             if self.local_rank == 0:
+                val_loss, metrics = self.evaluate(val_loader)
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])

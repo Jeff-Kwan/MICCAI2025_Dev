@@ -78,8 +78,6 @@ def main_worker(rank: int,
         # Distributed samplers & loaders
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True)
-        val_sampler = torch.utils.data.DistributedSampler(
-            val_ds, num_replicas=world_size, rank=rank, shuffle=False)
         train_loader = DataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
@@ -91,7 +89,7 @@ def main_worker(rank: int,
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
-            sampler=val_sampler,
+            shuffle=False,
             num_workers=24,
             persistent_workers=False)
 
@@ -109,8 +107,6 @@ def main_worker(rank: int,
             lambda_dice=0.66,)
 
         # Optional compile & cuDNN tweaks
-        if train_params.get('compile', False):
-            model = torch.compile(model, fullgraph=True)
         if train_params.get('autocast', False):
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
