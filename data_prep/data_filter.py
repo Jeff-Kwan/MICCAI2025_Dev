@@ -50,7 +50,7 @@ def filter_and_delete_zeros(datafiles):
     )
 
     dataset = Dataset(data=datafiles, transform=transform)
-    dataloader = ThreadDataLoader(dataset, batch_size=1, num_workers=8)
+    dataloader = ThreadDataLoader(dataset, batch_size=1, num_workers=32)
 
     for data in tqdm(dataloader, desc="Filtering zero-label images"):
         label = data["label"][0].numpy().squeeze()
