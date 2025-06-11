@@ -13,15 +13,16 @@ from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
 
-# For PersistentDataset pickling
-torch.serialization.add_safe_globals([
-    np.dtype, np.ndarray, np.core.multiarray._reconstruct,
-    np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
-    np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
-    MetaKeys, SpaceKeys, TraceKeys
-])
 
 def main_worker(local_rank, world_size, model_params, train_params, output_dir, comments):
+    # For PersistentDataset pickling
+    torch.serialization.add_safe_globals([
+        np.dtype, np.ndarray, np.core.multiarray._reconstruct,
+        np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
+        np.dtypes.UInt8DType, np.dtypes.Float32DType, np.dtypes.Float64DType,
+        MetaKeys, SpaceKeys, TraceKeys
+    ])
+
     # 1) set device for this process
     torch.cuda.set_device(local_rank)
 
