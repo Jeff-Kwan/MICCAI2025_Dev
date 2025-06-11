@@ -35,13 +35,6 @@ class DDPTrainer:
         else:
             self.device = torch.device("cpu")
 
-        # Wrap in DDP if using multiple GPUs
-        model.to(self.device)
-        if self.world_size > 1:
-            self.model = DDP(model, device_ids=[self.local_rank], output_device=self.local_rank)
-        else:
-            self.model = model
-
         self.optimizer = optimizer
         self.criterion = criterion
         self.scheduler = scheduler

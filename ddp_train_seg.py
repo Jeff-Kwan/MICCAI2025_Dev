@@ -1,7 +1,10 @@
+# ddp_train_seg_spawn.py
+
 import os
 import json
 import torch
 import torch.distributed as dist
+import torch.multiprocessing as mp
 import numpy as np
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
@@ -14,8 +17,16 @@ from model.Harmonics import HarmonicSeg
 from utils.ddp_trainer import DDPTrainer
 
 
-def main_worker(local_rank, world_size, model_params, train_params, output_dir, comments):
-    # For PersistentDataset pickling
+def main_worker(rank: int,
+                world_size: int,
+                model_params: dict,
+                train_params: dict,
+                output_dir: str,
+                comments: list):
+    """
+    Entry point for each spawned process.
+    """
+    # Ensure safe pickling for PersistentDataset
     torch.serialization.add_safe_globals([
         np.dtype, np.ndarray, np.core.multiarray._reconstruct,
         np.dtypes.Int64DType, np.dtypes.Int32DType, np.dtypes.Int16DType,
@@ -23,14 +34,19 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         MetaKeys, SpaceKeys, TraceKeys
     ])
 
-    # 1) set device for this process
-    torch.cuda.set_device(local_rank)
+    # 1) Set the GPU device for this rank
+    torch.cuda.set_device(rank)
 
-    # 2) accel-provided init
-    dist.init_process_group(backend='nccl', init_method='env://')
+    # 2) Initialize the process group
+    dist.init_process_group(
+        backend='nccl',
+        init_method='tcp://127.0.0.1:29500',
+        world_size=world_size,
+        rank=rank
+    )
 
-    # 3) only rank 0 creates the output folder
-    if local_rank == 0:
+    # 3) Only rank 0 creates output folder
+    if rank == 0:
         timestamp = datetime.now().strftime("%H-%M")
         date_str  = datetime.now().strftime("%Y-%m-%d")
         full_output = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
@@ -55,11 +71,11 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         transform=val_tf,
         cache_dir="data/cache/val")
 
-    # Distributed sampler & loader
+    # Distributed samplers & loaders
     train_sampler = torch.utils.data.DistributedSampler(
-        train_ds, num_replicas=world_size, rank=local_rank, shuffle=True)
+        train_ds, num_replicas=world_size, rank=rank, shuffle=True)
     val_sampler = torch.utils.data.DistributedSampler(
-        val_ds, num_replicas=world_size, rank=local_rank, shuffle=False)
+        val_ds, num_replicas=world_size, rank=rank, shuffle=False)
     train_loader = ThreadDataLoader(
         train_ds,
         batch_size=train_params['batch_size'],
@@ -70,7 +86,7 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         persistent_workers=True)
     val_loader = ThreadDataLoader(
         val_ds,
-        batch_size=1,   # not broadcasted
+        batch_size=1,
         sampler=val_sampler,
         num_workers=64,
         persistent_workers=False)
@@ -87,12 +103,12 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         include_background=False,
         to_onehot_y=True,
         softmax=True,
-        weight=torch.tensor([0.01] + [1.0]*13, device=f"cuda:{local_rank}"),
+        weight=torch.tensor([0.01] + [1.0]*13, device=f"cuda:{rank}"),
         label_smoothing=0.1,
         lambda_ce=0.34,
         lambda_dice=0.66)
 
-    # Optional compile
+    # Optional compile & cuDNN tweaks
     if train_params.get('compile', False):
         model = torch.compile(model, fullgraph=True)
     if train_params.get('autocast', False):
@@ -102,7 +118,13 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.set_float32_matmul_precision('medium')
 
-    # Initialize and run DDP trainer
+    # Wrap in DDP
+    model.to(rank)
+    if world_size > 1:
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[rank], output_device=rank)
+
+    # Initialize trainer and start
     trainer = DDPTrainer(
         model=model,
         optimizer=optimizer,
@@ -110,38 +132,30 @@ def main_worker(local_rank, world_size, model_params, train_params, output_dir, 
         scheduler=scheduler,
         train_params=train_params,
         output_dir=full_output,
-        local_rank=local_rank,
+        local_rank=rank,
         world_size=world_size,
         comments=comments)
     trainer.train(train_loader, val_loader)
 
-    # Rank 0 does final evaluation
-    if local_rank == 0:
+    # Final evaluations on rank 0
+    if rank == 0:
         test_loss, test_metrics = trainer.evaluate(val_loader)
         with open(os.path.join(full_output, 'results.txt'), 'a') as f:
             f.write(f"\nLast Model Test: Loss={test_loss:.5f}, Dice={test_metrics['dice']:.5f}\n")
         print(f"[Last] Test Loss: {test_loss:.5f}, Dice: {test_metrics['dice']:.5f}")
 
+        # Load best and re-evaluate
         trainer.model.load_state_dict(torch.load(os.path.join(full_output, 'best_model.pth')))
         best_loss, best_metrics = trainer.evaluate(val_loader)
         with open(os.path.join(full_output, 'results.txt'), 'a') as f:
             f.write(f"Best Model Test: Loss={best_loss:.5f}, Dice={best_metrics['dice']:.5f}\n")
         print(f"[Best] Test Loss: {best_loss:.5f}, Dice: {best_metrics['dice']:.5f}")
 
-    # teardown
+    # Clean up
     dist.destroy_process_group()
 
+
 if __name__ == "__main__":
-    import argparse
-    '''
-    torchrun --nproc_per_node=4 --master_port=29500 ddp_train_seg.py
-    '''
-
-    parser = argparse.ArgumentParser(description="DDP Training with torchrun")
-    args = parser.parse_args()
-    local_rank = int(os.environ["LOCAL_RANK"])
-    world_size = int(os.environ["WORLD_SIZE"])
-
     # Load configs
     model_params = json.load(open("configs/model/large.json"))
     train_params = {
@@ -153,7 +167,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (160, 160, 80),
         'num_crops': 8,
-        'compile': False,   # Seems to conflict with torchrun
+        'compile': False,   # Can switch on if desired
         'autocast': True,
         'sw_batch_size': 16,
         'sw_overlap': 1/8
@@ -164,5 +178,11 @@ if __name__ == "__main__":
         "DiceCE, 8-sample rand crop + fewer augmentations",
         "Spatial [1, 1, 0, 0, 1]; Intensity [3, 1, 1, 0, 1, 0, 0]; Coarse [2, 1, 1]"
     ]
+    torch._dynamo.config.cache_size_limit = 16  # Up the cache size limit for dynamo
 
-    main_worker(local_rank, world_size, model_params, train_params, output_dir, comments)
+    mp.spawn(
+        main_worker,
+        args=(4, model_params, train_params, output_dir, comments),
+        nprocs=4,
+        join=True
+    )
