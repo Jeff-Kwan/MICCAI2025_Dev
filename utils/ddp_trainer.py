@@ -110,6 +110,7 @@ class DDPTrainer:
             self.scheduler.step()
 
             if self.world_size > 1:
+                torch.cuda.synchronize(self.device)
                 dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
                 val_loss, metrics = self.evaluate(val_loader)
@@ -123,6 +124,7 @@ class DDPTrainer:
                 self.plot_results()
                 self.save_checkpoint(epoch, metrics)
             if self.world_size > 1:
+                torch.cuda.synchronize(self.device)
                 dist.barrier()
 
 
