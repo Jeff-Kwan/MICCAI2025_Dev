@@ -124,6 +124,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
             batch["image"].shape[1] > 512 and 
             batch["image"].shape[2] > 256):
             batch = crop(batch)
+            print(f"Cropping {batch['base_name'][0]} to {batch['image'].shape}")
 
         img = batch["image"].numpy().squeeze().astype(np.float32)
         label = batch["label"].numpy().squeeze().astype(np.uint8)
@@ -133,6 +134,9 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
             # Save as npy
             np.save(os.path.join(out_image_dir, f"{base_name}.npy"), img)
             np.save(os.path.join(out_label_dir, f"{base_name}.npy"), label)
+        else:
+            print(f"Skipping {base_name} due to empty label")
+            continue
 
 
 
