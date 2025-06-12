@@ -45,14 +45,14 @@ def main_worker(rank: int,
         # Datasets
         train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
         train_ds = Dataset(
-            # data=get_data_files(
-            #     images_dir="data/preprocessed/train_gt/images",
-            #     labels_dir="data/preprocessed/train_gt/labels",
-            #     extension='.npy'),
             data=get_data_files(
-                images_dir="data/preprocessed/train_pseudo/images",
-                labels_dir="data/preprocessed/train_pseudo/aladdin5",
+                images_dir="data/preprocessed/train_gt/images",
+                labels_dir="data/preprocessed/train_gt/labels",
                 extension='.npy'),
+            # data=get_data_files(
+            #     images_dir="data/preprocessed/train_pseudo/images",
+            #     labels_dir="data/preprocessed/train_pseudo/aladdin5",
+            #     extension='.npy'),
             transform=train_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True)

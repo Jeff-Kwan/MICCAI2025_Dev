@@ -109,6 +109,8 @@ class DDPTrainer:
 
             self.scheduler.step()
 
+            if self.world_size > 1:
+                dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
                 val_loss, metrics = self.evaluate(val_loader)
                 self.train_losses.append(running_loss / len(train_loader))
@@ -120,10 +122,9 @@ class DDPTrainer:
                       f"Val Dice: {metrics['dice']:.5f}")
                 self.plot_results()
                 self.save_checkpoint(epoch, metrics)
+            if self.world_size > 1:
+                dist.barrier()
 
-        # wait for all ranks before exit
-        if self.world_size > 1:
-            dist.barrier()
 
     def evaluate(self, data_loader):
         self.model.eval()
@@ -174,19 +175,16 @@ class DDPTrainer:
                 gts = one_hot(masks, num_classes=self.num_classes)
                 self.dice_metric(y_pred=preds, y=gts)
 
-        # after local loop, get local dice sum:
-        # MONAI's DiceMetric with default reduction='mean_batch' gives mean per batch,
-        # so to get a sum over all samples, multiply by sample_count:
-        dice_mean = self.dice_metric.aggregate().item()
-        dice_sum = dice_mean * sample_count
-        self.dice_metric.reset()
         total_loss = loss_sum / sample_count
-        total_dice = dice_sum / sample_count
+        total_dice = float(self.dice_metric.aggregate())
+        self.dice_metric.reset()
         return total_loss, {'dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
         # Save last
-        torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'model.pth'))
+        state_dict = (self.model.module.state_dict()
+                if isinstance(self.model, DDP) else self.model.state_dict())
+        torch.save(state_dict, os.path.join(self.output_dir, 'model.pth'))
         history = {
             'train_losses': self.train_losses,
             'val_losses': self.val_losses,
