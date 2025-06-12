@@ -123,6 +123,7 @@ def main_worker(rank: int,
         print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
     finally:
         dist.destroy_process_group()
+        os.system("pkill -f -- '--multiprocessing-fork'")
 
 
 if __name__ == "__main__":
@@ -159,3 +160,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")
         mp.get_context('spawn')._shutdown()
+        os.system("pkill -f -- '--multiprocessing-fork'")
