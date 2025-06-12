@@ -120,9 +120,9 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
-        if (batch["image"].shape[0] > 512 and 
-            batch["image"].shape[1] > 512 and 
-            batch["image"].shape[2] > 256):
+        if (batch["image"].shape[0] > 550 or 
+            batch["image"].shape[1] > 550 or 
+            batch["image"].shape[2] > 300):
             batch = crop(batch)
             print(f"Cropping {batch['base_name'][0]} to {batch['image'].shape}")
 
