@@ -184,7 +184,7 @@ class DDPTrainer:
             dist.all_reduce(sample_count, op=dist.ReduceOp.SUM)
 
         total_loss = loss_sum.item() / max(sample_count.item(), 1)
-        total_dice = float(self.dice_metric.get_buffer().aggregate())
+        total_dice = float(self.dice_metric.aggregate())
         return total_loss, {'dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):

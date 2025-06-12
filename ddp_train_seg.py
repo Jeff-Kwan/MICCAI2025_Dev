@@ -69,15 +69,12 @@ def main_worker(rank: int,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
             num_workers=32,
-            prefetch_factor=1,
-            pin_memory=True,
-            persistent_workers=True)
+            pin_memory=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=25,
-            persistent_workers=False)
+            num_workers=12)
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
