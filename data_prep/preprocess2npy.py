@@ -65,14 +65,15 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=True),
+            mt.Orientationd(keys=["image", "label"], axcodes="RAS", lazy=False),
             mt.SqueezeDimd(keys=["image", "label"],dim=0),
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
                 mode=("bicubic", "nearest"),
-                lazy=True,
+                lazy=False,
             ),
+            mt.EnsureChannelFirstd(keys=["image", "label"]),
             mt.EnsureTyped(
                 keys=["image", "label"],
                 dtype=[torch.float32, torch.uint8],
@@ -112,14 +113,11 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         num_workers=128,
     )
 
-    crop = mt.Compose([
-            mt.EnsureChannelFirstd(keys=["image", "label"],),
-            mt.CropForegroundd(
+    crop = mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
                 margin=16, # Keep some margin
                 allow_smaller=False)
-        ])
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
