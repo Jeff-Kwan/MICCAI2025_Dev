@@ -116,7 +116,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 keys=["image", "label"],
                 source_key="label",
                 margin=16, # Keep some margin
-                allow_smaller=False),
+                allow_smaller=False)
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
