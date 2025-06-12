@@ -11,18 +11,18 @@ def foreground_threshold(x):
 
 def get_transforms(shape, num_crops, nifti=True):
     train_transform = mt.Compose(
-        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
+        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+         mt.CropForegroundd( # Save training space with effective foreground
+                keys=["image", "label"],
+                source_key="label",
+                margin=8, # Keep some margin
+                allow_smaller=False),] if nifti else []
         +
         [
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Save training space with effective foreground
-                keys=["image", "label"],
-                source_key="label",
-                margin=8, # Keep some margin
-                allow_smaller=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -97,17 +97,17 @@ def get_transforms(shape, num_crops, nifti=True):
         ]
     )
     val_transform = mt.Compose(
-        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
+        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+         mt.CropForegroundd( # Validation you should not know true foreground
+                keys=["image", "label"],
+                source_key="image",
+                select_fn=foreground_threshold,
+                allow_smaller=False),] if nifti else []
         +
         [   mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Validation you should not know true foreground
-                keys=["image", "label"],
-                source_key="image",
-                select_fn=foreground_threshold,
-                allow_smaller=False),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),

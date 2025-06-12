@@ -101,6 +101,11 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 subtrahend=77.515,
                 divisor=142.119,
             ),
+            mt.CropForegroundd( # Save space with effective foreground (unfortunately also for val)
+                keys=["image", "label"],
+                source_key="label",
+                margin=16, # Keep some margin
+                allow_smaller=False),
         ]
     )
 
