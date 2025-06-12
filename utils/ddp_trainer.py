@@ -133,8 +133,8 @@ class DDPTrainer:
     def evaluate(self, data_loader):
         self.model.eval()
         # local accumulators
-        loss_sum = 0.0
-        sample_count = 0
+        loss_sum = torch.tensor(0.0, device=self.device)
+        sample_count = torch.tensor(0, device=self.device)
         # reset MONAI dice
         self.dice_metric.reset()
 
@@ -160,7 +160,7 @@ class DDPTrainer:
                         imgs[b:b+1],
                         roi_size=self.train_params['shape'],
                         sw_batch_size=self.train_params.get('sw_batch_size', 1),
-                        predictor=lambda x: self.model.module(x),
+                        predictor=lambda x: self.model(x),
                         overlap=self.train_params.get('sw_overlap', 0.25),
                         mode="gaussian",
                     )
@@ -178,8 +178,13 @@ class DDPTrainer:
             gts = one_hot(masks, num_classes=self.num_classes)
             self.dice_metric(y_pred=preds, y=gts)
 
-        total_loss = loss_sum / sample_count
-        total_dice = float(self.dice_metric.aggregate())
+        # Aggregate loss and sample count across all ranks
+        if self.world_size > 1:
+            dist.all_reduce(loss_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(sample_count, op=dist.ReduceOp.SUM)
+
+        total_loss = loss_sum.item() / max(sample_count.item(), 1)
+        total_dice = float(self.dice_metric.get_buffer().aggregate())
         self.dice_metric.reset()
         return total_loss, {'dice': total_dice}
 
