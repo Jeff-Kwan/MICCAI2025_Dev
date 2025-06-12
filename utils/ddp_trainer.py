@@ -38,7 +38,8 @@ class DDPTrainer:
         # Wrap in DDP if using multiple GPUs
         model.to(self.device)
         if self.world_size > 1:
-            self.model = DDP(model, device_ids=[self.local_rank], output_device=self.local_rank)
+            self.model = DDP(model, device_ids=[self.local_rank], 
+                output_device=self.local_rank, broadcast_buffers=False)
         else:
             self.model = model
 
@@ -128,6 +129,7 @@ class DDPTrainer:
                 dist.barrier()
 
 
+    @torch.no_grad()
     def evaluate(self, data_loader):
         self.model.eval()
         # local accumulators
@@ -136,46 +138,45 @@ class DDPTrainer:
         # reset MONAI dice
         self.dice_metric.reset()
 
-        with torch.inference_mode():
-            # loop over your shard
-            for batch in tqdm.tqdm(
-                data_loader,
-                desc=f"[Rank {self.local_rank}] Validation",
-                disable=(self.local_rank != 0),
-            ):
-                imgs = batch['image'].to(self.device, non_blocking=True)
-                masks = batch['label'].to(self.device, non_blocking=True)
-                B = imgs.size(0)
-                sample_count += B
+        # loop over your shard
+        for batch in tqdm.tqdm(
+            data_loader,
+            desc=f"[Rank {self.local_rank}] Validation",
+            disable=(self.local_rank != 0),
+        ):
+            imgs = batch['image'].to(self.device, non_blocking=True)
+            masks = batch['label'].to(self.device, non_blocking=True)
+            B = imgs.size(0)
+            sample_count += B
 
-                # sliding window inference as before
-                with torch.autocast(device_type='cuda', dtype=self.precision):
-                    aggregated = torch.zeros(
-                        (B, self.num_classes, *imgs.shape[2:]),
-                        device=self.device
-                    )
-                    for b in range(B):
-                        logits = sliding_window_inference(
-                            imgs[b:b+1],
-                            roi_size=self.train_params['shape'],
-                            sw_batch_size=self.train_params.get('sw_batch_size', 1),
-                            predictor=lambda x: self.model(x),
-                            overlap=self.train_params.get('sw_overlap', 0.25),
-                            mode="gaussian",
-                        )
-                        aggregated[b] = logits
-
-                    loss = self.criterion(aggregated, masks)
-                # accumulate loss weighted by batch size
-                loss_sum += loss.item() * B
-
-                # one‐hot encode and update dice
-                preds = one_hot(
-                    torch.argmax(aggregated, dim=1, keepdim=True),
-                    num_classes=self.num_classes
+            # sliding window inference as before
+            with torch.autocast(device_type='cuda', dtype=self.precision):
+                aggregated = torch.zeros(
+                    (B, self.num_classes, *imgs.shape[2:]),
+                    device=self.device
                 )
-                gts = one_hot(masks, num_classes=self.num_classes)
-                self.dice_metric(y_pred=preds, y=gts)
+                for b in range(B):
+                    logits = sliding_window_inference(
+                        imgs[b:b+1],
+                        roi_size=self.train_params['shape'],
+                        sw_batch_size=self.train_params.get('sw_batch_size', 1),
+                        predictor=lambda x: self.model.module(x),
+                        overlap=self.train_params.get('sw_overlap', 0.25),
+                        mode="gaussian",
+                    )
+                    aggregated[b] = logits
+
+                loss = self.criterion(aggregated, masks)
+            # accumulate loss weighted by batch size
+            loss_sum += loss.item() * B
+
+            # one‐hot encode and update dice
+            preds = one_hot(
+                torch.argmax(aggregated, dim=1, keepdim=True),
+                num_classes=self.num_classes
+            )
+            gts = one_hot(masks, num_classes=self.num_classes)
+            self.dice_metric(y_pred=preds, y=gts)
 
         total_loss = loss_sum / sample_count
         total_dice = float(self.dice_metric.aggregate())
