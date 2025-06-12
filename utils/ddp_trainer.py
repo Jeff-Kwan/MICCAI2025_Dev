@@ -177,24 +177,11 @@ class DDPTrainer:
         # after local loop, get local dice sum:
         # MONAI's DiceMetric with default reduction='mean_batch' gives mean per batch,
         # so to get a sum over all samples, multiply by sample_count:
-        local_dice_mean = self.dice_metric.aggregate().item()
-        local_dice_sum = local_dice_mean * sample_count
+        dice_mean = self.dice_metric.aggregate().item()
+        dice_sum = dice_mean * sample_count
         self.dice_metric.reset()
-
-        # convert to tensors
-        loss_tensor = torch.tensor(loss_sum, device=self.device)
-        samples_tensor = torch.tensor(sample_count, device=self.device)
-        dice_tensor = torch.tensor(local_dice_sum, device=self.device)
-
-        # all‐reduce across ranks
-        dist.all_reduce(loss_tensor, op=dist.ReduceOp.SUM)
-        dist.all_reduce(samples_tensor, op=dist.ReduceOp.SUM)
-        dist.all_reduce(dice_tensor, op=dist.ReduceOp.SUM)
-
-        # compute global means
-        total_loss = loss_tensor.item() / samples_tensor.item()
-        total_dice = dice_tensor.item() / samples_tensor.item()
-
+        total_loss = loss_sum / sample_count
+        total_dice = dice_sum / sample_count
         return total_loss, {'dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
