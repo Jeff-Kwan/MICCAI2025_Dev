@@ -185,7 +185,6 @@ class DDPTrainer:
 
         total_loss = loss_sum.item() / max(sample_count.item(), 1)
         total_dice = float(self.dice_metric.get_buffer().aggregate())
-        self.dice_metric.reset()
         return total_loss, {'dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
