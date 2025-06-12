@@ -9,20 +9,19 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, num_crops, nifti=True):
+def get_transforms(shape, num_crops):
     train_transform = mt.Compose(
-        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-         mt.CropForegroundd( # Save training space with effective foreground
-                keys=["image", "label"],
-                source_key="label",
-                margin=8, # Keep some margin
-                allow_smaller=False),] if nifti else []
-        +
         [
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.CropForegroundd( # Save training space with effective foreground
+                keys=["image", "label"],
+                source_key="label",
+                margin=8, # Keep some margin
+                allow_smaller=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -97,17 +96,17 @@ def get_transforms(shape, num_crops, nifti=True):
         ]
     )
     val_transform = mt.Compose(
-        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-         mt.CropForegroundd( # Validation you should not know true foreground
-                keys=["image", "label"],
-                source_key="image",
-                select_fn=foreground_threshold,
-                allow_smaller=False),] if nifti else []
-        +
-        [   mt.EnsureTyped(
+        [
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.CropForegroundd( # Validation you should not know true foreground
+                keys=["image", "label"],
+                source_key="image",
+                select_fn=foreground_threshold,
+                allow_smaller=False),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
@@ -122,11 +121,11 @@ def get_transforms(shape, num_crops, nifti=True):
     return train_transform, val_transform
 
 
-def get_mim_transforms(shape, num_crops, nifti=True):
+def get_mim_transforms(shape, num_crops):
     train_transform = mt.Compose(
-        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
-        +
-        [   mt.EnsureTyped(
+        [
+            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
+            mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
                 track_meta=False),
@@ -275,29 +274,6 @@ def get_mim_data_files(
 
     # Build result list
     return [{"image": str(images_dir / name)} for name in image_names]
-
-
-
-class NpyDataset(torch.utils.data.Dataset):
-    """
-    Custom dataset class to load numpy arrays from disk.
-    """
-    def __init__(self, data_files: List[Dict[str, str]], transform=None):
-        self.data_files = data_files
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.data_files)
-
-    def __getitem__(self, idx):
-        item = self.data_files[idx]
-        image = np.load(item["image"])
-        label = np.load(item["label"])
-        sample = {"image": image, "label": label}
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
-
 
 
 if __name__ == "__main__":

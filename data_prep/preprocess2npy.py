@@ -101,11 +101,6 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 subtrahend=77.515,
                 divisor=142.119,
             ),
-            mt.CropForegroundd( # Save space with effective foreground (unfortunately also for val)
-                keys=["image", "label"],
-                source_key="label",
-                margin=16, # Keep some margin
-                allow_smaller=False),
         ]
     )
 
@@ -117,9 +112,19 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         num_workers=128,
     )
 
+    crop = mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=16, # Keep some margin
+                allow_smaller=False),
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
+        if (batch["image"].shape[0] > 512 and 
+            batch["image"].shape[1] > 512 and 
+            batch["image"].shape[2] > 256):
+            batch = crop(batch)
+
         img = batch["image"].numpy().squeeze().astype(np.float32)
         label = batch["label"].numpy().squeeze().astype(np.uint8)
         base_name = batch["base_name"][0]
