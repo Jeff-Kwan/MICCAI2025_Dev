@@ -113,7 +113,7 @@ def training(model_params, train_params, output_dir, comments):
 
 
 if __name__ == "__main__":
-    model_params = json.load(open("configs/model/large.json"))
+    model_params = json.load(open("configs/model/base.json"))
 
     train_params = {
         'epochs': 200,
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (160, 160, 96),
+        'shape': (192, 192, 128),
         'num_crops': 8,
         'compile': True,
         'autocast': True,
@@ -133,8 +133,8 @@ if __name__ == "__main__":
 
     output_dir = "PseudolabelsAll"
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
-        "(160, 160, 96) shape", 
-        "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [2, 2, 0, 0, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [2, 1, 1]"]
+        "(192, 192, 128) shape", 
+        "DiceCE, 8-sample rand crop + augmentations",
+        "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [2, 1, 1]"]
 
     training(model_params, train_params, output_dir, comments)

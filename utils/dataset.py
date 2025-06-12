@@ -65,7 +65,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 2, 0, 0, 1], lazy=True),
+                weights=[2, 3, 1, 1, 1], lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -83,13 +83,13 @@ def get_transforms(shape, num_crops):
                         keys=["image"],
                         prob=1.0,
                         holes=1,
-                        max_holes=2,
+                        max_holes=4,
                         spatial_size=(16, 16, 16),
                         max_spatial_size=(32, 32, 32)),
                     mt.RandCoarseShuffled(
                         keys=["image"],
                         prob=1.0,
-                        holes=1, max_holes=4,
+                        holes=2, max_holes=6,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
                 weights=[2, 1, 1]),

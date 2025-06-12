@@ -45,11 +45,11 @@ def main_worker(rank: int,
         # Datasets
         train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
         train_ds = Dataset(
-            # data=get_data_files(
-            #     images_dir="data/preprocessed/train_gt/images",
-            #     labels_dir="data/preprocessed/train_gt/labels",
-            #     extension='.npy'),
             data=get_data_files(
+                images_dir="data/preprocessed/train_gt/images",
+                labels_dir="data/preprocessed/train_gt/labels",
+                extension='.npy')\
+            + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
                 extension='.npy'),
@@ -128,15 +128,15 @@ def main_worker(rank: int,
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Load configs
-    model_params = json.load(open("configs/model/large.json"))
+    model_params = json.load(open("configs/model/base.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
-        'weight_decay': 1e-2,
+        'learning_rate': 5e-4,
+        'weight_decay': 5e-2,
         'num_classes': 14,
-        'shape': (160, 160, 80),
+        'shape': (192, 192, 128),
         'num_crops': 8,
         'compile': False,
         'autocast': True,
@@ -144,10 +144,10 @@ if __name__ == "__main__":
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
-    comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
-        "(160, 160, 80) shape", 
-        "DiceCE, 8-sample rand crop + fewer augmentations",
-        "Spatial [2, 2, 0, 0, 1]; Intensity [3, 2, 1, 0, 1, 0, 0]; Coarse [3, 1, 1]"]
+    comments = ["HarmonicSeg Large - GT+Aladdin training",
+        "(192, 192, 128) shape", 
+        "DiceCE, 8-sample rand crop + augmentations",
+        "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
     torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     try:
