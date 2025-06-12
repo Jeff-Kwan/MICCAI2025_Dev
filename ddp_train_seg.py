@@ -55,7 +55,9 @@ def main_worker(rank: int,
             #     extension='.npy'),
             transform=train_tf)
         train_sampler = torch.utils.data.DistributedSampler(
-            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True)
+            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
+        val_sampler = torch.utils.data.DistributedSampler(
+            train_ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
         train_loader = DataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
@@ -64,21 +66,18 @@ def main_worker(rank: int,
             prefetch_factor=1,
             pin_memory=True,
             persistent_workers=True)
-        if rank == 0:
-            val_ds = Dataset(
-                data=get_data_files(
-                    images_dir="data/preprocessed/val/images",
-                    labels_dir="data/preprocessed/val/labels",
-                    extension='.npy'),
-                transform=val_tf)
-            val_loader = DataLoader(
-                val_ds,
-                batch_size=1,
-                shuffle=False,
-                num_workers=25,
-                persistent_workers=False)
-        else:
-            val_loader = None
+        val_ds = Dataset(
+            data=get_data_files(
+                images_dir="data/preprocessed/val/images",
+                labels_dir="data/preprocessed/val/labels",
+                extension='.npy'),
+            transform=val_tf)
+        val_loader = DataLoader(
+            val_ds,
+            batch_size=1,
+            sampler=val_sampler,
+            num_workers=25,
+            persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
