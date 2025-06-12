@@ -45,14 +45,14 @@ def main_worker(rank: int,
         # Datasets
         train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
         train_ds = Dataset(
-            data=get_data_files(
-                images_dir="data/preprocessed/train_gt/images",
-                labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy'),
             # data=get_data_files(
-            #     images_dir="data/preprocessed/train_pseudo/images",
-            #     labels_dir="data/preprocessed/train_pseudo/aladdin5",
+            #     images_dir="data/preprocessed/train_gt/images",
+            #     labels_dir="data/preprocessed/train_gt/labels",
             #     extension='.npy'),
+            data=get_data_files(
+                images_dir="data/preprocessed/train_pseudo/images",
+                labels_dir="data/preprocessed/train_pseudo/aladdin5",
+                extension='.npy'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -74,7 +74,8 @@ def main_worker(rank: int,
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=12)
+            num_workers=8,
+            persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
