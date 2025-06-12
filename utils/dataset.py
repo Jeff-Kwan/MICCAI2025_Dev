@@ -9,10 +9,11 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, num_crops):
+def get_transforms(shape, num_crops, nifti=True):
     train_transform = mt.Compose(
+        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
+        +
         [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
@@ -96,9 +97,9 @@ def get_transforms(shape, num_crops):
         ]
     )
     val_transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
+        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
+        +
+        [   mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
@@ -121,11 +122,11 @@ def get_transforms(shape, num_crops):
     return train_transform, val_transform
 
 
-def get_mim_transforms(shape, num_crops):
+def get_mim_transforms(shape, num_crops, nifti=True):
     train_transform = mt.Compose(
-        [
-            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
-            mt.EnsureTyped(
+        [mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True)] if nifti else []
+        +
+        [   mt.EnsureTyped(
                 keys=["image"], 
                 dtype=[torch.float32],
                 track_meta=False),
@@ -274,6 +275,29 @@ def get_mim_data_files(
 
     # Build result list
     return [{"image": str(images_dir / name)} for name in image_names]
+
+
+
+class NpyDataset(torch.utils.data.Dataset):
+    """
+    Custom dataset class to load numpy arrays from disk.
+    """
+    def __init__(self, data_files: List[Dict[str, str]], transform=None):
+        self.data_files = data_files
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data_files)
+
+    def __getitem__(self, idx):
+        item = self.data_files[idx]
+        image = np.load(item["image"])
+        label = np.load(item["label"])
+        sample = {"image": image, "label": label}
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
+
 
 
 if __name__ == "__main__":
