@@ -81,7 +81,7 @@ class ConvBlock(nn.Module):
             LayerNormTranspose(1, in_c),
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
         
-        self.dilated = nn.Conv3d(h_c, h_c, 3, 1, 2, bias=bias, dilation=2)
+        # self.dilated = nn.Conv3d(h_c, h_c, 3, 1, 2, bias=bias, dilation=2)
 
         self.out_conv = nn.Sequential(
             nn.SiLU(),
@@ -90,7 +90,7 @@ class ConvBlock(nn.Module):
         
     def _inner(self, x):
         z = self.in_conv(x)
-        z = z + self.dilated(z)
+        # z = z + self.dilated(z)
         x = self.out_conv(z)
         return x
 
