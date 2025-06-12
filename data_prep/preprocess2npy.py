@@ -119,9 +119,10 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         label = batch["label"].numpy().squeeze().astype(np.uint8)
         base_name = batch["base_name"][0]
 
-        # Save as npy
-        np.save(os.path.join(out_image_dir, f"{base_name}.npy"), img)
-        np.save(os.path.join(out_label_dir, f"{base_name}.npy"), label)
+        if label.any():
+            # Save as npy
+            np.save(os.path.join(out_image_dir, f"{base_name}.npy"), img)
+            np.save(os.path.join(out_label_dir, f"{base_name}.npy"), label)
 
 
 
