@@ -54,6 +54,12 @@ def main_worker(rank: int,
             #     labels_dir="data/preprocessed/train_pseudo/aladdin5",
             #     extension='.npy'),
             transform=train_tf)
+        val_ds = Dataset(
+            data=get_data_files(
+                images_dir="data/preprocessed/val/images",
+                labels_dir="data/preprocessed/val/labels",
+                extension='.npy'),
+            transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True)
         val_sampler = torch.utils.data.DistributedSampler(
@@ -66,12 +72,6 @@ def main_worker(rank: int,
             prefetch_factor=1,
             pin_memory=True,
             persistent_workers=True)
-        val_ds = Dataset(
-            data=get_data_files(
-                images_dir="data/preprocessed/val/images",
-                labels_dir="data/preprocessed/val/labels",
-                extension='.npy'),
-            transform=val_tf)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
@@ -123,7 +123,6 @@ def main_worker(rank: int,
         print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
     finally:
         dist.destroy_process_group()
-        os.system("pkill -f -- '--multiprocessing-fork'")
 
 
 if __name__ == "__main__":
@@ -160,4 +159,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")
         mp.get_context('spawn')._shutdown()
-        os.system("pkill -f -- '--multiprocessing-fork'")
