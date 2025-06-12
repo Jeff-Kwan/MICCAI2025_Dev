@@ -112,11 +112,14 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         num_workers=128,
     )
 
-    crop = mt.CropForegroundd(
+    crop = mt.Compose([
+            mt.EnsureChannelFirstd(keys=["image", "label"],),
+            mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
                 margin=16, # Keep some margin
                 allow_smaller=False)
+        ])
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
