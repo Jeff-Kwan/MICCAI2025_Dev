@@ -68,14 +68,15 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=28,
-            pin_memory=True,
-            persistent_workers=True)
+            num_workers=16,
+            prefetch_factor=4,
+            pin_memory=True)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
             num_workers=8,
+            pin_memory=True,
             persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
@@ -127,7 +128,7 @@ def main_worker(rank: int,
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Load configs
-    model_params = json.load(open("configs/model/base.json"))
+    model_params = json.load(open("configs/model/large.json"))
     train_params = {
         'epochs': 200,
         'batch_size': 1,    # effectively x4
