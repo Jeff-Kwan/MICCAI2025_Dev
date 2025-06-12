@@ -122,18 +122,18 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (256, 256, 192),
+        'shape': (256, 256, 160),
         'num_crops': 8,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 32,
+        'sw_batch_size': 8,
         'sw_overlap': 1/8
     }
     torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     output_dir = "PseudolabelsAll"
     comments = ["HarmonicSeg Large - 2000 Aladdin5 training",
-        "(256, 256, 192) shape", 
+        "(256, 256, 160) shape", 
         "DiceCE, 8-sample rand crop + augmentations",
         "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [2, 1, 1]"]
 
