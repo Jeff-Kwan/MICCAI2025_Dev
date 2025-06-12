@@ -55,9 +55,9 @@ def main_worker(rank: int,
             #     extension='.npy'),
             transform=train_tf)
         train_sampler = torch.utils.data.DistributedSampler(
-            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
+            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True)
         val_sampler = torch.utils.data.DistributedSampler(
-            train_ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
+            train_ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=True)
         train_loader = DataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
