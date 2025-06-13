@@ -48,7 +48,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy')\
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -133,8 +133,8 @@ if __name__ == "__main__":
         'epochs': 300,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
-        'weight_decay': 5e-2,
+        'learning_rate': 2e-4,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (160, 160, 96),
         'num_crops': 8,
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
-    comments = ["HarmonicSeg Large - GT+Aladdin training",
+    comments = ["HarmonicSeg Large - GT*4 + Aladdin training",
         "(160, 160, 96) shape", 
         "DiceCE, 8-sample rand crop + augmentations",
         "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]

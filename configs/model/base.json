@@ -6,7 +6,7 @@
 "attns":        [[256, 4], [256, 4], [256, 4]],
 "mlps":         [128, 256, 512],
 "layers":       [2, 2, 2],
-"dropout":      0.1,
+"dropout":      0.2,
 "stochastic_depth": 0.1,
 "checkpoint":   false
 }
