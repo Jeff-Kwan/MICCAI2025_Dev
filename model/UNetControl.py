@@ -43,6 +43,40 @@ class Layer(nn.Module):
             x = x + stochastic_depth(self.convs[i][0](x), self.sto_depth, 'row', self.training)
             x = x + stochastic_depth(self.convs[i][1](x), self.sto_depth, 'row', self.training)
         return x
+    
+
+class TransformerLayer(nn.Module):
+    def __init__(self, in_c: int, head_dim: int, repeats: int, bias: bool = True,
+                 dropout: float = 0.0, sto_depth: float = 0.0):
+        super().__init__()
+        assert in_c % head_dim == 0, "in_c must be divisible by head_dim"
+        self.sto_depth = sto_depth
+        self.repeats = repeats
+        self.mha_norms = nn.ModuleList([
+            nn.LayerNorm(in_c) for _ in range(repeats)])
+        self.MHAs = nn.ModuleList([
+            nn.MultiheadAttention(in_c, in_c//head_dim, dropout=dropout, 
+                        batch_first=True, bias=bias)
+            for _ in range(repeats)])
+        self.mlps = nn.ModuleList([
+            nn.Sequential(
+                nn.LayerNorm(in_c),
+                nn.Linear(in_c, in_c*4, bias=bias),
+                nn.GELU(),
+                nn.Dropout(dropout) if dropout else nn.Identity(),
+                nn.Linear(in_c*4, in_c, bias=bias))
+            for _ in range(repeats)])
+
+    def forward(self, x):
+        B, C, S1, S2, S3 = x.shape
+        x = x.permute(0, 2, 3, 4, 1).reshape(B, S1*S2*S3, C)
+        for i in range(self.repeats):
+            norm_x = self.mha_norms[i](x)
+            x = x + stochastic_depth(self.MHAs[i](norm_x, norm_x, norm_x, need_weights=False)[0], 
+                                     self.sto_depth, 'row', self.training)
+            x = x + stochastic_depth(self.mlps[i](x), self.sto_depth, 'row', self.training)
+        x = x.permute(0, 2, 1).reshape(B, C, S1, S2, S3)
+        return x
 
 
 class UNetControl(nn.Module):
@@ -54,6 +88,7 @@ class UNetControl(nn.Module):
         layers = p["layers"]
         out_c = p["out_channels"]
         dropout = p.get("dropout", 0.0)
+        sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         stages = len(channels)
 
@@ -61,17 +96,21 @@ class UNetControl(nn.Module):
 
         # Encoder
         self.encoder_convs = nn.ModuleList(
-            [Layer(channels[i], convs[i], layers[i], bias=False, dropout=dropout)
-             for i in range(stages)])
+            [Layer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in range(stages - 1)])
         self.downs = nn.ModuleList([nn.Sequential(
                 nn.GroupNorm(channels[i], channels[i], affine=False),
                 nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
              for i in range(stages - 1)])
         
+        # Bottleneck
+        self.bottleneck = TransformerLayer(channels[-1], convs[-1], layers[-1],
+                        bias=True, dropout=dropout, sto_depth=sto_depth)
+        
         # Decoder
         self.decoder_convs = nn.ModuleList(
-            [Layer(channels[i], convs[i], layers[i], bias=False, dropout=dropout)
-             for i in reversed(range(stages))])
+            [Layer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in reversed(range(stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
@@ -92,16 +131,17 @@ class UNetControl(nn.Module):
         skips = []
         for i, conv in enumerate(self.encoder_convs):
             x = conv(x)
-            if i < len(self.downs):
-                skips.append(x)
-                x = self.downs[i](x)
+            skips.append(x)
+            x = self.downs[i](x)
+
+        # Bottleneck
+        x = self.bottleneck(x)
 
         # Decoder
         for i, conv in enumerate(self.decoder_convs):
+            x = self.ups[i](x)
+            x = self.merges[i](torch.cat([x, skips.pop()], dim=1))
             x = conv(x)
-            if i < len(self.ups):
-                x = self.ups[i](x)
-                x = self.merges[i](torch.cat([x, skips.pop()], dim=1))
 
         x = self.out_conv(x)
         return x
@@ -115,10 +155,10 @@ if __name__ == "__main__":
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
-        "convs":        [24, 32, 48, 64],
-        "layers":       [2, 2, 2, 2],
+        "convs":        [32, 48, 64, 32],
+        "layers":       [2, 2, 2, 4],
         "dropout":      0.1,
-        "stochastic_depth": 0.1,
+        "stochastic_depth": 0.1
     }
 
     x = torch.randn(B, 1, S1, S2, S3).to(device)
