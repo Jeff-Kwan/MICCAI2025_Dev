@@ -9,8 +9,8 @@ class ConvBlock(nn.Module):
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
         self.convs = nn.Sequential(
+            nn.GroupNorm(in_c, in_c),
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c, h_c),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
