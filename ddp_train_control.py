@@ -140,7 +140,7 @@ if __name__ == "__main__":
         'num_crops': 8,
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 16,
+        'sw_batch_size': 8,
         'sw_overlap': 1/8
     }
     output_dir = "UNetControl"

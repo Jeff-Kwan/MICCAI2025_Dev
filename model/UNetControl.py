@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.utils import checkpoint
+# from torch.utils import checkpoint
 from torchvision.ops import stochastic_depth
 
 
@@ -19,10 +19,10 @@ class ConvBlock(nn.Module):
         return self.convs(x)
 
     def forward(self, x):
-        if self.training and x.requires_grad:
-            return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
-        else:
-            return self._inner(x)
+        # if self.training and x.requires_grad:
+        #     return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
+        # else:
+        return self._inner(x)
 
 
 class Layer(nn.Module):
