@@ -219,6 +219,7 @@ class DDPTrainer:
             f.write(f"Training time: {int(hrs):02}:{int(mins):02}:{int(secs):02}\n\n")
             for c in self.comments:
                 f.write(c + "\n")
+            f.write(f"\nModel params: {json.dumps(self.model.module.model_params, indent=4)}\n")
             f.write(f"\nTrain params: {json.dumps(self.train_params, indent=4)}\n")
             f.write(f"\nBest results: {json.dumps(self.best_results, indent=4)}\n")
 
