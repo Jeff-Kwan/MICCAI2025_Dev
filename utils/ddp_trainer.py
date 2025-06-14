@@ -51,7 +51,7 @@ class DDPTrainer:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.set_float32_matmul_precision('medium')
         if train_params.get("compile", False):
-            model = torch.compile(model)
+            self.model = torch.compile(self.model)
 
         self.optimizer = optimizer
         self.criterion = criterion
