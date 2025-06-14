@@ -70,7 +70,8 @@ def main_worker(rank: int,
             sampler=train_sampler,
             num_workers=20,
             prefetch_factor=4,
-            pin_memory=True)
+            pin_memory=True,
+            persistent_workers=True)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
@@ -88,7 +89,7 @@ def main_worker(rank: int,
             to_onehot_y=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
-            lambda_dice=1,
+            lambda_focal=1,
             lambda_dice=1,)
 
         # Initialize trainer and start
