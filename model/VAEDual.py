@@ -262,8 +262,10 @@ class VAEPosterior(nn.Module):
 
 if __name__ == "__main__":
     device = torch.device("cuda")
+    print("DO NOT RUN ON LAPTOP!")
+    exit()
     
-    B, S1, S2, S3 = 1, 256, 256, 128
+    B, S1, S2, S3 = 1, 480, 480, 224
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
