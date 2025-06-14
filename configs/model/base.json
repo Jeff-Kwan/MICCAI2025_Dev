@@ -7,5 +7,5 @@
 "layers":       [2, 2, 2, 2],
 "dropout":      0.1,
 "stochastic_depth": 0.1,
-"checkpoint":   true
+"checkpoint":   false
 }

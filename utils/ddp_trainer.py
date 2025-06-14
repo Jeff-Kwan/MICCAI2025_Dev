@@ -35,6 +35,14 @@ class DDPTrainer:
         else:
             self.device = torch.device("cpu")
 
+        # Wrap in DDP if using multiple GPUs
+        model.to(self.device)
+        if self.world_size > 1:
+            self.model = DDP(model, device_ids=[self.local_rank], 
+                output_device=self.local_rank, broadcast_buffers=False)
+        else:
+            self.model = model
+
         # Optimizations
         if train_params.get('autocast', False):
             torch.backends.cudnn.enabled = True
@@ -44,14 +52,6 @@ class DDPTrainer:
             torch.set_float32_matmul_precision('medium')
         if train_params.get("compile", False):
             model = torch.compile(model)
-
-        # Wrap in DDP if using multiple GPUs
-        model.to(self.device)
-        if self.world_size > 1:
-            self.model = DDP(model, device_ids=[self.local_rank], 
-                output_device=self.local_rank, broadcast_buffers=False)
-        else:
-            self.model = model
 
         self.optimizer = optimizer
         self.criterion = criterion
