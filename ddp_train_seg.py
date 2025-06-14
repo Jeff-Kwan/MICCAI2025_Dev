@@ -69,7 +69,7 @@ def main_worker(rank: int,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
             num_workers=24,
-            prefetch_factor=4,
+            # prefetch_factor=2,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
