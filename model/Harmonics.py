@@ -6,16 +6,16 @@ from torchvision.ops import stochastic_depth
 
 # ---------- normalization ----------------------------------------------------
 
-class LayerNormTranspose(nn.Module):
+class RMSNormTranspose(nn.Module):
     """
-    Wrapper that lets LayerNorm act over an arbitrary dimension by
+    Wrapper that lets RMSNorm act over an arbitrary dimension by
     temporarily transposing it to the last position.
     """
     def __init__(self, dim: int, features: int, eps: float = 1e-6,
                  elementwise_affine: bool = True, bias: bool = True):
         super().__init__()
         self.dim = dim
-        self.norm = nn.LayerNorm(features, eps, elementwise_affine)
+        self.norm = nn.RMSNorm(features, eps, elementwise_affine)
 
     def forward(self, x):
         # (..., C, ...) -> (..., ..., C) -> norm -> restore
@@ -35,14 +35,14 @@ class HyperEdgeAttention(nn.Module):
             raise ValueError(f"{channels=} not divisible by {heads=}")
         
         self.edges = edges
-        self.in_norm = nn.LayerNorm(channels)
+        self.in_norm = nn.RMSNorm(channels)
         self.hyperedge = nn.Linear(channels, edges, bias=bias)
         self.dropout = nn.Dropout(dropout) if dropout else nn.Identity()
         self.mha = nn.MultiheadAttention(channels, heads,
                                          batch_first=True,
                                          bias=bias,
                                          dropout=dropout)
-        self.z_norm = nn.LayerNorm(channels)
+        self.z_norm = nn.RMSNorm(channels)
 
     def _compute_edges(self, tokens, scale):
         w = self.hyperedge(tokens)
@@ -78,7 +78,7 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.checkpoint = checkpoint
         self.in_conv = nn.Sequential(
-            LayerNormTranspose(1, in_c),
+            RMSNormTranspose(1, in_c),
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
         
         # self.dilated = nn.Conv3d(h_c, h_c, 3, 1, 2, bias=bias, dilation=2)
@@ -95,7 +95,7 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.checkpoint = checkpoint
         self.convs = nn.Sequential(
-            LayerNormTranspose(1, in_c),
+            RMSNormTranspose(1, in_c),
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
             nn.SiLU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
@@ -116,7 +116,7 @@ class SwiGLU(nn.Module):
                  bias: bool = False, dropout: float = 0.0, checkpoint=False):
         super().__init__()
         self.checkpoint = checkpoint
-        self.in_norm = LayerNormTranspose(1, in_c)
+        self.in_norm = RMSNormTranspose(1, in_c)
         self.conv1 = nn.Conv3d(in_c, h_c * 2, 1, 1, 0, bias=bias)
         self.act = nn.SiLU()
         self.conv2 = nn.Sequential(
@@ -173,7 +173,7 @@ class HarmonicEncoder(nn.Module):
         # Helper to build downsample + encoder blocks
         def make_stage(in_ch, out_ch, conv, attn, mlp, n_layers):
             down = nn.Sequential(
-                LayerNormTranspose(1, in_ch, elementwise_affine=False, bias=False),
+                RMSNormTranspose(1, in_ch, elementwise_affine=False, bias=False),
                 nn.Conv3d(in_ch, out_ch, 2, 2, 0, bias=False))
             enc = nn.ModuleList([
                 Layer(out_ch, conv, attn, mlp, False, dropout, sto_depth, checkpoint)
@@ -223,7 +223,7 @@ class HarmonicDecoder(nn.Module):
                 Layer(in_ch, conv, attn, mlp, dropout=dropout, sto_depth=sto_depth)
                 for _ in range(n_layers)])
             up = nn.Sequential(
-                LayerNormTranspose(1, in_ch, elementwise_affine=False, bias=False),
+                RMSNormTranspose(1, in_ch, elementwise_affine=False, bias=False),
                 nn.ConvTranspose3d(in_ch, out_ch, 2, 2, 0, bias=False))
             merge = nn.Conv3d(out_ch, out_ch, 1, 1, 0, bias=False)
             return dec, up, merge
@@ -272,7 +272,7 @@ class HarmonicSeg(nn.Module):
         self.final_convs = nn.ModuleList(
             [ConvBlock(in_c, p['convs'][0], in_c, dropout=dropout) for _ in range(p['layers'][0])])
         self.out_conv = nn.Sequential(
-            LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False),
+            RMSNormTranspose(1, in_c, elementwise_affine=False, bias=False),
             nn.ConvTranspose3d(in_c, out_c, 2, 2, 0, bias=False))
         
         # Encoder & Decoder
