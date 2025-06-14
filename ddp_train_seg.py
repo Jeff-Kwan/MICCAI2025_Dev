@@ -137,10 +137,10 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (192, 192, 96),
-        'num_crops': 2,
+        'num_crops': 4,
         'compile': True,
         'autocast': True,
-        'sw_batch_size': 4,
+        'sw_batch_size': 8,
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
@@ -148,7 +148,8 @@ if __name__ == "__main__":
         f"{train_params["shape"]} shape", 
         f"DiceCE, {train_params["num_crops"]}-sample rand crop + augmentations",
         "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
-    torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
+    torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
+    torch._dynamo.config.recompile_limit = 12   # 8 -> 12
 
     try:
         mp.spawn(
