@@ -1,6 +1,7 @@
 import torch
 from torch import nn
-# from torch.utils import checkpoint
+import torch.nn.functional as F
+from torch.utils import checkpoint
 from torchvision.ops import stochastic_depth
 
 
@@ -19,10 +20,10 @@ class ConvBlock(nn.Module):
         return self.convs(x)
 
     def forward(self, x):
-        # if self.training and x.requires_grad:
-        #     return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
-        # else:
-        return self._inner(x)
+        if self.training and x.requires_grad:
+            return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
+        else:
+            return self._inner(x)
 
 
 class ConvLayer(nn.Module):
@@ -91,9 +92,10 @@ class VAEPrior(nn.Module):
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
-        assert channels[0]//2 >= out_c+1, "First channel must be at least 2x out_channels+1 for embedding"
-        self.embedding = nn.Embedding(out_c+1, channels[0]//2)
-        self.in_conv = nn.Conv3d(channels[0]//2, channels[0], 2, 2, 0, bias=False)
+        self.classes = out_c + 1 # + 1 for masking
+
+        self.img_conv = nn.Conv3d(1, channels[0], 2, 2, 0, bias=False)
+        self.label_conv = nn.Conv3d(self.classes, channels[0], 2, 2, 0, bias=False)
         
         # Encoder
         self.encoder_convs = nn.ModuleList(
@@ -125,9 +127,8 @@ class VAEPrior(nn.Module):
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
         
 
-    def encode(self, labels):
-        x = self.embedding(labels).permute(0, 4, 1, 2, 3)
-        x = self.in_conv(x)
+    def encode(self, img, labels):
+        x = self.img_conv(img) + self.label_conv(F.one_hot(labels, self.classes).float().permute(0, 4, 1, 2, 3))
 
         for i, conv in enumerate(self.encoder_convs):
             x = conv(x)
@@ -239,19 +240,19 @@ class VAEPosterior(nn.Module):
         x = self.out_conv(x)
         return x
     
-    def forward(self, x, labels=None):
+    def forward(self, img, labels=None):
         if self.training:
             # During training, teacher forcing on vae prior decoding
-            mu, log_var = self.vae_prior.encode(labels)
+            mu, log_var = self.vae_prior.encode(img, labels)
             prior_z = self.vae_prior.reparameterize(mu, log_var)
             prior_x, latent_priors = self.vae_prior.decode(prior_z)
 
-            mu_hat, log_var_hat, skips = self.img_encode(x)
+            mu_hat, log_var_hat, skips = self.img_encode(img)
             x = self.decode(prior_z, skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image
-            mu_hat, log_var_hat, skips = self.img_encode(x)
+            mu_hat, log_var_hat, skips = self.img_encode(img)
             z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
             x, latent_priors = self.vae_prior.decode(z_hat)
             x = self.decode(z_hat, skips, latent_priors)
@@ -262,7 +263,7 @@ class VAEPosterior(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 160, 160, 80
+    B, S1, S2, S3 = 1, 256, 256, 128
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
@@ -286,13 +287,13 @@ if __name__ == "__main__":
         profile_memory=True,
         record_shapes=True
     ) as prof:
-        with torch.inference_mode():
-            model.eval()
-            y = model(x)
-        # with torch.autocast('cuda', torch.bfloat16):
-        #     y = model(x, labels)[0]
-        #     loss = y.sum()
-        # loss.backward()
+        # with torch.inference_mode():
+        #     model.eval()
+        #     y = model(x)
+        with torch.autocast('cuda', torch.bfloat16):
+            y = model(x, labels)[0]
+            loss = y.sum()
+        loss.backward()
 
     assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         
