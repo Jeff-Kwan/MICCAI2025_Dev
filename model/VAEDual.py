@@ -79,53 +79,7 @@ class TransformerLayer(nn.Module):
         return x
 
 
-class Encoder(nn.Module):
-    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0, sto_depth: float = 0.0):
-        super().__init__()
-        assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
-        self.stages = len(channels)
-        self.encoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
-             for i in range(self.stages - 1)])
-        self.downs = nn.ModuleList([nn.Sequential(
-                nn.GroupNorm(channels[i], channels[i], affine=False),
-                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
-             for i in range(self.stages - 1)])
-        
-    def forward(self, x):
-        skips = []
-        for i, conv in enumerate(self.encoder_convs):
-            x = conv(x)
-            skips.append(x)
-            x = self.downs[i](x)
-        return x, skips
-
-
-class Decoder(nn.Module):
-    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0, sto_depth: float = 0.0):
-        super().__init__()
-        assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
-        self.stages = len(channels)
-        self.decoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
-             for i in reversed(range(self.stages - 1))])
-        self.ups = nn.ModuleList([nn.Sequential(
-                nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
-             for i in reversed(range(self.stages - 1))])
-        self.merges = nn.ModuleList([
-             nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
-             for i in reversed(range(self.stages - 1))])
-
-    def forward(self, x, skips):
-        for i, conv in enumerate(self.decoder_convs):
-            x = self.ups[i](x)
-            x = self.merges[i](torch.cat([x, skips.pop()], dim=1))
-            x = conv(x)
-        return x
-
-
-class UNetControl(nn.Module):
+class VAEPrior(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
         self.model_params = p
@@ -136,33 +90,172 @@ class UNetControl(nn.Module):
         dropout = p.get("dropout", 0.0)
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
+        self.stages = len(channels)
+        assert channels[0]//2 >= out_c+1, "First channel must be at least 2x out_channels+1 for embedding"
+        self.embedding = nn.Embedding(out_c+1, channels[0]//2)
+        self.in_conv = nn.Conv3d(channels[0]//2, channels[0], 2, 2, 0, bias=False)
+        
+        # Encoder
+        self.encoder_convs = nn.ModuleList(
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in range(self.stages - 1)])
+        self.downs = nn.ModuleList([nn.Sequential(
+                nn.GroupNorm(channels[i], channels[i], affine=False),
+                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
+             for i in range(self.stages - 1)])
+        self.bottleneck1 = TransformerLayer(channels[-1], convs[-1], layers[-1],
+                bias=True, dropout=dropout, sto_depth=sto_depth)
+        self.muvar_norm = nn.LayerNorm(channels[-1], elementwise_affine=False, bias=False)
+        self.mu_var = nn.Conv3d(channels[-1], channels[-1] * 2, 1, 1, 0, bias=False)
+
+        # Decoder
+        self.bottleneck2 = TransformerLayer(channels[-1], convs[-1], layers[-1],
+                bias=True, dropout=dropout, sto_depth=sto_depth)
+        self.decoder_convs = nn.ModuleList(
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in reversed(range(self.stages - 1))])
+        self.ups = nn.ModuleList([nn.Sequential(
+                nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
+             for i in reversed(range(self.stages - 1))])
+        self.merges = nn.ModuleList([
+             nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
+             for i in reversed(range(self.stages - 1))])
+        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
+        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        
+
+    def encode(self, labels):
+        x = self.embedding(labels).permute(0, 4, 1, 2, 3)
+        x = self.in_conv(x)
+
+        for i, conv in enumerate(self.encoder_convs):
+            x = conv(x)
+            x = self.downs[i](x)
+
+        x = self.bottleneck1(x)
+
+        x = self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)
+        mu, log_var = self.mu_var(x).chunk(2, dim=1)
+        return mu, log_var
+    
+    def reparameterize(self, mu, log_var):
+        # Reparameterization trick
+        return mu + torch.randn_like(mu, device=mu.device) * torch.exp(0.5 * log_var)
+    
+    def decode(self, x):
+        x = self.bottleneck2(x)
+        latent_priors = [x]
+        for i, conv in enumerate(self.decoder_convs):
+            x = self.ups[i](x)
+            x = conv(x)
+            latent_priors.append(x)
+
+        x = self.out_norm(x.transpose(1, -1)).transpose(1, -1)
+        x = self.out_conv(x)
+        return x, latent_priors
+    
+    def forward(self, labels):
+        mu, log_var = self.encode(labels)
+        x = self.reparameterize(mu, log_var)
+        x, _ = self.decode(x)
+        return x, mu, log_var
+    
+
+
+class VAEPosterior(nn.Module):
+    '''
+    VAE Posterior based on UNet Control.
+    '''
+    def __init__(self, p: dict):
+        super().__init__()
+        self.model_params = p
+        channels = p["channels"]
+        convs = p["convs"]
+        layers = p["layers"]
+        out_c = p["out_channels"]
+        dropout = p.get("dropout", 0.0)
+        sto_depth = p.get("stochastic_depth", 0.0)
+        assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
+        self.stages = len(channels)
 
         self.in_conv = nn.Conv3d(1, channels[0], 2, 2, 0, bias=False)
+        self.vae_prior = VAEPrior(p)
         
-        self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
-        self.bottleneck = TransformerLayer(channels[-1], convs[-1], layers[-1],
-                        bias=True, dropout=dropout, sto_depth=sto_depth)
-        self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
+        # Encoder
+        self.encoder_convs = nn.ModuleList(
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in range(self.stages - 1)])
+        self.downs = nn.ModuleList([nn.Sequential(
+                nn.GroupNorm(channels[i], channels[i], affine=False),
+                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
+             for i in range(self.stages - 1)])
+        self.bottleneck1 = TransformerLayer(channels[-1], convs[-1], layers[-1],
+                bias=True, dropout=dropout, sto_depth=sto_depth)
+        self.muvar_norm = nn.LayerNorm(channels[-1], elementwise_affine=False, bias=False)
+        self.mu_var = nn.Conv3d(channels[-1], channels[-1] * 2, 1, 1, 0, bias=False)
 
+        # Decoder
+        self.bottleneck2 = TransformerLayer(channels[-1], convs[-1], layers[-1],
+                bias=True, dropout=dropout, sto_depth=sto_depth)
+        self.decoder_convs = nn.ModuleList(
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+             for i in reversed(range(self.stages - 1))])
+        self.ups = nn.ModuleList([nn.Sequential(
+                nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
+             for i in reversed(range(self.stages - 1))])
+        self.merge_lat = nn.Conv3d(channels[-1] * 2, channels[-1], 1, 1, 0, bias=False)
+        self.merges = nn.ModuleList([
+             nn.Conv3d(channels[i] * 3, channels[i], 1, 1, 0, bias=False)
+             for i in reversed(range(self.stages - 1))])
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
 
         
-    def forward(self, x):
+    def img_encode(self, x):
         x = self.in_conv(x)
 
-        # Encoder
-        x, skips = self.encoder(x)
+        skips = []
+        for down, conv in zip(self.downs, self.encoder_convs):
+            x = conv(x)
+            skips.append(x)
+            x = down(x)
 
-        # Bottleneck
-        x = self.bottleneck(x)
+        x = self.bottleneck1(x)
+        mu, log_var = self.mu_var(self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)).chunk(2, dim=1)
+        return mu, log_var, skips
+    
+    def decode(self, x, skips, latent_priors):
+        x = self.merge_lat(torch.cat([x, latent_priors.pop(0)], dim=1))
+        x = self.bottleneck2(x)
 
-        # Decoder
-        x = self.decoder(x, skips)
+        for up, conv, merge in zip(self.ups, self.decoder_convs, self.merges):
+            x = up(x)
+            x = merge(torch.cat([x, skips.pop(), latent_priors.pop(0)], dim=1))
+            x = conv(x)
 
         x = self.out_norm(x.transpose(1, -1)).transpose(1, -1)
         x = self.out_conv(x)
         return x
+    
+    def forward(self, x, labels=None):
+        if self.training:
+            # During training, teacher forcing on vae prior decoding
+            mu, log_var = self.vae_prior.encode(labels)
+            prior_z = self.vae_prior.reparameterize(mu, log_var)
+            prior_x, latent_priors = self.vae_prior.decode(prior_z)
+
+            mu_hat, log_var_hat, skips = self.img_encode(x)
+            x = self.decode(prior_z, skips, latent_priors)
+            return x, mu_hat, log_var_hat, prior_x, mu, log_var
+        else:
+            # During inference, latent estimation from image
+            mu_hat, log_var_hat, skips = self.img_encode(x)
+            z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
+            x, latent_priors = self.vae_prior.decode(z_hat)
+            x = self.decode(z_hat, skips, latent_priors)
+            return x
 
 # ---------- demo ----------------------------------------------
 
@@ -174,13 +267,14 @@ if __name__ == "__main__":
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
         "convs":        [32, 48, 64, 32],
-        "layers":       [2, 2, 2, 4],
+        "layers":       [2, 2, 2, 2],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
 
     x = torch.randn(B, 1, S1, S2, S3).to(device)
-    model = UNetControl(params).to(device)
+    labels = torch.randint(0, params["out_channels"], (B, S1, S2, S3)).long().to(device)
+    model = VAEPosterior(params).to(device)
 
     # Profile the forward and backward pass
     if device == torch.device("cuda"):
@@ -192,13 +286,13 @@ if __name__ == "__main__":
         profile_memory=True,
         record_shapes=True
     ) as prof:
-        # with torch.inference_mode():
-        #     model.eval()
-        #     y = model(x)
-        with torch.autocast('cuda', torch.bfloat16):
+        with torch.inference_mode():
+            model.eval()
             y = model(x)
-            loss = y.sum()
-        loss.backward()
+        # with torch.autocast('cuda', torch.bfloat16):
+        #     y = model(x, labels)[0]
+        #     loss = y.sum()
+        # loss.backward()
 
     assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         
