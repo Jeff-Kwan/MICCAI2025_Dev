@@ -265,7 +265,7 @@ class HarmonicSeg(nn.Module):
         dropout = p.get("dropout", 0.0)
         
         # Native Resolution
-        self.in_conv = nn.Conv3d(1, in_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
+        self.in_conv = nn.Conv3d(1, in_c, 2, 2, 0, bias=False)
         self.init_convs = nn.ModuleList(
             [ConvBlock(in_c, p['convs'][0], in_c, dropout=dropout) for _ in range(p['layers'][0])])
         
@@ -273,7 +273,7 @@ class HarmonicSeg(nn.Module):
             [ConvBlock(in_c, p['convs'][0], in_c, dropout=dropout) for _ in range(p['layers'][0])])
         self.out_conv = nn.Sequential(
             LayerNormTranspose(1, in_c, elementwise_affine=False, bias=False),
-            nn.ConvTranspose3d(in_c, out_c, (2, 2, 1), (2, 2, 1), 0, bias=False))
+            nn.ConvTranspose3d(in_c, out_c, 2, 2, 0, bias=False))
         
         # Encoder & Decoder
         self.encoder = HarmonicEncoder(p)
