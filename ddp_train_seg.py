@@ -61,14 +61,14 @@ def main_worker(rank: int,
                 extension='.npy'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
-            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True)
+            train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
         val_sampler = torch.utils.data.DistributedSampler(
-            val_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=True)
+            val_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
         train_loader = ThreadDataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=30,
+            num_workers=24,
             prefetch_factor=4,
             pin_memory=True,
             persistent_workers=True)
