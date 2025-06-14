@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import ThreadDataLoader, Dataset
-from monai.losses import DiceCELoss
+from monai.losses import DiceFocalLoss
 
 from utils import get_transforms, get_data_files
 from model.Harmonics import HarmonicSeg
@@ -48,7 +48,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') \
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -83,14 +83,13 @@ def main_worker(rank: int,
         model = HarmonicSeg(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-        criterion = DiceCELoss(
-            include_background=False, 
+        criterion = DiceFocalLoss(
+            include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
-            label_smoothing=0.1,
-            lambda_ce=0.34,
-            lambda_dice=0.66,)
+            lambda_dice=1,
+            lambda_dice=1,)
 
         # Initialize trainer and start
         trainer = DDPTrainer(
@@ -130,11 +129,11 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/base.json"))
     train_params = {
-        'epochs': 300,
+        'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
-        'weight_decay': 5e-2,
+        'learning_rate': 2e-4,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (192, 192, 160),
         'num_crops': 4,
@@ -144,9 +143,9 @@ if __name__ == "__main__":
         'sw_overlap': 1/8
     }
     output_dir = "PseudolabelsAll"
-    comments = ["HarmonicSeg v2 Base (No pos) - GT + Aladdin training",
+    comments = ["HarmonicSeg v2 Base (No pos) - GTx4 + Aladdin training",
         f"{train_params["shape"]} shape", 
-        f"DiceCE, {train_params["num_crops"]}-sample rand crop + augmentations",
+        f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
     torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
     torch._dynamo.config.recompile_limit = 12   # 8 -> 12
