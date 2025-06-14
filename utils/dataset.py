@@ -65,7 +65,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 3, 1, 1, 1], lazy=True),
+                weights=[2, 2, 1, 1, 1], lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),

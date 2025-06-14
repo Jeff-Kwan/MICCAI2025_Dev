@@ -48,7 +48,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 4 \
+                extension='.npy') * 2 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -63,7 +63,7 @@ def main_worker(rank: int,
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
         val_sampler = torch.utils.data.DistributedSampler(
-            val_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
+            val_ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
         train_loader = ThreadDataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
@@ -144,10 +144,10 @@ if __name__ == "__main__":
         'sw_overlap': 1/8
     }
     output_dir = "AllData"
-    comments = ["HarmonicSeg v2 Base (No pos) - GTx4 + Aladdin training",
+    comments = ["HarmonicSeg v2 Base (No pos) - GTx2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
-        "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
+        "Spatial [2, 2, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
     
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
     # torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
