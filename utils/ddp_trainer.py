@@ -43,7 +43,7 @@ class DDPTrainer:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.set_float32_matmul_precision('medium')
         if train_params.get("compile", False):
-            self.model = torch.compile(self.model)
+            model = torch.compile(model)
 
         # Wrap in DDP if using multiple GPUs
         model.to(self.device)
