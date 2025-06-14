@@ -68,7 +68,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=20,
+            num_workers=18,
             prefetch_factor=4,
             pin_memory=True,
             persistent_workers=True)
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         'sw_batch_size': 8,
         'sw_overlap': 1/8
     }
-    output_dir = "PseudolabelsAll"
+    output_dir = "AllData"
     comments = ["HarmonicSeg v2 Base (No pos) - GTx4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
