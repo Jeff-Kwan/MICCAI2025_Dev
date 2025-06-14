@@ -68,7 +68,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=18,
+            num_workers=22,
             prefetch_factor=4,
             pin_memory=True,
             persistent_workers=True)
