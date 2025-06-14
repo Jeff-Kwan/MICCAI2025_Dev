@@ -133,7 +133,7 @@ if __name__ == "__main__":
         'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 2e-4,
+        'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (192, 192, 160),
