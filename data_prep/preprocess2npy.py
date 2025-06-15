@@ -59,7 +59,7 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
 def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     # Use range -974.0 to 295.0
-    return x >= -974.0 and x <= 295.0
+    return (x >= -974.0) & (x <= 295.0)
 
 def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs

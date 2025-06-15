@@ -105,20 +105,6 @@ def main_worker(rank: int,
             comments=comments)
         trainer.train(train_loader, val_loader)
 
-        # Final evaluations on rank 0
-        if rank == 0:
-            test_loss, test_metrics = trainer.evaluate(val_loader)
-            with open(os.path.join(full_output, 'results.txt'), 'a') as f:
-                f.write(f"\nLast Model Test: Loss={test_loss:.5f}, Dice={test_metrics['dice']:.5f}\n")
-            print(f"[Last] Test Loss: {test_loss:.5f}, Dice: {test_metrics['dice']:.5f}")
-
-            # Load best and re-evaluate
-            trainer.model.load_state_dict(torch.load(os.path.join(full_output, 'best_model.pth')))
-            best_loss, best_metrics = trainer.evaluate(val_loader)
-            with open(os.path.join(full_output, 'results.txt'), 'a') as f:
-                f.write(f"Best Model Test: Loss={best_loss:.5f}, Dice={best_metrics['dice']:.5f}\n")
-            print(f"[Best] Test Loss: {best_loss:.5f}, Dice: {best_metrics['dice']:.5f}")
-
     except KeyboardInterrupt:
         print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
     finally:
