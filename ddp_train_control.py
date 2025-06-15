@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import ThreadDataLoader, Dataset
-from monai.losses import DiceFocalLoss
+from monai.losses import GeneralizedDiceFocalLoss
 
 from utils import get_transforms, get_data_files
 from model.UNetControl import UNetControl
@@ -52,7 +52,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 4 \
+                extension='.npy') * 2 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -87,13 +87,13 @@ def main_worker(rank: int,
         model = UNetControl(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-        criterion = DiceFocalLoss(
+        criterion = GeneralizedDiceFocalLoss(
             include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
+            # weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
             lambda_focal=1,
-            lambda_dice=1,)
+            lambda_gdl=1,)
 
         # Initialize trainer and start
         trainer = DDPTrainer(
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "UNetControl"
-    comments = ["UNet Control - GT*4 + Aladdin training",
+    comments = ["UNet Control - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
