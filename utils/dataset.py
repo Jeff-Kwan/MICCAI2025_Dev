@@ -9,7 +9,7 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, num_crops):
+def get_transforms(shape, num_crops, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -17,21 +17,21 @@ def get_transforms(shape, num_crops):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Save training space with effective foreground
-                keys=["image", "label"],
-                source_key="label",
-                margin=8, # Keep some margin
-                allow_smaller=False),
+            # mt.CropForegroundd( # Save training space with effective foreground
+            #     keys=["image", "label"],
+            #     source_key="label",
+            #     margin=8, # Keep some margin
+            #     allow_smaller=False),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
+            # mt.SpatialPadd(     # In case too small
+            #     keys=["image", "label"],
+            #     spatial_size=shape,
+            #     mode=("edge", "edge"),
+            #     lazy=True),
             mt.RandAffined(keys=["image","label"], prob=0, spatial_size=shape), # Strange fix
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
@@ -65,7 +65,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 2, 1, 1, 1], lazy=True),
+                weights=spatial, lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -75,7 +75,7 @@ def get_transforms(shape, num_crops):
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
                     mt.RandGaussianSharpend(keys='image', prob=1.0),
                     mt.RandHistogramShiftd(keys='image', prob=1.0)],
-                weights=[2, 2, 1, 0.5, 1, 1, 0.5]),
+                weights=intensity),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -92,7 +92,7 @@ def get_transforms(shape, num_crops):
                         holes=2, max_holes=6,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
-                weights=[2, 1, 1]),
+                weights=coarse),
         ]
     )
     val_transform = mt.Compose(
@@ -102,20 +102,20 @@ def get_transforms(shape, num_crops):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Validation you should not know true foreground
-                keys=["image", "label"],
-                source_key="image",
-                select_fn=foreground_threshold,
-                allow_smaller=False),
+            # mt.CropForegroundd( # Validation you should not know true foreground
+            #     keys=["image", "label"],
+            #     source_key="image",
+            #     select_fn=foreground_threshold,
+            #     allow_smaller=False),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
                 lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True)
+            # mt.SpatialPadd(     # In case too small
+            #     keys=["image", "label"],
+            #     spatial_size=shape,
+            #     mode=("edge", "edge"),
+            #     lazy=True)
         ]
     )
     return train_transform, val_transform

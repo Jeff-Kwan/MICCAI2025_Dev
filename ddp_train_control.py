@@ -43,7 +43,11 @@ def main_worker(rank: int,
             full_output = None
 
         # Datasets
-        train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
+        train_tf, val_tf = get_transforms(
+            train_params['shape'], train_params['num_crops'],
+            train_params['data_augmentation']['spatial'],
+            train_params['data_augmentation']['intensity'],
+            train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
@@ -68,9 +72,9 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=16,
-            prefetch_factor=4,
-            pin_memory=True)
+            num_workers=32,
+            pin_memory=True,
+            persistent_workers=True)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
@@ -116,24 +120,32 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/unet_control.json"))
     train_params = {
-        'epochs': 300,
+        'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 2e-4,
+        'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (160, 160, 80),
-        'num_crops': 8,
+        'shape': (192, 192, 160),
+        'num_crops': 4,
         'compile': False,
         'autocast': True,
         'sw_batch_size': 8,
-        'sw_overlap': 1/8
+        'sw_overlap': 1/8,
+        'data_augmentation': {
+            # [I, Affine, Flip, Rotate90, Elastic]
+            'spatial': [2, 2, 1, 1, 1],  
+            # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
+            'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
+            # [I, Dropout, Shuffle]
+            'coarse': [2, 1, 1]  
+        }
     }
     output_dir = "UNetControl"
     comments = ["UNet Control - GT*4 + Aladdin training",
-        "(160, 160, 80) shape", 
-        "DiceCE, 8-sample rand crop + augmentations",
-        "Spatial [2, 3, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
+        f"{train_params["shape"]} shape", 
+        f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
+        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
     torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
 
     try:

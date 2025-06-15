@@ -43,7 +43,11 @@ def main_worker(rank: int,
             full_output = None
 
         # Datasets
-        train_tf, val_tf = get_transforms(train_params['shape'], train_params['num_crops'])
+        train_tf, val_tf = get_transforms(
+            train_params['shape'], train_params['num_crops'],
+            train_params['data_augmentation']['spatial'],
+            train_params['data_augmentation']['intensity'],
+            train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
@@ -104,7 +108,7 @@ def main_worker(rank: int,
             world_size=world_size,
             comments=comments)
         trainer.train(train_loader, val_loader)
-        
+
     except KeyboardInterrupt:
         print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
     finally:
@@ -127,13 +131,21 @@ if __name__ == "__main__":
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
-        'sw_overlap': 1/8
+        'sw_overlap': 1/8,
+        'data_augmentation': {
+            # [I, Affine, Flip, Rotate90, Elastic]
+            'spatial': [2, 2, 1, 1, 1],  
+            # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
+            'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
+            # [I, Dropout, Shuffle]
+            'coarse': [2, 1, 1]  
+        }
     }
     output_dir = "AllData"
     comments = ["HarmonicSeg v2 Base (No pos) - GTx2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
-        "Spatial [2, 2, 1, 1, 1]; Intensity [2, 2, 1, 0.5, 1, 1, 0.5]; Coarse [3, 1, 1]"]
+        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
     
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
     # torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
