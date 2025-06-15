@@ -100,10 +100,6 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
@@ -118,6 +114,10 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
             #     spatial_size=shape,
             #     mode=("edge", "edge"),
             #     lazy=True)
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
         ]
     )
     return train_transform, val_transform
