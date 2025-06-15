@@ -110,10 +110,10 @@ class DDPTrainer:
 
             self.scheduler.step()
 
+            val_loss, metrics = self.evaluate(val_loader)
             if self.world_size > 1:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
-            val_loss, metrics = self.evaluate(val_loader)
             if self.local_rank == 0 and val_loader is not None:
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
@@ -124,9 +124,6 @@ class DDPTrainer:
                       f"Val Dice: {metrics['dice']:.5f}")
                 self.plot_results()
                 self.save_checkpoint(epoch, metrics)
-            if self.world_size > 1:
-                torch.cuda.synchronize(self.device)
-                dist.barrier()
 
 
     @torch.no_grad()
