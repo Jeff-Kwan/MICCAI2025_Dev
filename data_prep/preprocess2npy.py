@@ -59,7 +59,7 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
 def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     # Use range -974.0 to 295.0
-    return (x >= -974.0) & (x <= 295.0)
+    return (x >= -961.0) & (x <= 267.0)
 
 def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs
@@ -98,25 +98,25 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
             mt.CropForegroundd( # Foreground by intensity
                 keys=["image", "label"],
                 source_key="image",
-                margin=10,   # Keep some margin
+                margin=16,   # Keep some margin
                 select_fn=foreground_threshold,
                 allow_smaller=True),
             mt.ThresholdIntensityd( # upper bound 99.5%
                 keys=["image"],
                 above=False,
-                threshold=295.0,
-                cval=295.0,
+                threshold=267.0,
+                cval=267.0,
             ),
             mt.ThresholdIntensityd( # lower bound 0.5%
                 keys=["image"],
                 above=True,
-                threshold=-974.0, 
-                cval=-974.0,
+                threshold=-961.0, 
+                cval=-961.0,
             ),
             mt.NormalizeIntensityd( # z-score normalization
                 keys=["image"],     # GT data stats with the above clipping
-                subtrahend=95.959,
-                divisor=139.964,
+                subtrahend=95.926,
+                divisor=139.476,
             ),
         ]
     )
