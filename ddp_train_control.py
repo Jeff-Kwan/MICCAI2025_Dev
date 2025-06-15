@@ -44,7 +44,7 @@ def main_worker(rank: int,
 
         # Datasets
         train_tf, val_tf = get_transforms(
-            train_params['shape'], rank,
+            train_params['shape'], train_params['num_crops'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
