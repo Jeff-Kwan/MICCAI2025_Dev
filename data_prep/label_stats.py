@@ -124,3 +124,23 @@ Label weights: [0.1000, 2.8616, 4.9539, 4.7724, 5.7069, 5.7091, 5.7985, 8.7701, 
 Then to 1 decimal place rounding:
 [0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, 8.6, 6.7, 7.5, 4.4, 5.9, 5.0]
 '''
+
+'''
+Crop foreground image sizes
+
+Ground Truth set:
+Mean shape of label images: [477.04 245.06  93.18]
+Median shape of label images: [485.  245.5  93. ]
+Maximum shape of label images: [512 288 138]
+Minimum shape of label images: [402 185  46]
+Numels Mean: 10956837.48; Median: 10943127.0; Max: 19505334; Min: 4345712
+Shape with max numels: (503, 281, 138) (numels: 19505334)
+
+Validation set:
+Mean shape of label images: [476.12 244.16 143.2 ]
+Median shape of label images: [493.5 240.5 124.5]
+Maximum shape of label images: [512 344 566]
+Minimum shape of label images: [306 172  42]
+Numels Mean: 17018796.62; Median: 13268352.0; Max: 83659328; Min: 5101568
+Shape with max numels: (496, 298, 566) (numels: 83659328)
+'''
