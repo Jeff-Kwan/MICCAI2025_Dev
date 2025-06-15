@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import ThreadDataLoader, Dataset
-from monai.losses import DiceCELoss
+from monai.losses import DiceFocalLoss
 
 from utils import get_transforms, get_data_files
 from model.UNetControl import UNetControl
@@ -87,14 +87,13 @@ def main_worker(rank: int,
         model = UNetControl(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
-        criterion = DiceCELoss(
-            include_background=False, 
+        criterion = DiceFocalLoss(
+            include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
-            label_smoothing=0.1,
-            lambda_ce=0.34,
-            lambda_dice=0.66,)
+            lambda_focal=1,
+            lambda_dice=1,)
 
         # Initialize trainer and start
         trainer = DDPTrainer(
