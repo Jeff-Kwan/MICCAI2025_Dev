@@ -13,26 +13,14 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.RandSpatialCropSamplesd( # Does not support on GPU
+                keys=["image", "label"], 
+                roi_size=shape,
+                num_samples=num_crops),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Save training space with effective foreground
-                keys=["image", "label"],
-                source_key="label",
-                margin=8, # Keep some margin
-                allow_smaller=False),
-            mt.RandSpatialCropSamplesd( # Does not support on GPU
-                keys=["image", "label"], 
-                roi_size=shape,
-                num_samples=num_crops,
-                lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True),
-            mt.Affined(keys=["image","label"], spatial_size=shape), # Strange fix
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
@@ -43,18 +31,15 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
-                        padding_mode="border",
-                        lazy=True),
+                        padding_mode="border"),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
-                        spatial_axis=(0, 1),  # Flip in XY plane
-                        lazy=True),
+                        spatial_axis=(0, 1)),  # Flip in XY plane
                     mt.RandRotate90d(
                         keys=["image", "label"],
                         prob=1.0,
-                        spatial_axes=(0, 1),  # Rotate in XY plane
-                        lazy=True),
+                        spatial_axes=(0, 1)),  # Rotate in XY plane
                     mt.Rand3DElasticd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -65,7 +50,7 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=spatial, lazy=True),
+                weights=spatial),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -102,20 +87,6 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd( # Validation you should not know true foreground
-                keys=["image", "label"],
-                source_key="image",
-                select_fn=foreground_threshold,
-                allow_smaller=False),
-            mt.CenterSpatialCropd(   # Hardcoded max size just in case
-                keys=["image", "label"],
-                roi_size=(512, 512, 256),
-                lazy=True),
-            mt.SpatialPadd(     # In case too small
-                keys=["image", "label"],
-                spatial_size=shape,
-                mode=("edge", "edge"),
-                lazy=True)
         ]
     )
     return train_transform, val_transform
