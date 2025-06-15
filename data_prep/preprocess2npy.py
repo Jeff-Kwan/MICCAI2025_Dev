@@ -56,11 +56,6 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
         for name in image_names
     ]
 
-def foreground_threshold(x):
-    '''Define foreground from image with above smallest GT foreground intensity'''
-    # Use range -974.0 to 295.0
-    return (x >= -961.0) & (x <= 267.0)
-
 def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs
     os.makedirs(out_image_dir, exist_ok=True)
@@ -84,40 +79,35 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 dtype=[torch.float32, torch.uint8],
                 track_meta=True,
             ),
-            mt.ThresholdIntensityd( # Label thresholding
+            mt.ThresholdIntensityd(
                 keys=["label"],
                 above=False,
                 threshold=14,   # 14 classes
                 cval=0,
             ),
-            mt.CropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                margin=64, # Keep more margin
-                allow_smaller=True),
-            # mt.CropForegroundd( # Foreground by intensity
-            #     keys=["image", "label"],
-            #     source_key="image",
-            #     margin=16,   # Keep some margin
-            #     select_fn=foreground_threshold,
-            #     allow_smaller=True),
             mt.ThresholdIntensityd( # upper bound 99.5%
                 keys=["image"],
                 above=False,
-                threshold=267.0,
-                cval=267.0,
+                threshold=295.0,
+                cval=295.0,
             ),
             mt.ThresholdIntensityd( # lower bound 0.5%
                 keys=["image"],
                 above=True,
-                threshold=-961.0, 
-                cval=-961.0,
+                threshold=-974.0, 
+                cval=-974.0,
             ),
             mt.NormalizeIntensityd( # z-score normalization
-                keys=["image"],     # GT data stats with the above clipping
-                subtrahend=95.926,
-                divisor=139.476,
+                keys=["image"],
+                subtrahend=77.515,
+                divisor=142.119,
             ),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=32, # Keep some margin
+                allow_smaller=False)
+
         ]
     )
 
