@@ -13,21 +13,17 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.CropForegroundd( # Save training space with effective foreground
                 keys=["image", "label"],
                 source_key="label",
                 margin=16, # Keep some margin
-                allow_smaller=False),
+                allow_smaller=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            mt.RandAffined(keys=["image","label"], prob=0, spatial_size=shape), # Strange fix
+            # mt.RandAffined(keys=["image","label"], prob=0, spatial_size=shape), # Strange fix
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
@@ -90,6 +86,10 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
                 weights=coarse),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
         ]
     )
     val_transform = mt.Compose(
@@ -98,7 +98,7 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                allow_smaller=False),
+                allow_smaller=True),
             # mt.CenterSpatialCropd(   # Hardcoded max size just in case
             #     keys=["image", "label"],
             #     roi_size=(512, 512, 256),
