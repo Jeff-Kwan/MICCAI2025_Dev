@@ -98,7 +98,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
             mt.CropForegroundd( # Foreground by intensity
                 keys=["image", "label"],
                 source_key="image",
-                margin=16,   # Keep some margin
+                margin=10,   # Keep some margin
                 select_fn=foreground_threshold,
                 allow_smaller=True),
             mt.ThresholdIntensityd( # upper bound 99.5%
