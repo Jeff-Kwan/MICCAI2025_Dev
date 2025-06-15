@@ -56,11 +56,6 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
         for name in image_names
     ]
 
-def foreground_threshold(x):
-    '''Define foreground from image with above smallest GT foreground intensity'''
-    # Use range -974.0 to 295.0
-    return x >= -974.0 and x <= 295.0
-
 def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs
     os.makedirs(out_image_dir, exist_ok=True)
@@ -84,18 +79,12 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 dtype=[torch.float32, torch.uint8],
                 track_meta=True,
             ),
-            mt.ThresholdIntensityd( # Label thresholding
+            mt.ThresholdIntensityd(
                 keys=["label"],
                 above=False,
                 threshold=14,   # 14 classes
                 cval=0,
             ),
-            mt.CropForegroundd( # Foreground by intensity
-                keys=["image", "label"],
-                source_key="image",
-                margin=16,   # Keep some margin
-                select_fn=foreground_threshold,
-                allow_smaller=False),
             mt.ThresholdIntensityd( # upper bound 99.5%
                 keys=["image"],
                 above=False,
@@ -113,11 +102,11 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 subtrahend=77.515,
                 divisor=142.119,
             ),
-            # mt.CropForegroundd(
-            #     keys=["image", "label"],
-            #     source_key="label",
-            #     margin=32, # Keep some margin
-            #     allow_smaller=False)
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=32, # Keep some margin
+                allow_smaller=False)
 
         ]
     )
