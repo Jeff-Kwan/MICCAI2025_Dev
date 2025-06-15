@@ -68,7 +68,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=24,
+            num_workers=32,
             # prefetch_factor=2,
             pin_memory=True,
             persistent_workers=True)
@@ -130,17 +130,17 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/base.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 120,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (192, 192, 160),
-        'num_crops': 4,
+        'shape': (224, 224, 160),
+        'num_crops': 2,
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 8,
+        'sw_batch_size': 4,
         'sw_overlap': 1/8
     }
     output_dir = "AllData"
