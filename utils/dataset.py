@@ -9,7 +9,7 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, num_crops):
+def get_transforms(shape, num_crops, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -60,7 +60,7 @@ def get_transforms(shape, num_crops):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
                     )],
-                weights=[2, 2, 1, 1, 1], lazy=True),
+                weights=spatial, lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -70,7 +70,7 @@ def get_transforms(shape, num_crops):
                     mt.RandAdjustContrastd(keys='image', prob=1.0),
                     mt.RandGaussianSharpend(keys='image', prob=1.0),
                     mt.RandHistogramShiftd(keys='image', prob=1.0)],
-                weights=[2, 2, 1, 0.5, 1, 1, 0.5]),
+                weights=intensity),
             mt.OneOf(   # Random coarse augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -87,7 +87,7 @@ def get_transforms(shape, num_crops):
                         holes=2, max_holes=6,
                         spatial_size=(8, 8, 8),
                         max_spatial_size=(24, 24, 24))],
-                weights=[2, 1, 1]),
+                weights=coarse),
         ]
     )
     val_transform = mt.Compose(
