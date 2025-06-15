@@ -34,6 +34,7 @@ class ConvLayer(nn.Module):
         self.convs = nn.ModuleList([
             nn.ModuleList([
                 ConvBlock(in_c, conv, in_c, bias, dropout),
+                ConvBlock(in_c, conv, in_c, bias, dropout),
                 ConvBlock(in_c, conv, in_c, bias, dropout)])
             for _ in range(repeats)
         ])
@@ -42,6 +43,7 @@ class ConvLayer(nn.Module):
         for i in range(self.repeats):
             x = x + stochastic_depth(self.convs[i][0](x), self.sto_depth, 'row', self.training)
             x = x + stochastic_depth(self.convs[i][1](x), self.sto_depth, 'row', self.training)
+            x = x + stochastic_depth(self.convs[i][2](x), self.sto_depth, 'row', self.training)
         return x
     
 
@@ -174,7 +176,7 @@ if __name__ == "__main__":
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
         "convs":        [32, 48, 64, 32],
-        "layers":       [2, 2, 2, 4],
+        "layers":       [2, 2, 2, 2],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
