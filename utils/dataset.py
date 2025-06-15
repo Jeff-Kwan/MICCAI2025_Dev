@@ -104,11 +104,11 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            # mt.CropForegroundd( # Validation you should not know true foreground
+            # mt.CropForegroundd(
             #     keys=["image", "label"],
-            #     source_key="image",
-            #     select_fn=foreground_threshold,
-            #     allow_smaller=False),
+            #     source_key="label",
+            #     margin=16, # Keep some margin
+            #     allow_smaller=True),
             mt.CenterSpatialCropd(   # Hardcoded max size just in case
                 keys=["image", "label"],
                 roi_size=(512, 512, 256),
