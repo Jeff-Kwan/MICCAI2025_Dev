@@ -128,10 +128,10 @@ if __name__ == "__main__":
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (256, 160, 128),
-        'num_crops': 2,
+        'num_crops': 4,
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 2,
+        'sw_batch_size': 8,
         'sw_overlap': 1/8,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
