@@ -70,24 +70,6 @@ class HyperEdgeAttention(nn.Module):
 
 
 # ---------- convolutional blocks ---------------------------------------------
-
-class ConvBlock(nn.Module):
-    """Local + dilated block."""
-    def __init__(self, in_c: int, h_c: int, out_c: int,
-                 bias: bool = False, dropout: float = 0.0, checkpoint=False):
-        super().__init__()
-        self.checkpoint = checkpoint
-        self.in_conv = nn.Sequential(
-            RMSNormTranspose(1, in_c),
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
-        
-        # self.dilated = nn.Conv3d(h_c, h_c, 3, 1, 2, bias=bias, dilation=2)
-
-        self.out_conv = nn.Sequential(
-            nn.SiLU(),
-            nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
-        
     
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int,
