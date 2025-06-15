@@ -3,6 +3,7 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import torch
+from torch.nn import functional as F
 import monai.transforms as mt
 from monai.data import Dataset, ThreadDataLoader
 import matplotlib.pyplot as plt
@@ -86,22 +87,23 @@ def process_labels(datafiles, num_classes=14):
             print("All labels are zero for image:", data['label'][0].meta['filename_or_obj'])
 
     # Plot the histogram
-    classes = np.arange(num_classes)
-    plt.bar(classes, label_counts)
-    plt.xlabel("Label Class")
-    plt.ylabel("Frequency")
-    plt.title("Histogram of Label Frequencies")
-    plt.xticks(classes)
-    plt.show()
+    # classes = np.arange(num_classes)
+    # plt.bar(classes, label_counts)
+    # plt.xlabel("Label Class")
+    # plt.ylabel("Frequency")
+    # plt.title("Histogram of Label Frequencies")
+    # plt.xticks(classes)
+    # plt.show()
 
     return label_counts
 
 if __name__ == "__main__":
     datafiles = get_data_files(
-        "data/preprocessed/val/images",
-        "data/preprocessed/val/labels")
-    datafiles += get_data_files(
-        "data/preprocessed/train_pseudo/images",
-        "data/preprocessed/train_pseudo/aladdin5")
-    label_histogram = process_labels(datafiles)
-    print("Label frequencies:", label_histogram)
+        "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
+    # datafiles += get_data_files(
+    #     "data/preprocessed/train_pseudo/images",
+    #     "data/preprocessed/train_pseudo/aladdin5")
+    label_counts = torch.tensor(process_labels(datafiles)).squeeze()
+    label_weights = F.normalize(1/label_counts, p=1, dim=0) * 14
+    print("Label weights:", [f"{w:.4f}" for w in label_weights.tolist()])
