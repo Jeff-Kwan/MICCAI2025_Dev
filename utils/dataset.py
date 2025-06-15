@@ -27,11 +27,10 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 roi_size=shape,
                 num_samples=num_crops,
                 lazy=True),
-            # mt.SpatialPadd(     # In case too small
-            #     keys=["image", "label"],
-            #     spatial_size=shape,
-            #     mode=("edge", "edge"),
-            #     lazy=True),
+            mt.SpatialPadd(     # In case too small
+                keys=["image", "label"],
+                spatial_size=shape,
+                lazy=True),
             mt.RandAffined(keys=["image","label"], prob=0, spatial_size=shape), # Strange fix
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
