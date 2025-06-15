@@ -15,8 +15,7 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.RandSpatialCropd( # Does not support on GPU
                 keys=["image", "label"], 
-                roi_size=shape,
-                num_samples=num_crops),
+                roi_size=shape),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
