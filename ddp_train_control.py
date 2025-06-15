@@ -125,14 +125,14 @@ if __name__ == "__main__":
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (192, 192, 160),
         'num_crops': 2,
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
-        'sw_overlap': 1/8,
+        'sw_overlap': 1/4,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
