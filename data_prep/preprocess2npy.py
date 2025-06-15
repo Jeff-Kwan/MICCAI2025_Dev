@@ -90,17 +90,17 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 threshold=14,   # 14 classes
                 cval=0,
             ),
-            # mt.CropForegroundd(
-            #     keys=["image", "label"],
-            #     source_key="label",
-            #     margin=32, # Keep some margin
-            #     allow_smaller=True),
-            mt.CropForegroundd( # Foreground by intensity
+            mt.CropForegroundd(
                 keys=["image", "label"],
-                source_key="image",
-                margin=16,   # Keep some margin
-                select_fn=foreground_threshold,
+                source_key="label",
+                margin=64, # Keep more margin
                 allow_smaller=True),
+            # mt.CropForegroundd( # Foreground by intensity
+            #     keys=["image", "label"],
+            #     source_key="image",
+            #     margin=16,   # Keep some margin
+            #     select_fn=foreground_threshold,
+            #     allow_smaller=True),
             mt.ThresholdIntensityd( # upper bound 99.5%
                 keys=["image"],
                 above=False,
