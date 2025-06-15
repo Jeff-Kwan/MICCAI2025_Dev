@@ -131,8 +131,8 @@ if __name__ == "__main__":
         'num_crops': 2,
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 4,
-        'sw_overlap': 1/4,
+        'sw_batch_size': 2,
+        'sw_overlap': 1/8,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
