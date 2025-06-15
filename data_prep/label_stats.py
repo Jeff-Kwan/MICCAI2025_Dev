@@ -120,4 +120,7 @@ Label frequencies (%): [89.5178, 5.6570, 0.6980, 0.8370, 0.3288, 0.3280, 0.3000,
 
 With background class weight set to 1, log-space difference as class weights
 Label weights: [0.1000, 2.8616, 4.9539, 4.7724, 5.7069, 5.7091, 5.7985, 8.7701, 8.5915, 6.7250, 7.4852, 4.4442, 5.9218, 4.9539]
+
+Then to 1 decimal place rounding:
+[0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, 8.6, 6.7, 7.5, 4.4, 5.9, 5.0]
 '''
