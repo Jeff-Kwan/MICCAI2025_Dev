@@ -40,7 +40,7 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
-                        translation_range=(8, 8, 8),
+                        translate_range=(8, 8, 8),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
