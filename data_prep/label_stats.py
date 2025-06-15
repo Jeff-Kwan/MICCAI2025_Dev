@@ -8,7 +8,7 @@ import monai.transforms as mt
 from monai.data import Dataset, ThreadDataLoader
 import matplotlib.pyplot as plt
 
-def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
+def get_data_files(images_dir, labels_dir, extension = ".npy"):
     """
     Returns a list of dicts with file paths for images and labels.
     Each dict has the keys "image" and "label".
@@ -99,11 +99,25 @@ def process_labels(datafiles, num_classes=14):
 
 if __name__ == "__main__":
     datafiles = get_data_files(
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
+        "data/preprocessed/train_gt/images",
+        "data/preprocessed/train_gt/labels")
     # datafiles += get_data_files(
     #     "data/preprocessed/train_pseudo/images",
     #     "data/preprocessed/train_pseudo/aladdin5")
     label_counts = torch.tensor(process_labels(datafiles)).squeeze()
-    label_weights = F.normalize(1/label_counts, p=1, dim=0) * 14
-    print("Label weights:", [f"{w:.4f}" for w in label_weights.tolist()])
+    # label_weights = label_counts.sum().item() / (label_counts * len(label_counts))
+    # label_weights = torch.log(label_weights)
+    # label_weights += label_weights.min().abs()+0.1
+    # print("Label weights:", [f"{w:.4f}" for w in label_weights.tolist()])
+    label_frequencies = label_counts / label_counts.sum()*100
+    print("Label frequencies (%):", [f"{f:.4f}" for f in label_frequencies.tolist()])
+
+
+'''
+Analysis on Ground Truth Preprocessed data:
+
+Label frequencies (%): [89.5178, 5.6570, 0.6980, 0.8370, 0.3288, 0.3280, 0.3000, 0.0154, 0.0184, 0.1188, 0.0555, 1.1621, 0.2652, 0.6981]
+
+With background class weight set to 1, log-space difference as class weights
+Label weights: [0.1000, 2.8616, 4.9539, 4.7724, 5.7069, 5.7091, 5.7985, 8.7701, 8.5915, 6.7250, 7.4852, 4.4442, 5.9218, 4.9539]
+'''

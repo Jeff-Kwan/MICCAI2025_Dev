@@ -91,7 +91,8 @@ def main_worker(rank: int,
             include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([0.1] + [1.0] * 13, device=rank),
+            weight=torch.tensor([0.1000, 2.8616, 4.9539, 4.7724, 5.7069, 5.7091, 5.7985, 8.7701, 
+                                 8.5915, 6.7250, 7.4852, 4.4442, 5.9218, 4.9539], device=rank),
             lambda_focal=1,
             lambda_dice=1,)
 
