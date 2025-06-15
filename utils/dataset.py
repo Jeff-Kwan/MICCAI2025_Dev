@@ -17,11 +17,11 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            # mt.CropForegroundd( # Save training space with effective foreground
-            #     keys=["image", "label"],
-            #     source_key="label",
-            #     margin=32, # Keep some margin
-            #     allow_smaller=True),
+            mt.CropForegroundd( # Save training space with effective foreground
+                keys=["image", "label"],
+                source_key="label",
+                margin=16, # Keep some margin
+                allow_smaller=True),
             mt.RandSpatialCropSamplesd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -102,7 +102,6 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                margin=4,
                 allow_smaller=True),
             # mt.CenterSpatialCropd(   # Hardcoded max size just in case
             #     keys=["image", "label"],
