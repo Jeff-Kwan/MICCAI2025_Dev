@@ -97,7 +97,7 @@ def process_dataset(datafiles):
     p_low, p_high = np.percentile(all_foreground_intensities, [0.5, 99.5])
 
     # Clip the intensities
-    clipped_intensities = np.clip(all_foreground_intensities, -974, 295)
+    clipped_intensities = np.clip(all_foreground_intensities, p_low, p_high)
     
     # Compute mean and std
     mean = np.mean(clipped_intensities)
@@ -108,7 +108,7 @@ def process_dataset(datafiles):
 
 if __name__ == "__main__":
     datafiles = get_data_files("data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr", "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
-    # datafiles += get_data_files("data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr", "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")
+    datafiles += get_data_files("data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr", "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")
     p_low, p_high, mean, std = process_dataset(datafiles)
     print(f"Final results: 0.5th percentile = {p_low}, 99.5th percentile = {p_high}, "
           f"Clipped mean = {mean}, Clipped std = {std}")
@@ -118,6 +118,8 @@ Over 50 GT + 2000 Aladdin5 training set to get foreground intensities
 Total foreground intensities collected: 5177351249
 Final results: 0.5th percentile = -974.0, 99.5th percentile = 295.0, 
 Clipped mean = 77.51521301269531, Clipped std = 142.11891174316406
+
+Clipped mean = 95.95867919921875, Clipped std = 139.9641571044922 of GT with [-974, 295] clipping
 
 Min and max of gt intensities after processing:
 -7.3988347 1.530302

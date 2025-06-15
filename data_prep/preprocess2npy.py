@@ -114,9 +114,9 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 cval=-974.0,
             ),
             mt.NormalizeIntensityd( # z-score normalization
-                keys=["image"],
-                subtrahend=77.515,
-                divisor=142.119,
+                keys=["image"],     # GT data stats with the above clipping
+                subtrahend=95.959,
+                divisor=139.964,
             ),
         ]
     )
