@@ -127,7 +127,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (480, 320, 224),
+        'shape': (420, 256, 160),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
