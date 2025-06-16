@@ -141,8 +141,8 @@ if __name__ == "__main__":
             'coarse': [2, 1, 1]  
         }
     }
-    output_dir = "UNetControl"
-    comments = ["UNet Control - GT*2 + Aladdin training",
+    output_dir = "AttnUNet"
+    comments = ["AttnUNet - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
