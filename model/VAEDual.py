@@ -127,8 +127,9 @@ class VAEPrior(nn.Module):
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
         
 
-    def encode(self, img, labels):
-        x = self.img_conv(img) + self.label_conv(F.one_hot(labels, self.classes).float().permute(0, 4, 1, 2, 3))
+    def encode(self, img, label):
+        label = F.one_hot(label, self.classes).squeeze(1).float().permute(0, 4, 1, 2, 3)
+        x = self.img_conv(img) + self.label_conv(label)
 
         for i, conv in enumerate(self.encoder_convs):
             x = conv(x)
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     }
 
     x = torch.randn(B, 1, S1, S2, S3).to(device)
-    labels = torch.randint(0, params["out_channels"], (B, S1, S2, S3)).long().to(device)
+    labels = torch.randint(0, params["out_channels"], (B, 1, S1, S2, S3)).long().to(device)
     model = VAEPosterior(params).to(device)
 
     # Profile the forward and backward pass
