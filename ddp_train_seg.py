@@ -44,7 +44,7 @@ def main_worker(rank: int,
 
         # Datasets
         train_tf, val_tf = get_transforms(
-            train_params['shape'], train_params['num_crops'],
+            train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
@@ -73,7 +73,6 @@ def main_worker(rank: int,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
             num_workers=32,
-            # prefetch_factor=2,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -83,6 +82,7 @@ def main_worker(rank: int,
             num_workers=8,
             pin_memory=True,
             persistent_workers=False)
+
 
         # Model, optimizer, scheduler, loss
         model = HarmonicSeg(model_params)
@@ -127,7 +127,6 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (224, 224, 160),
-        'num_crops': 2,
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
@@ -147,10 +146,6 @@ if __name__ == "__main__":
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
     
-    # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
-    # torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
-    # torch._dynamo.config.recompile_limit = 12   # 8 -> 12
-
     gpu_count = torch.cuda.device_count()
     try:
         mp.spawn(
