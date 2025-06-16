@@ -8,7 +8,7 @@ from torch.optim import AdamW, lr_scheduler
 from monai.data import ThreadDataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
-from utils import get_transforms, get_data_files
+from utils.dataset import get_transforms, get_data_files
 from model.UNetControl import UNetControl
 from utils.ddp_trainer import DDPTrainer
 
