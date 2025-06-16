@@ -191,6 +191,8 @@ class VAETrainer:
                         mode="gaussian",
                     )
                     aggregated[b] = logits
+                
+                torch.cuda.empty_cache()    # clear cache after inference
 
                 loss = self.criterion(aggregated, masks)
             # accumulate loss weighted by batch size
