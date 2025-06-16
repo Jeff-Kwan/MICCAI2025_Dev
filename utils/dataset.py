@@ -96,6 +96,10 @@ def get_transforms(shape, device, spatial, intensity, coarse):
                 dtype=[torch.float32, torch.long],
                 track_meta=False,
                 device=device),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                allow_smaller=False),
             mt.DivisiblePadd(
                 keys=["image", "label"],
                 k=16),
