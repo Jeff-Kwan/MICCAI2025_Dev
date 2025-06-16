@@ -5,7 +5,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import ThreadDataLoader, Dataset
+from monai.data import ThreadDataLoader, Dataset, list_data_collate
 from monai.losses import DiceFocalLoss
 
 from utils import get_transforms, get_data_files
@@ -74,14 +74,16 @@ def main_worker(rank: int,
             sampler=train_sampler,
             num_workers=32,
             pin_memory=True,
-            persistent_workers=True)
+            persistent_workers=True,
+            collate_fn=list_data_collate)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
             num_workers=8,
             pin_memory=True,
-            persistent_workers=False)
+            persistent_workers=False,
+            collate_fn=list_data_collate)
 
         # Model, optimizer, scheduler, loss
         model = UNetControl(model_params)
