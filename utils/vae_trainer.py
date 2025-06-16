@@ -10,7 +10,7 @@ import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 
-class DDPTrainer:
+class VAETrainer:
     def __init__(
         self,
         model: torch.nn.Module,
@@ -43,6 +43,9 @@ class DDPTrainer:
         else:
             self.model = model
 
+        # MSE Loss for mu var estimation
+        self.mse = torch.nn.MSELoss()
+
         # Optimizations
         if train_params.get('autocast', False):
             torch.backends.cudnn.enabled = True
@@ -63,12 +66,17 @@ class DDPTrainer:
         self.dice_metric = mm.DiceMetric(include_background=False)
         if self.local_rank == 0:
             os.makedirs(output_dir, exist_ok=True)
-            self.train_losses = []
+            self.vae_losses = []
+            self.model_losses = []
             self.val_losses = []
             self.val_metrics = {'dice': []}
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
+
+    def kl_div_normal(self, mu, logvar):
+        # Sum over latent dim - channels (1); mean over batch and img dimensions
+        return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
     def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
@@ -82,6 +90,8 @@ class DDPTrainer:
                 train_loader.sampler.set_epoch(epoch)
 
             self.model.train()
+            running_vae_loss = 0.0
+            running_model_loss = 0.0
             running_loss = 0.0
             grad_norm = torch.tensor(0.0, device=self.device)
 
@@ -93,12 +103,28 @@ class DDPTrainer:
             for i, batch in enumerate(loop):
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
+                vae_masks = batch['label_vae'].to(self.device, non_blocking=True)
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
-                    outputs = self.model(imgs)
-                    loss = self.criterion(outputs, masks)
+                    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, vae_masks)
+                    # Loss:
+                        # 1. Reconstruction loss (pred vs masks)
+                        # 2. Reconstruction loss (prior_pred vs masks)
+                        # 3. KL divergence between mu, log_var and prior
+                        # 4. MSE align mu_hat towards mu
+                        # 5. MSE align log_var_hat towards log_var
+                    vae_recon_loss = self.criterion(prior_pred, masks)
+                    model_recon_loss = self.criterion(pred, masks)
+                    loss = model_recon_loss + vae_recon_loss +\
+                            self.kl_div_normal(mu, log_var) +\
+                            self.mse(mu_hat, mu.detach()) +\
+                            self.mse(log_var_hat, log_var.detach())
+
                 loss.backward()
                 running_loss += loss.item()
+                running_vae_loss += vae_recon_loss.item()
+                running_model_loss += model_recon_loss.item()
+
 
                 if ((i + 1) % agg_steps == 0) or (i + 1 == len(train_loader)):
                     grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
@@ -115,11 +141,13 @@ class DDPTrainer:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
-                self.train_losses.append(running_loss / len(train_loader))
+                self.vae_losses.append(running_vae_loss / len(train_loader))
+                self.model_losses.append(running_model_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
                 print(f"Epoch {epoch+1}/{epochs} | "
-                      f"Train Loss: {self.train_losses[-1]:.5f} | "
+                      f"VAE Loss: {running_vae_loss / len(train_loader):.5f} | "
+                      f"Model Loss: {running_model_loss / len(train_loader):.5f} | "
                       f"Val Loss: {val_loss:.5f} | "
                       f"Val Dice: {metrics['dice']:.5f}")
                 self.plot_results()
@@ -190,7 +218,8 @@ class DDPTrainer:
                 if isinstance(self.model, DDP) else self.model.state_dict())
         torch.save(state_dict, os.path.join(self.output_dir, 'model.pth'))
         history = {
-            'train_losses': self.train_losses,
+            'vae_losses': self.vae_losses,
+            'model_losses': self.model_losses,
             'val_losses': self.val_losses,
             'val_metrics': self.val_metrics
         }
@@ -202,7 +231,8 @@ class DDPTrainer:
             torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'best_model.pth'))
             self.best_results = {
                 'epoch': epoch,
-                'train_loss': self.train_losses[-1],
+                'vae_loss': self.vae_losses[-1],
+                'model_loss': self.model_losses[-1],
                 'val_loss': self.val_losses[-1],
                 'val_metrics': val_metrics
             }
@@ -215,7 +245,7 @@ class DDPTrainer:
             f.write(f"Model size: {self.model_size/1e6:.2f}M\n")
             f.write(f"Training time: {int(hrs):02}:{int(mins):02}:{int(secs):02}\n\n")
             f.write(f"Epoch {epoch+1} results:\n")
-            f.write(f"Train Loss: {self.train_losses[-1]:.5f}; Val Loss: {self.val_losses[-1]:.5f}; Val Dice: {self.val_metrics['dice'][-1]:.5f}\n")
+            f.write(f"VAE Loss: {self.vae_losses[-1]:.5f}; Model Loss: {self.model_losses[-1]:.5f}; Val Loss: {self.val_losses[-1]:.5f}; Val Dice: {self.val_metrics['dice'][-1]:.5f}\n")
             for c in self.comments:
                 f.write(c + "\n")
             f.write(f"\nModel params: {json.dumps(self.model.module.model_params, indent=4)}\n")
@@ -223,17 +253,18 @@ class DDPTrainer:
             f.write(f"\nBest results: {json.dumps(self.best_results, indent=4)}\n")
 
     def plot_results(self):
-        epochs = range(1, len(self.train_losses) + 1)
+        epochs = range(1, len(self.val_losses) + 1)
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
         # Loss curve
-        ax1.plot(epochs, self.train_losses, label='Train')
-        ax1.plot(epochs, self.val_losses, label='Val')
+        ax1.plot(epochs, self.vae_losses, label='VAE', color='black')
+        ax1.plot(epochs, self.model_losses, label='Model', color='blue')
+        ax1.plot(epochs, self.val_losses, label='Val', color='orange')
         ax1.set_xlabel('Epoch'); ax1.set_ylabel('Loss')
         ax1.legend(); ax1.set_title('Loss')
 
         # Dice curve
-        ax2.plot(epochs, self.val_metrics['dice'], label='Val Dice')
+        ax2.plot(epochs, self.val_metrics['dice'], label='Val Dice', color='orange')
         ax2.set_xlabel('Epoch'); ax2.set_ylabel('Dice')
         ax2.legend(); ax2.set_title('Validation Dice')
 

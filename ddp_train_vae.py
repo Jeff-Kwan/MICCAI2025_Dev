@@ -8,9 +8,9 @@ from torch.optim import AdamW, lr_scheduler
 from monai.data import ThreadDataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
-from utils import get_transforms, get_data_files
-from model.Harmonics import HarmonicSeg
-from utils.ddp_trainer import DDPTrainer
+from utils.dataset import get_vae_transforms, get_data_files
+from model.VAEDual import VAEPosterior
+from utils.vae_trainer import VAETrainer
 
 def main_worker(rank: int,
                 world_size: int,
@@ -43,7 +43,7 @@ def main_worker(rank: int,
             full_output = None
 
         # Datasets
-        train_tf, val_tf = get_transforms(
+        train_tf, val_tf = get_vae_transforms(
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
@@ -72,7 +72,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=42,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -85,7 +85,7 @@ def main_worker(rank: int,
 
 
         # Model, optimizer, scheduler, loss
-        model = HarmonicSeg(model_params)
+        model = VAEPosterior(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
         criterion = DiceFocalLoss(
@@ -98,7 +98,7 @@ def main_worker(rank: int,
             lambda_dice=1,)
 
         # Initialize trainer and start
-        trainer = DDPTrainer(
+        trainer = VAETrainer(
             model=model,
             optimizer=optimizer,
             criterion=criterion,
@@ -119,30 +119,30 @@ def main_worker(rank: int,
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Load configs
-    model_params = json.load(open("configs/model/base.json"))
+    model_params = json.load(open("configs/model/vae.json"))
     train_params = {
         'epochs': 120,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (224, 224, 160),
+        'shape': (512, 384, 256),
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 4,
-        'sw_overlap': 1/8,
+        'sw_batch_size': 1,
+        'sw_overlap': 1/2,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 1, 1, 1],  
+            'spatial': [2, 2, 0, 0, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
-            'coarse': [2, 1, 1]  
+            'coarse': [4, 1, 1]  
         }
     }
-    output_dir = "AllData"
-    comments = ["HarmonicSeg v2 Base (No pos) - GTx2 + Aladdin training",
+    output_dir = "VAEPosterior"
+    comments = ["VAE Posterior (UNet) - GTx2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

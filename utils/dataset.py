@@ -17,7 +17,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.RandSpatialCropd( # Does not support on GPU
+            mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
                 lazy=True),
@@ -81,9 +81,9 @@ def get_transforms(shape, spatial, intensity, coarse):
                     mt.RandCoarseShuffled(
                         keys=["image"],
                         prob=1.0,
-                        holes=2, max_holes=6,
-                        spatial_size=(8, 8, 8),
-                        max_spatial_size=(24, 24, 24))],
+                        holes=8, max_holes=16,
+                        spatial_size=(6, 6, 6),
+                        max_spatial_size=(12, 12, 12))],
                 weights=coarse),
         ]
     )
@@ -106,77 +106,130 @@ def get_transforms(shape, spatial, intensity, coarse):
     return train_transform, val_transform
 
 
-def get_mim_transforms(shape, num_crops):
+def get_vae_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image"], ensure_channel_first=True),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.EnsureTyped(
-                keys=["image"], 
-                dtype=[torch.float32],
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd(
-                keys=["image"],
-                source_key="label"),
-            mt.RandSpatialCropSamplesd(
-                keys=["image"], 
+            mt.RandSpatialCropd(
+                keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=num_crops,
                 lazy=True),
-            mt.RandAffined(
-                keys=["image"],
-                prob=0.8,
-                spatial_size=shape,
-                rotate_range=(np.pi/9, np.pi/9, np.pi/9),    # ±20°
-                scale_range=(0.1,0.1,0.1),                   # ±10%
-                mode="bilinear",
-                padding_mode="border",
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16,
                 lazy=True),
-            mt.SpatialPadd(
-                keys=["image"],
-                spatial_size=shape,
-                mode="edge",
-                lazy=True),
-            ### ~~~ Split into two image / label from here on ~~~ ###
-            mt.CopyItemsd(      # Masked image modelling copy whole image
-                keys=["image"],
-                times=1,
-                names=["label"]),
-            mt.RandBiasFieldd(
-                keys=["image"],
-                prob=0.30),
-            mt.RandGaussianNoised(
-                keys=["image"],
-                prob=0.30,
-                mean=0.0,
-                std=0.10),
-            mt.RandGaussianSmoothd(
-                keys=["image"],
-                prob=0.50),
-            mt.RandCoarseDropoutd(
-                keys=["image"],
-                prob=1.0,
-                holes=2,
-                max_holes=4,
-                spatial_size=(48, 48, 48),
-                max_spatial_size=(64, 64, 64)),
-            mt.RandCoarseDropoutd(
-                keys=["image"],
-                prob=1.0,
-                holes=3,
-                max_holes=6,
-                spatial_size=(32, 32, 32),
-                max_spatial_size=(48, 48, 48)),
-            mt.RandCoarseDropoutd(
-                keys=["image"],
-                prob=1.0,
-                holes=4,
-                max_holes=8,
-                spatial_size=(16, 16, 16),
-                max_spatial_size=(32, 32, 32)),
+            mt.OneOf(       # Random spatial augmentations
+                transforms=[
+                    mt.Identityd(keys=["image", "label"]),
+                    mt.RandAffined(     # Small affine perturbation
+                        keys=["image","label"],
+                        prob=1.0,
+                        spatial_size=shape,
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),
+                        scale_range=(0.1, 0.1, 0.1),
+                        mode=("bilinear", "nearest"),
+                        padding_mode="border",
+                        lazy=True),
+                    mt.RandFlipd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        spatial_axis=(0, 1),
+                        lazy=True),  # Flip in XY plane
+                    mt.RandRotate90d(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        spatial_axes=(0, 1),
+                        lazy=True),  # Rotate in XY plane
+                    mt.Rand3DElasticd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        sigma_range=(2.0, 5.0),
+                        magnitude_range=(1.0, 3.0),
+                        spatial_size=shape,
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
+                        scale_range=(0.1, 0.1, 0.1),                # ±10%
+                        mode=("bilinear", "nearest")
+                    )],
+                weights=spatial),
+            mt.OneOf(     # Random intensity augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandGaussianSmoothd(keys='image', prob=1.0),
+                    mt.RandGaussianNoised(keys='image', prob=1.0),
+                    mt.RandBiasFieldd(keys='image', prob=1.0),
+                    mt.RandAdjustContrastd(keys='image', prob=1.0),
+                    mt.RandGaussianSharpend(keys='image', prob=1.0),
+                    mt.RandHistogramShiftd(keys='image', prob=1.0)],
+                weights=intensity),
+            mt.OneOf(   # Random coarse augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandCoarseDropoutd(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=1,
+                        max_holes=4,
+                        spatial_size=(16, 16, 16),
+                        max_spatial_size=(32, 32, 32)),
+                    mt.RandCoarseShuffled(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=8, max_holes=16,
+                        spatial_size=(6, 6, 6),
+                        max_spatial_size=(12, 12, 12))],
+                weights=coarse),
+            # Then for the VAE label input
+            mt.CopyItemsd(
+                keys=["label"],
+                times=2,  # Duplicate label
+                names=["label", "label_vae"]),
+            mt.OneOf(   # Dropout VAE input label
+                transforms=[
+                    mt.Identityd(keys=["label_vae"]),
+                    mt.RandCoarseDropoutd(  # Small
+                        keys=["label_vae"],
+                        prob=1.0,
+                        holes=4,
+                        max_holes=8,
+                        spatial_size=(8, 8, 8),
+                        max_spatial_size=(32, 32, 32)),
+                    mt.RandCoarseDropoutd(  # Medium
+                        keys=["label_vae"],
+                        prob=1.0,
+                        holes=2, max_holes=6,
+                        spatial_size=(24, 24, 24),
+                        max_spatial_size=(48, 48, 48)),
+                    mt.RandCoarseDropoutd(  # Large
+                        keys=["label_vae"],
+                        prob=1.0,
+                        holes=1, max_holes=4,
+                        spatial_size=(32, 32, 32),
+                        max_spatial_size=(64, 64, 64))],
+                weights=[0.5, 0.25, 0.15, 0.1]),
         ]
     )
-    # Same transform, test performance on different datasets for generalization
-    return train_transform, train_transform     
+    val_transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=4,
+                allow_smaller=True),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16),
+        ]
+    )
+    return train_transform, val_transform
 
 def get_data_files(
     images_dir: str,

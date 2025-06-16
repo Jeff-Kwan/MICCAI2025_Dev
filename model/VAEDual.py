@@ -248,7 +248,7 @@ class VAEPosterior(nn.Module):
             prior_x, latent_priors = self.vae_prior.decode(prior_z)
 
             mu_hat, log_var_hat, skips = self.img_encode(img)
-            x = self.decode(prior_z, skips, latent_priors)
+            x = self.decode(prior_z.detach(), skips, latent_priors.detach())
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image
