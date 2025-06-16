@@ -121,13 +121,13 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': 120,
+        'epochs': 100,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (480, 320, 224),
+        'shape': (448, 288, 160),
         'beta': 1.0, # VAE beta
         'compile': False,
         'autocast': True,
