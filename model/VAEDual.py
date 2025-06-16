@@ -247,8 +247,10 @@ class VAEPosterior(nn.Module):
             prior_z = self.vae_prior.reparameterize(mu, log_var)
             prior_x, latent_priors = self.vae_prior.decode(prior_z)
 
+            latent_priors = [lp.detach() for lp in latent_priors]
+
             mu_hat, log_var_hat, skips = self.img_encode(img)
-            x = self.decode(prior_z.detach(), skips, latent_priors.detach())
+            x = self.decode(prior_z.detach(), skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image
@@ -265,7 +267,7 @@ if __name__ == "__main__":
     print("DO NOT RUN ON LAPTOP!")
     exit()
     
-    B, S1, S2, S3 = 1, 480, 480, 224
+    B, S1, S2, S3 = 1, 480, 320, 224
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
