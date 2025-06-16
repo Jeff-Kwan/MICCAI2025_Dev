@@ -72,7 +72,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 192, 160),
+        'shape': (256, 192, 128),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 2,
