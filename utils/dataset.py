@@ -17,10 +17,9 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.RandSpatialCropSamplesd( # Does not support on GPU
+            mt.RandSpatialCropd( # Does not support on GPU
                 keys=["image", "label"], 
                 roi_size=shape,
-                num_samples=num_crops,
                 lazy=True),
             mt.DivisiblePadd(
                 keys=["image", "label"],
