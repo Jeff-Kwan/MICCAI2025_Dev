@@ -149,7 +149,7 @@ if __name__ == "__main__":
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
-    torch._dynamo.config.cache_size_limit = 32  # Up the cache size limit for dynamo
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
 
     try:
         mp.spawn(
