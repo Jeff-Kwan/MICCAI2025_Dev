@@ -116,10 +116,6 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 roi_size=shape,
                 lazy=True),
-            mt.DivisiblePadd(
-                keys=["image", "label"],
-                k=16,
-                lazy=True),
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
@@ -214,6 +210,9 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label", "label_vae"], 
                 dtype=[torch.float32, torch.long, torch.long],
                 track_meta=False),
+            mt.DivisiblePadd(
+                keys=["image", "label", "label_vae"],
+                k=16),
         ]
     )
     val_transform = mt.Compose(

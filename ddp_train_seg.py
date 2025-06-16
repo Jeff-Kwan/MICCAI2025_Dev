@@ -72,7 +72,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=42,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -121,17 +121,17 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/base.json"))
     train_params = {
-        'epochs': 120,
+        'epochs': 150,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (224, 224, 160),
+        'shape': (256, 192, 160),
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 4,
-        'sw_overlap': 1/8,
+        'sw_batch_size': 2,
+        'sw_overlap': 1/4,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
