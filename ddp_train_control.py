@@ -72,14 +72,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=64,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=13,
+            num_workers=8,
             pin_memory=True,
             persistent_workers=False)
 
