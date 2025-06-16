@@ -117,8 +117,8 @@ class VAETrainer:
                     model_recon_loss = self.criterion(pred, masks)
                     loss = model_recon_loss + vae_recon_loss +\
                             self.kl_div_normal(mu, log_var) +\
-                            self.mse(mu_hat, mu.detach()) +\
-                            self.mse(log_var_hat, log_var.detach())
+                            self.mse(mu_hat, mu.detach().clone().requires_grad_()) +\
+                            self.mse(log_var_hat, log_var.detach().clone().requires_grad_())
 
                 loss.backward()
                 running_loss += loss.item()
