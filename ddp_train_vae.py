@@ -72,14 +72,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=16,
+            num_workers=32,
             pin_memory=False,
             persistent_workers=False)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=4,
+            num_workers=8,
             pin_memory=False,
             persistent_workers=False)
 
@@ -127,7 +127,8 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (420, 256, 160),
+        'shape': (480, 320, 224),
+        'beta': 1.0, # VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,

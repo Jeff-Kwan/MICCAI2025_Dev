@@ -45,6 +45,7 @@ class VAETrainer:
 
         # MSE Loss for mu var estimation
         self.mse = torch.nn.MSELoss()
+        self.beta = train_params.get('beta', 1.0)
 
         # Optimizations
         if train_params.get('autocast', False):
@@ -116,9 +117,9 @@ class VAETrainer:
                     vae_recon_loss = self.criterion(prior_pred, masks)
                     model_recon_loss = self.criterion(pred, masks)
                     loss = model_recon_loss + vae_recon_loss +\
-                            self.kl_div_normal(mu, log_var) +\
-                            self.mse(mu_hat, mu.detach().clone().requires_grad_()) +\
-                            self.mse(log_var_hat, log_var.detach().clone().requires_grad_())
+                            self.beta * self.kl_div_normal(mu, log_var) +\
+                            self.mse(mu_hat, mu.detach()) +\
+                            self.mse(log_var_hat, log_var.detach())
 
                 loss.backward()
                 running_loss += loss.item()

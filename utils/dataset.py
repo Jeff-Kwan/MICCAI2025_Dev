@@ -208,7 +208,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                 weights=[0.5, 0.25, 0.15, 0.1]),
             mt.EnsureTyped(
                 keys=["image", "label", "label_vae"], 
-                dtype=[torch.float32, torch.long, torch.long],
+                dtype=[torch.float32, torch.uint8, torch.uint8],
                 track_meta=False),
             mt.DivisiblePadd(
                 keys=["image", "label", "label_vae"],
@@ -220,7 +220,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
+                dtype=[torch.float32, torch.uint8],
                 track_meta=False),
             mt.CropForegroundd(
                 keys=["image", "label"],

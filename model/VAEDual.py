@@ -121,7 +121,7 @@ class VAEPrior(nn.Module):
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 1, 1, 0, bias=False)
         
 
     def encode(self, img, label):
@@ -209,7 +209,7 @@ class VAEPosterior(nn.Module):
              nn.Conv3d(channels[i] * 3, channels[i], 1, 1, 0, bias=False)
              for i in reversed(range(self.stages - 1))])
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 1, 1, 0, bias=False)
 
         
     def img_encode(self, x):
@@ -252,10 +252,12 @@ class VAEPosterior(nn.Module):
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image
+            _, _, S1, S2, S3 = img.shape
             mu_hat, log_var_hat, skips = self.img_encode(img)
             z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
             x, latent_priors = self.vae_prior.decode(z_hat)
             x = self.decode(z_hat, skips, latent_priors)
+            x = F.interpolate(x, size=(S1, S2, S3), mode='trilinear')
             return x
 
 # ---------- demo ----------------------------------------------
