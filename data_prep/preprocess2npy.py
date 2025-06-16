@@ -85,29 +85,28 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
                 threshold=14,   # 14 classes
                 cval=0,
             ),
-            mt.ThresholdIntensityd( # upper bound 99.5%
+            mt.ThresholdIntensityd( # upper bound 99.5% from Aladdin5 + GT stats
                 keys=["image"],
                 above=False,
                 threshold=295.0,
                 cval=295.0,
             ),
-            mt.ThresholdIntensityd( # lower bound 0.5%
+            mt.ThresholdIntensityd( # lower bound 0.5% from Aladdin5 + GT stats
                 keys=["image"],
                 above=True,
                 threshold=-974.0, 
                 cval=-974.0,
             ),
-            mt.NormalizeIntensityd( # z-score normalization
+            mt.NormalizeIntensityd( # z-score normalization from GT stats
                 keys=["image"],
-                subtrahend=77.515,
-                divisor=142.119,
+                subtrahend=95.958,
+                divisor=139.964,
             ),
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                margin=32, # Keep some margin
-                allow_smaller=False)
-
+                margin=64, # Keep some margin
+                allow_smaller=True)
         ]
     )
 
@@ -116,7 +115,7 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=128,
+        num_workers=192,
     )
 
     # iterate, transform, and save
