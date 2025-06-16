@@ -130,7 +130,7 @@ if __name__ == "__main__":
         'shape': (256, 160, 128),
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 8,
+        'sw_batch_size': 4,
         'sw_overlap': 1/8,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
