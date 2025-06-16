@@ -110,10 +110,6 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.EnsureTyped(
-                keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
-                track_meta=False),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -210,6 +206,10 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                         spatial_size=(32, 32, 32),
                         max_spatial_size=(64, 64, 64))],
                 weights=[0.5, 0.25, 0.15, 0.1]),
+            mt.EnsureTyped(
+                keys=["image", "label", "label_vae"], 
+                dtype=[torch.float32, torch.long, torch.long],
+                track_meta=False),
         ]
     )
     val_transform = mt.Compose(
