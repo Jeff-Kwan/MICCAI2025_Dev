@@ -89,10 +89,10 @@ def main_worker(rank: int,
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
         criterion = DiceFocalLoss(
-            include_background=False, 
+            include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, # remove background 0.1
+            weight=torch.tensor([0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8,
                                  8.6, 6.7, 7.5, 4.4, 5.9, 5.0], device=rank),
             lambda_focal=1,
             lambda_dice=1,)
