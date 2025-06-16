@@ -120,9 +120,6 @@ class VAEPrior(nn.Module):
                 nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
-        self.merges = nn.ModuleList([
-             nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
-             for i in reversed(range(self.stages - 1))])
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
         
