@@ -144,7 +144,7 @@ if __name__ == "__main__":
     output_dir = "UNetControl"
     comments = ["UNet Control - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
-        f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
+        f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
 
     gpu_count = torch.cuda.device_count()
