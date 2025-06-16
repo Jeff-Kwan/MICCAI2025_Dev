@@ -52,7 +52,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -121,20 +121,20 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 100,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (224, 160, 128),
+        'shape': (256, 224, 160),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
         'sw_overlap': 1/4,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 0, 0, 1],  
+            'spatial': [2, 2, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet - GT*2 + Aladdin training",
+    comments = ["AttnUNet Large - GT*4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
