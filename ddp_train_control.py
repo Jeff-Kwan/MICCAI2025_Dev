@@ -5,7 +5,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import ThreadDataLoader, Dataset
+from monai.data import ThreadDataLoader, Dataset, list_data_collate
 from monai.losses import DiceFocalLoss
 
 from utils import get_transforms, get_data_files
@@ -44,7 +44,7 @@ def main_worker(rank: int,
 
         # Datasets
         train_tf, val_tf = get_transforms(
-            train_params['shape'], rank,
+            train_params['shape'], train_params['num_crops'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
@@ -74,14 +74,16 @@ def main_worker(rank: int,
             sampler=train_sampler,
             num_workers=32,
             pin_memory=True,
-            persistent_workers=True)
+            persistent_workers=True,
+            collate_fn=list_data_collate)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
             num_workers=8,
             pin_memory=True,
-            persistent_workers=False)
+            persistent_workers=False,
+            collate_fn=list_data_collate)
 
         # Model, optimizer, scheduler, loss
         model = UNetControl(model_params)
@@ -147,13 +149,14 @@ if __name__ == "__main__":
         f"{train_params["shape"]} shape", 
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
+    # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
 
+    gpu_count = torch.cuda.device_count()
     try:
         mp.spawn(
             main_worker,
-            args=(4, model_params, train_params, output_dir, comments),
-            nprocs=4,
+            args=(gpu_count, model_params, train_params, output_dir, comments),
+            nprocs=gpu_count,
             join=True)
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")

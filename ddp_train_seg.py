@@ -147,15 +147,16 @@ if __name__ == "__main__":
         f"DiceFocal, {train_params["num_crops"]}-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
     
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
+    # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Reduce fragmentation
     # torch._dynamo.config.cache_size_limit = 32  # 16 -> 32
     # torch._dynamo.config.recompile_limit = 12   # 8 -> 12
 
+    gpu_count = torch.cuda.device_count()
     try:
         mp.spawn(
             main_worker,
-            args=(4, model_params, train_params, output_dir, comments),
-            nprocs=4,
+            args=(gpu_count, model_params, train_params, output_dir, comments),
+            nprocs=gpu_count,
             join=True)
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")
