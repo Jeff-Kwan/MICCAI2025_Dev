@@ -1,4 +1,5 @@
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
 import json
 import torch
 import torch.distributed as dist
@@ -127,7 +128,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (448, 288, 160),
+        'shape': (480, 320, 192),
         'beta': 1.0, # VAE beta
         'compile': False,
         'autocast': True,
