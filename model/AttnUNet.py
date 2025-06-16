@@ -190,7 +190,7 @@ if __name__ == "__main__":
     B, S1, S2, S3 = 1, 160, 160, 80
     params = {
         "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
+        "channels":     [24, 48, 96, 192],
         "convs":        [32, 48, 64, 32],
         "layers":       [2, 2, 2, 8],
         "dropout":      0.1,

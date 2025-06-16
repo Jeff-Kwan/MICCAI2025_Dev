@@ -213,6 +213,12 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
             mt.DivisiblePadd(
                 keys=["image", "label", "label_vae"],
                 k=16),
+            mt.Zoomd(
+                keys=["label"],
+                zoom=(0.5, 0.5, 0.5),
+                mode="nearest",
+                keep_size=False,
+                lazy=True),
         ]
     )
     val_transform = mt.Compose(
