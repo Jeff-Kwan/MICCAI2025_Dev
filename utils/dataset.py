@@ -185,8 +185,8 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
             # Then for the VAE label input
             mt.CopyItemsd(
                 keys=["label"],
-                times=2,  # Duplicate label
-                names=["label", "label_vae"]),
+                times=1,
+                names=["label_vae"]),
             mt.OneOf(   # Dropout VAE input label
                 transforms=[
                     mt.Identityd(keys=["label_vae"]),
