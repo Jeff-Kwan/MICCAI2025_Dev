@@ -13,13 +13,19 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.RandSpatialCropd( # Does not support on GPU
-                keys=["image", "label"], 
-                roi_size=shape),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.RandSpatialCropSamplesd( # Does not support on GPU
+                keys=["image", "label"], 
+                roi_size=shape,
+                num_samples=num_crops,
+                lazy=True),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16,
+                lazy=True),
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),
@@ -30,15 +36,18 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
-                        padding_mode="border"),
+                        padding_mode="border",
+                        lazy=True),
                     mt.RandFlipd(
                         keys=["image", "label"],
                         prob=1.0,
-                        spatial_axis=(0, 1)),  # Flip in XY plane
+                        spatial_axis=(0, 1),
+                        lazy=True),  # Flip in XY plane
                     mt.RandRotate90d(
                         keys=["image", "label"],
                         prob=1.0,
-                        spatial_axes=(0, 1)),  # Rotate in XY plane
+                        spatial_axes=(0, 1),
+                        lazy=True),  # Rotate in XY plane
                     mt.Rand3DElasticd(
                         keys=["image", "label"],
                         prob=1.0,
@@ -86,6 +95,9 @@ def get_transforms(shape, num_crops, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16),
         ]
     )
     return train_transform, val_transform
