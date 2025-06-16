@@ -121,13 +121,13 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 100,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 1e-4,
+        'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 192, 160),
+        'shape': (224, 160, 128),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
