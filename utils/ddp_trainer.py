@@ -215,7 +215,7 @@ class DDPTrainer:
             f.write(f"Model size: {self.model_size/1e6:.2f}M\n")
             f.write(f"Training time: {int(hrs):02}:{int(mins):02}:{int(secs):02}\n\n")
             f.write(f"Epoch {epoch+1} results:\n")
-            f.write(f"Train Loss: {self.train_losses[-1]:.5f}; Val Loss: {self.val_losses[-1]:.5f}; Val Dice: {self.val_metrics['dice'][-1]:.5f}\n")
+            f.write(f"Train Loss: {self.train_losses[-1]:.5f}; Val Loss: {self.val_losses[-1]:.5f}; Val Dice: {self.val_metrics['dice'][-1]:.5f}\n\n")
             for c in self.comments:
                 f.write(c + "\n")
             f.write(f"\nModel params: {json.dumps(self.model.module.model_params, indent=4)}\n")
