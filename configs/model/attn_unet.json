@@ -2,7 +2,7 @@
 "out_channels": 14,
 "channels":     [48, 96, 192, 384],
 "convs":        [32, 48, 64, 32],
-"layers":       [4, 4, 4, 12],
+"layers":       [4, 4, 4, 8],
 "dropout":      0.1,
 "stochastic_depth": 0.1
 }
