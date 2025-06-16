@@ -248,7 +248,7 @@ class VAEPosterior(nn.Module):
             prior_z = self.vae_prior.reparameterize(mu, log_var)
             prior_x, latent_priors = self.vae_prior.decode(prior_z)
 
-            latent_priors = [lp.detach() for lp in latent_priors]
+            latent_priors = [lp.detach().requires_grad_() for lp in latent_priors]
 
             mu_hat, log_var_hat, skips = self.img_encode(img)
             x = self.decode(prior_z.detach().requires_grad_(), skips, latent_priors)
