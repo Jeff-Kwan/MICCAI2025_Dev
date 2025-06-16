@@ -32,6 +32,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
+                        translate_range=(8, 8, 8),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
@@ -53,6 +54,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                         sigma_range=(2.0, 5.0),
                         magnitude_range=(1.0, 3.0),
                         spatial_size=shape,
+                        translate_range=(8, 8, 8),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
@@ -125,6 +127,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
+                        translate_range=(16, 16, 16),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
@@ -146,6 +149,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                         sigma_range=(2.0, 5.0),
                         magnitude_range=(1.0, 3.0),
                         spatial_size=shape,
+                        translate_range=(16, 16, 16),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")
