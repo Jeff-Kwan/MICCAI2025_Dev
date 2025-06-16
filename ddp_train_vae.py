@@ -72,7 +72,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=12,
+            num_workers=16,
             pin_memory=False,
             persistent_workers=False)
         val_loader = ThreadDataLoader(
@@ -89,7 +89,7 @@ def main_worker(rank: int,
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
         criterion = DiceFocalLoss(
-            include_background=True, 
+            include_background=False, 
             to_onehot_y=True, 
             softmax=True, 
             weight=torch.tensor([0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (420, 256, 192),
+        'shape': (480, 320, 224),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
