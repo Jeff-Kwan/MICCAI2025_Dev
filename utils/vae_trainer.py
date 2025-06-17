@@ -123,16 +123,12 @@ class VAETrainer:
 
             for i, batch in enumerate(loop):
                 imgs = batch['image'].to(self.device, non_blocking=True)
-                masks = batch['label'].to(self.device, non_blocking=True)
+                label = batch['label'].to(self.device, non_blocking=True)
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
-                    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, masks)
-                    # Loss:
-                        # 1. Reconstruction loss (pred vs masks)
-                        # 2. Reconstruction loss (prior_pred vs masks)
-                        # 3. KL divergence between mu, log_var and prior
-                        # 4. KL between mu_hat, log_var_hat and mu, log_var
-                    label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
+                    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, label)
+                    # Loss - Reconstruction x2 + KL x2
+                    # label = interpolate(label.float(), scale_factor=0.5, mode='nearest').long()
                     vae_recon_loss = self.criterion(prior_pred, label)
                     model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
