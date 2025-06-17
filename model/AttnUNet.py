@@ -3,6 +3,19 @@ from torch import nn
 # from torch.utils import checkpoint
 from torchvision.ops import stochastic_depth
 
+class LayerNormTranspose(nn.Module):
+    def __init__(self, dim: int, features: int, eps: float = 1e-6,
+                 elementwise_affine: bool = True, bias: bool = True):
+        super().__init__()
+        self.dim = dim
+        self.norm = nn.LayerNorm(features, eps, elementwise_affine, bias)
+
+    def forward(self, x):
+        # (..., C, ...) -> (..., ..., C) -> norm -> restore
+        x = x.transpose(self.dim, -1)
+        x = self.norm(x)
+        return x.transpose(self.dim, -1)
+
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int,
@@ -82,7 +95,7 @@ class TransformerLayer(nn.Module):
         self.mlps = nn.ModuleList([
             nn.Sequential(
                 nn.LayerNorm(in_c),
-                SwiGLU(in_c, in_c*4, in_c, bias=bias, dropout=dropout))
+                SwiGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -106,7 +119,7 @@ class Encoder(nn.Module):
             [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Sequential(
-                nn.GroupNorm(channels[i], channels[i], affine=False),
+                LayerNormTranspose(1, channels[i], elementwise_affine=False, bias=False),
                 nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
              for i in range(self.stages - 1)])
         
@@ -128,7 +141,7 @@ class Decoder(nn.Module):
             [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
+                LayerNormTranspose(1, channels[i+1], elementwise_affine=False, bias=False),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
@@ -162,7 +175,7 @@ class AttnUNet(nn.Module):
                         bias=True, dropout=dropout, sto_depth=sto_depth)
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
+        self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
 
         
@@ -178,7 +191,7 @@ class AttnUNet(nn.Module):
         # Decoder
         x = self.decoder(x, skips)
 
-        x = self.out_norm(x.transpose(1, -1)).transpose(1, -1)
+        x = self.out_norm(x)
         x = self.out_conv(x)
         return x
 
@@ -187,11 +200,11 @@ class AttnUNet(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 224, 160, 128
+    B, S1, S2, S3 = 1, 256, 192, 128
     params = {
         "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
-        "convs":        [24, 48, 64, 32],
+        "channels":     [24, 48, 96, 192],
+        "convs":        [16, 32, 64, 32],
         "layers":       [2, 2, 2, 6],
         "dropout":      0.1,
         "stochastic_depth": 0.1

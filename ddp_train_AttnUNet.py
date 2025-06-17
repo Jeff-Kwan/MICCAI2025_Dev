@@ -124,10 +124,10 @@ if __name__ == "__main__":
         'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 1e-4,
+        'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 224, 160),
+        'shape': (256, 192, 128),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet Large - GT*4 + Aladdin training",
+    comments = ["AttnUNet Small - GT*4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
