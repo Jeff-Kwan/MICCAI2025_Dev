@@ -211,8 +211,9 @@ class VAETrainer:
                 self.vae_losses.append(running_vae_loss / len(train_loader))
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"VAE Loss: {running_vae_loss / len(train_loader):.5f} | ")
-                self.plot_results()
-                self.save_checkpoint(epoch, metrics=None)
+                self.plot_vae_results()
+                torch.save(self.model.module.vae_prior.state_dict(),
+                            os.path.join(self.output_dir, 'vae_prior.pth'))
 
 
     def train_posterior(self, train_loader, val_loader, epochs, agg_steps=1):
@@ -404,3 +405,15 @@ class VAETrainer:
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'training_curves.png'))
         plt.close(fig)
+
+    def plot_vae_results(self):
+        epochs = range(1, len(self.vae_losses) + 1)
+        plt.figure()
+        plt.plot(epochs, self.vae_losses, label='VAE Loss', color='black')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('VAE Training Loss')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'vae_training_loss.png'))
+        plt.close()
