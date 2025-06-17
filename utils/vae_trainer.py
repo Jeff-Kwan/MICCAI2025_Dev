@@ -128,7 +128,7 @@ class VAETrainer:
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, label)
                     # Loss - Reconstruction x2 + KL x2
-                    label = interpolate(label.float(), scale_factor=0.5, mode='nearest').long()
+                    # label = interpolate(label.float(), scale_factor=0.5, mode='nearest').long()
                     vae_recon_loss = self.criterion(prior_pred, label)
                     model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
