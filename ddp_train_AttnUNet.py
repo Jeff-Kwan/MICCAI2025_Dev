@@ -129,7 +129,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (256, 192, 128),
         'compile': False,
-        'autocast': True,
+        'autocast': False,
         'sw_batch_size': 4,
         'sw_overlap': 1/4,
         'data_augmentation': {
