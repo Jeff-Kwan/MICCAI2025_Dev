@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': (100, 100),    # (prior, posterior)
+        'epochs': (50, 50),    # (prior, posterior)
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': (3e-4, 3e-4),
