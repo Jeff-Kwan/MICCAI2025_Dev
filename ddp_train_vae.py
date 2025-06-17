@@ -53,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 4 \
+                extension='.npy') * 2 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
@@ -73,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=64,
+            num_workers=42,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 5e-4,
-        'weight_decay': 1e-2,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (448, 224, 128),
         'alpha': (0.1, 1.0, 60), # JS Match of Prior and Likelihood
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx4 + Aladdin training",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
         f"Allow skips gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
