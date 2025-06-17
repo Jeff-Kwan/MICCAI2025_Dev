@@ -129,8 +129,8 @@ if __name__ == "__main__":
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (448, 224, 128),
-        'alpha': (0.01, 1.0, 60), # KL Match of Prior and Likelihood
-        'beta': (0.01, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
+        'alpha': (0.1, 1.0, 60), # JS Match of Prior and Likelihood
+        'beta': (0.1, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,

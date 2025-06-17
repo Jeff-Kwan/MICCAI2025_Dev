@@ -90,14 +90,18 @@ class VAETrainer:
         # Sum over latent dim - channels (1); mean over batch and img dimensions
         return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
-    def kl_gaussian(self, mu, logvar, mu_target, logvar_target):
-        # mu, logvar: [batch, latent_dim]
-        # mu_target, logvar_target: [batch, latent_dim] or [latent_dim]
-        var = logvar.exp()
-        var_target = logvar_target.exp()
-        kl = 0.5 * (logvar_target - logvar + (var + (mu - mu_target).pow(2)) / var_target - 1)
-        # Sum over latent dimension, mean over batch
-        return kl.sum(dim=1).mean()
+    def js_gaussian(self, mu1, logvar1, mu2, logvar2):
+        # mu1, logvar1: [batch, latent_dim]
+        # mu2, logvar2: [batch, latent_dim] or [latent_dim]
+        var1 = logvar1.exp()
+        var2 = logvar2.exp()
+        kl_pq = 0.5 * (logvar2 - logvar1 + (var1 + (mu1 - mu2).pow(2)) / var2 - 1.0)
+        # KL(Q||P)
+        kl_qp = 0.5 * (logvar1 - logvar2 + (var2 + (mu2 - mu1).pow(2)) / var1 - 1.0)
+        # Jensen–Shannon = ½(KL(P||Q) + KL(Q||P))
+        js = 0.5 * (kl_pq + kl_qp)
+        # sum over latent dims, mean over batch
+        return js.sum(dim=1).mean()
 
     def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
@@ -127,13 +131,13 @@ class VAETrainer:
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, label)
-                    # Loss - Reconstruction x2 + KL x2
+                    # Loss - Reconstruction x2 + KL + JS
                     # label = interpolate(label.float(), scale_factor=0.5, mode='nearest').long()
                     vae_recon_loss = self.criterion(prior_pred, label)
                     model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
                             self.beta[epoch] * self.kl_div_normal(mu, log_var) +\
-                            self.alpha[epoch] * self.kl_gaussian(mu_hat, log_var_hat, mu, log_var)
+                            self.alpha[epoch] * self.js_gaussian(mu_hat, log_var_hat, mu, log_var)
 
                 loss.backward()
                 running_loss += loss.item()
