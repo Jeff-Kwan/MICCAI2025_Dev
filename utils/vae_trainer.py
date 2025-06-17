@@ -45,15 +45,18 @@ class VAETrainer:
             self.model = model
 
         # VAE params
+        epochs = train_params['epochs']
+        if isinstance(epochs, tuple):
+            epochs = epochs[0]
         beta = train_params.get('beta', 1.0)
         self.beta = torch.linspace(beta[0], beta[1], beta[2], device=self.device)
-        if beta[2] < train_params['epochs'][0]:
-            self.beta = torch.cat([self.beta, self.beta[-1].repeat(train_params['epochs'][0] - beta[2])])
+        if beta[2] < epochs:
+            self.beta = torch.cat([self.beta, self.beta[-1].repeat(epochs - beta[2])])
 
         alpha = train_params.get('alpha', 1.0)
         self.alpha = torch.linspace(alpha[0], alpha[1], alpha[2], device=self.device)
-        if alpha[2] < train_params['epochs'][0]:
-            self.alpha = torch.cat([self.alpha, self.alpha[-1].repeat(train_params['epochs'][0] - alpha[2])])
+        if alpha[2] < epochs:
+            self.alpha = torch.cat([self.alpha, self.alpha[-1].repeat(epochs - alpha[2])])
 
         # Optimizations
         if train_params.get('autocast', False):
