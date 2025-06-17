@@ -73,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=64,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         'learning_rate': 5e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (432, 224, 128),
+        'shape': (448, 256, 128),
         'alpha': (0.01, 1.0, 60), # KL Match of Prior and Likelihood
         'beta': (0.01, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,

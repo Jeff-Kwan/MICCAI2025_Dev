@@ -124,7 +124,6 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                         mt.RandAffined(     # Small affine perturbation
                             keys=["image","label"],
                             prob=1.0,
-                            spatial_size=shape,
                             translate_range=(16, 16, 16),
                             rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                             scale_range=(0.1, 0.1, 0.1),
@@ -146,7 +145,6 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                             prob=1.0,
                             sigma_range=(2.0, 5.0),
                             magnitude_range=(1.0, 3.0),
-                            spatial_size=shape,
                             translate_range=(16, 16, 16),
                             rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                             scale_range=(0.1, 0.1, 0.1),                # ±10%
@@ -182,13 +180,13 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                     weights=coarse)],
                 weights=(2, 1, 1),
             ),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.DivisiblePadd(
-                keys=["image", "label"],
-                k=16),
         ]
     )
     val_transform = mt.Compose(
