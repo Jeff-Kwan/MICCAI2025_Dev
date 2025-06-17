@@ -88,7 +88,7 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         model = VAEPosterior(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'][0])
         criterion = DiceFocalLoss(
             include_background=True, 
             to_onehot_y=True, 
@@ -114,7 +114,7 @@ def main_worker(rank: int,
 
         # Reinitialize optimizer, scheduler for posterior training
         trainer.optimizer = AdamW(trainer.model.module.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
-        trainer.scheduler = lr_scheduler.CosineAnnealingLR(trainer.optimizer, T_max=train_params['epochs'])
+        trainer.scheduler = lr_scheduler.CosineAnnealingLR(trainer.optimizer, T_max=train_params['epochs'][1])
         trainer.train_posterior(train_loader, val_loader, train_params['epochs'][1])
 
     except KeyboardInterrupt:
