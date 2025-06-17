@@ -53,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 10 ,#\
+                extension='.npy') * 30 ,#\
             # + get_data_files(
             #     images_dir="data/small/train_pseudo/images",
             #     labels_dir="data/small/train_pseudo/aladdin5",
@@ -73,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=24,
             pin_memory=False,
             persistent_workers=False)
         val_loader = ThreadDataLoader(
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': (50, 50),    # (prior, posterior)
+        'epochs': (20, 20),    # (prior, posterior)
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': (3e-4, 3e-4),
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx10",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx30",
         f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
