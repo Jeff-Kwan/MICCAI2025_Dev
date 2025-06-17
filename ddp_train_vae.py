@@ -51,18 +51,18 @@ def main_worker(rank: int,
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/train_gt/images",
-                labels_dir="data/preprocessed/train_gt/labels",
+                images_dir="data/small/train_gt/images",
+                labels_dir="data/small/train_gt/labels",
                 extension='.npy') * 2 \
             + get_data_files(
-                images_dir="data/preprocessed/train_pseudo/images",
-                labels_dir="data/preprocessed/train_pseudo/aladdin5",
+                images_dir="data/small/train_pseudo/images",
+                labels_dir="data/small/train_pseudo/aladdin5",
                 extension='.npy'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/val/images",
-                labels_dir="data/preprocessed/val/labels",
+                images_dir="data/small/val/images",
+                labels_dir="data/small/val/labels",
                 extension='.npy'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
@@ -73,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=32,
+            num_workers=48,
             pin_memory=False,
             persistent_workers=False)
         val_loader = ThreadDataLoader(
@@ -122,14 +122,14 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': 100,
+        'epochs': 120,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (480, 320, 160),
-        'beta': 1.0, # VAE beta
+        'shape': (416, 224, 128),
+        'beta': (0.1, 1.0, 20), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
@@ -140,11 +140,12 @@ if __name__ == "__main__":
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
-            'coarse': [4, 1, 1]  
+            'coarse': [2, 1, 1]  
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior (UNet) - GTx2 + Aladdin training",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
+        f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

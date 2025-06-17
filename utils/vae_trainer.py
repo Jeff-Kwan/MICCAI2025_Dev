@@ -2,6 +2,7 @@ import os
 import json
 import time
 import torch
+from torch.nn.functional import interpolate
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import tqdm
@@ -43,9 +44,11 @@ class VAETrainer:
         else:
             self.model = model
 
-        # MSE Loss for mu var estimation
-        self.mse = torch.nn.MSELoss()
-        self.beta = train_params.get('beta', 1.0)
+        # VAE params
+        beta = train_params.get('beta', 1.0)
+        self.beta = torch.linspace(beta[0], beta[1], beta[2], device=self.device)
+        if beta[2] < train_params['epochs']:
+            self.beta = torch.cat([self.beta, self.beta[-1].repeat(train_params['epochs'] - beta[2])])
 
         # Optimizations
         if train_params.get('autocast', False):
@@ -79,6 +82,15 @@ class VAETrainer:
         # Sum over latent dim - channels (1); mean over batch and img dimensions
         return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
+    def kl_gaussian(self, mu, logvar, mu_target, logvar_target):
+        # mu, logvar: [batch, latent_dim]
+        # mu_target, logvar_target: [batch, latent_dim] or [latent_dim]
+        var = logvar.exp()
+        var_target = logvar_target.exp()
+        kl = 0.5 * (logvar_target - logvar + (var + (mu - mu_target).pow(2)) / var_target - 1)
+        # Sum over latent dimension, mean over batch
+        return kl.sum(dim=1).mean()
+
     def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
             self.start_time = time.time()
@@ -104,22 +116,20 @@ class VAETrainer:
             for i, batch in enumerate(loop):
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
-                vae_masks = batch['label_vae'].to(self.device, non_blocking=True)
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
-                    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, vae_masks)
+                    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = self.model(imgs, masks)
                     # Loss:
                         # 1. Reconstruction loss (pred vs masks)
                         # 2. Reconstruction loss (prior_pred vs masks)
                         # 3. KL divergence between mu, log_var and prior
-                        # 4. MSE align mu_hat towards mu
-                        # 5. MSE align log_var_hat towards log_var
-                    vae_recon_loss = self.criterion(prior_pred, masks)
-                    model_recon_loss = self.criterion(pred, masks)
+                        # 4. KL between mu_hat, log_var_hat and mu, log_var
+                    label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
+                    vae_recon_loss = self.criterion(prior_pred, label)
+                    model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
-                            self.beta * self.kl_div_normal(mu, log_var) +\
-                            self.mse(mu_hat, mu.detach()) +\
-                            self.mse(log_var_hat, log_var.detach())
+                            self.beta[epoch] * self.kl_div_normal(mu, log_var) +\
+                            self.kl_gaussian(mu_hat, log_var_hat, mu.detach(), log_var.detach())
 
                 loss.backward()
                 running_loss += loss.item()

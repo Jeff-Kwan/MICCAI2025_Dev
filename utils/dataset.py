@@ -178,47 +178,13 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                         spatial_size=(6, 6, 6),
                         max_spatial_size=(12, 12, 12))],
                 weights=coarse),
-            # Then for the VAE label input
-            mt.CopyItemsd(
-                keys=["label"],
-                times=1,
-                names=["label_vae"]),
-            mt.OneOf(   # Dropout VAE input label
-                transforms=[
-                    mt.Identityd(keys=["label_vae"]),
-                    mt.RandCoarseDropoutd(  # Small
-                        keys=["label_vae"],
-                        prob=1.0,
-                        holes=4,
-                        max_holes=8,
-                        spatial_size=(8, 8, 8),
-                        max_spatial_size=(32, 32, 32)),
-                    mt.RandCoarseDropoutd(  # Medium
-                        keys=["label_vae"],
-                        prob=1.0,
-                        holes=2, max_holes=6,
-                        spatial_size=(24, 24, 24),
-                        max_spatial_size=(48, 48, 48)),
-                    mt.RandCoarseDropoutd(  # Large
-                        keys=["label_vae"],
-                        prob=1.0,
-                        holes=1, max_holes=4,
-                        spatial_size=(32, 32, 32),
-                        max_spatial_size=(64, 64, 64))],
-                weights=[0.5, 0.25, 0.15, 0.1]),
             mt.EnsureTyped(
-                keys=["image", "label", "label_vae"], 
-                dtype=[torch.float32, torch.long, torch.long],
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
                 track_meta=False),
             mt.DivisiblePadd(
-                keys=["image", "label", "label_vae"],
+                keys=["image", "label"],
                 k=16),
-            mt.Zoomd(
-                keys=["label"],
-                zoom=(0.5, 0.5, 0.5),
-                mode="nearest",
-                keep_size=False,
-                lazy=True),
         ]
     )
     val_transform = mt.Compose(

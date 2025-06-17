@@ -3,6 +3,6 @@
 "channels":     [32, 64, 128, 256],
 "convs":        [24, 48, 64, 32],
 "layers":       [2, 2, 2, 2],
-"dropout":      0.1,
+"dropout":      0.0,
 "stochastic_depth": 0.0
 }

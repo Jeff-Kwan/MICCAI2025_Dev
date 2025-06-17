@@ -94,7 +94,7 @@ class VAEPrior(nn.Module):
         self.stages = len(channels)
         self.classes = out_c + 1 # + 1 for masking
 
-        self.img_conv = nn.Conv3d(1, channels[0], 2, 2, 0, bias=False)
+        # self.img_conv = nn.Conv3d(1, channels[0], 2, 2, 0, bias=False)
         self.label_conv = nn.Conv3d(self.classes, channels[0], 2, 2, 0, bias=False)
         
         # Encoder
@@ -124,9 +124,9 @@ class VAEPrior(nn.Module):
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 1, 1, 0, bias=False)
         
 
-    def encode(self, img, label):
+    def encode(self, label):
         label = F.one_hot(label, self.classes).squeeze(1).float().permute(0, 4, 1, 2, 3)
-        x = self.img_conv(img) + self.label_conv(label)
+        x = self.label_conv(label)
 
         for i, conv in enumerate(self.encoder_convs):
             x = conv(x)
@@ -241,13 +241,13 @@ class VAEPosterior(nn.Module):
     def forward(self, img, labels=None):
         if self.training:
             # During training, teacher forcing on vae prior decoding
-            mu, log_var = self.vae_prior.encode(img, labels)
+            mu, log_var = self.vae_prior.encode(labels)
             prior_z = self.vae_prior.reparameterize(mu, log_var)
             prior_x, latent_priors = self.vae_prior.decode(prior_z)
 
-            latent_priors = [lp.detach().clone().requires_grad_() for lp in latent_priors]
-
             mu_hat, log_var_hat, skips = self.img_encode(img)
+            latent_priors = [lp.detach().clone().requires_grad_() for lp in latent_priors]
+            skips = [s.detach().clone().requires_grad_() for s in skips]
             x = self.decode(prior_z.detach().clone().requires_grad_(), skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
@@ -264,10 +264,10 @@ class VAEPosterior(nn.Module):
 
 if __name__ == "__main__":
     device = torch.device("cuda")
-    print("DO NOT RUN ON LAPTOP!")
-    exit()
+    # print("DO NOT RUN ON LAPTOP!")
+    # exit()
     
-    B, S1, S2, S3 = 1, 480, 320, 224
+    B, S1, S2, S3 = 1, 416, 224, 128
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
@@ -298,8 +298,6 @@ if __name__ == "__main__":
             y = model(x, labels)[0]
             loss = y.sum()
         loss.backward()
-
-    assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         
     print(prof.key_averages().table(sort_by=f"{device}_time_total", row_limit=12))
     if device == torch.device("cuda"):
