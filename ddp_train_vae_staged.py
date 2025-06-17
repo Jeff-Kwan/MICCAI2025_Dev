@@ -53,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 1 ,#\
+                extension='.npy') * 10 ,#\
             # + get_data_files(
             #     images_dir="data/small/train_pseudo/images",
             #     labels_dir="data/small/train_pseudo/aladdin5",
@@ -128,14 +128,14 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': (1, 2),    # (prior, posterior)
+        'epochs': (100, 100),    # (prior, posterior)
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': (3e-4, 3e-4),
         'weight_decay': (1e-2, 1e-2),
         'num_classes': 14,
         'shape': (416, 224, 128),
-        'beta': (0.1, 1.0, 50), # Linear ramp up [min, max, epochs] VAE beta
+        'beta': (0.1, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx10",
         f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
