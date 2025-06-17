@@ -3,10 +3,9 @@ import json
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from torch.utils.data import DataLoader
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import Dataset
+from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
 from utils.dataset import get_transforms, get_data_files
