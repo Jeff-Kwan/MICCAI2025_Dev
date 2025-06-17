@@ -133,7 +133,7 @@ class VAEPrior(nn.Module):
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
         
 
     def encode(self, label):
@@ -221,7 +221,7 @@ class VAEPosterior(nn.Module):
              nn.Conv3d(channels[i] * 3, channels[i], 1, 1, 0, bias=False)
              for i in reversed(range(self.stages - 1))])
         self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
 
         
     def img_encode(self, x):
