@@ -224,11 +224,10 @@ class VAETrainer:
             if self.world_size > 1:
                 train_loader.sampler.set_epoch(epoch)
 
-            self.model.train()
-
             # Freeze VAE prior
             for param in self.model.module.vae_prior.parameters():
                 param.requires_grad = False
+            self.model.train()
 
             running_model_loss = 0.0
             grad_norm = torch.tensor(0.0, device=self.device)
@@ -283,7 +282,7 @@ class VAETrainer:
                       f"Model Loss: {running_model_loss / len(train_loader):.5f} | "
                       f"Val Loss: {val_loss:.5f} | "
                       f"Val Dice: {metrics['dice']:.5f}")
-                self.plot_results()
+                self.plot_posterior_results()
                 self.save_checkpoint(epoch, metrics)
 
     @torch.no_grad()
@@ -417,3 +416,23 @@ class VAETrainer:
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'vae_training_loss.png'))
         plt.close()
+
+
+    def plot_posterior_results(self):
+        epochs = range(1, len(self.val_losses) + 1)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Loss curve
+        ax1.plot(epochs, self.model_losses, label='Model', color='blue')
+        ax1.plot(epochs, self.val_losses, label='Val', color='orange')
+        ax1.set_xlabel('Epoch'); ax1.set_ylabel('Loss')
+        ax1.legend(); ax1.set_title('Loss')
+
+        # Dice curve
+        ax2.plot(epochs, self.val_metrics['dice'], label='Val Dice', color='orange')
+        ax2.set_xlabel('Epoch'); ax2.set_ylabel('Dice')
+        ax2.legend(); ax2.set_title('Validation Dice')
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'model_posterior_loss.png'))
+        plt.close(fig)
