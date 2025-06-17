@@ -75,7 +75,7 @@ def main_worker(rank: int,
             sampler=train_sampler,
             num_workers=42,
             pin_memory=True,
-            persistent_workers=False)
+            persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
