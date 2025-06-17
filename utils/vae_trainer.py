@@ -50,6 +50,11 @@ class VAETrainer:
         if beta[2] < train_params['epochs'][0]:
             self.beta = torch.cat([self.beta, self.beta[-1].repeat(train_params['epochs'][0] - beta[2])])
 
+        alpha = train_params.get('alpha', 1.0)
+        self.alpha = torch.linspace(alpha[0], alpha[1], alpha[2], device=self.device)
+        if alpha[2] < train_params['epochs'][0]:
+            self.alpha = torch.cat([self.alpha, self.alpha[-1].repeat(train_params['epochs'][0] - alpha[2])])
+
         # Optimizations
         if train_params.get('autocast', False):
             torch.backends.cudnn.enabled = True
@@ -129,7 +134,7 @@ class VAETrainer:
                     model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
                             self.beta[epoch] * self.kl_div_normal(mu, log_var) +\
-                            self.kl_gaussian(mu_hat, log_var_hat, mu.detach(), log_var.detach())
+                            self.alpha[epoch] * self.kl_gaussian(mu_hat, log_var_hat, mu, log_var)
 
                 loss.backward()
                 running_loss += loss.item()

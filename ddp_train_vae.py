@@ -53,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
@@ -73,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=32,
             pin_memory=False,
             persistent_workers=False)
         val_loader = Dataloader(
@@ -122,21 +122,22 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': (120),    # Prior posterior together
+        'epochs': (300),    # Prior posterior together
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
+        'learning_rate': 5e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (416, 224, 128),
-        'beta': (0.1, 1.0, 20), # Linear ramp up [min, max, epochs] VAE beta
+        'shape': (384, 224, 128),
+        'alpha': (0.01, 1.0, 60), # KL Match of Prior and Likelihood
+        'beta': (0.01, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
         'sw_overlap': 1/2,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 0, 0, 1],  
+            'spatial': [1, 2, 0, 0, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
@@ -144,8 +145,8 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
-        f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx4 + Aladdin training",
+        f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
