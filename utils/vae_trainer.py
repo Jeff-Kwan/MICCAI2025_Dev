@@ -165,6 +165,126 @@ class VAETrainer:
                 self.save_checkpoint(epoch, metrics)
 
 
+    def train_prior(self, train_loader, epochs, agg_steps=1):
+        if self.local_rank == 0:
+            self.start_time = time.time()
+
+        for epoch in range(epochs):
+            if self.world_size > 1:
+                train_loader.sampler.set_epoch(epoch)
+
+            self.model.train()
+            running_vae_loss = 0.0
+            grad_norm = torch.tensor(0.0, device=self.device)
+
+            loop = tqdm.tqdm(train_loader,
+                             desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
+                             disable=(self.local_rank!=0))
+            self.optimizer.zero_grad()
+
+            for i, batch in enumerate(loop):
+                masks = batch['label'].to(self.device, non_blocking=True)
+
+                with torch.autocast(device_type='cuda', dtype=self.precision):
+                    prior_pred, mu, log_var = self.model.vae_prior(masks)
+                    label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
+                    loss = self.criterion(prior_pred, label) +\
+                            self.beta[epoch] * self.kl_div_normal(mu, log_var)
+
+                loss.backward()
+                running_vae_loss += loss.item()
+
+                if ((i + 1) % agg_steps == 0) or (i + 1 == len(train_loader)):
+                    grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+
+                if self.local_rank == 0:
+                    loop.set_postfix({'Norm': grad_norm.item(), 'Loss': loss.item()})
+
+            self.scheduler.step()
+
+            if self.world_size > 1:
+                torch.cuda.synchronize(self.device)
+                dist.barrier()
+            if self.local_rank == 0:
+                self.vae_losses.append(running_vae_loss / len(train_loader))
+                print(f"Epoch {epoch+1}/{epochs} | "
+                      f"VAE Loss: {running_vae_loss / len(train_loader):.5f} | ")
+                self.plot_results()
+                self.save_checkpoint(epoch, metrics=None)
+
+
+    def train_posterior(self, train_loader, val_loader, epochs, agg_steps=1):
+        if self.local_rank == 0:
+            self.start_time = time.time()
+
+        for epoch in range(epochs):
+            if self.world_size > 1:
+                train_loader.sampler.set_epoch(epoch)
+
+            self.model.train()
+
+            # Freeze VAE prior
+            for param in self.model.vae_prior.parameters():
+                param.requires_grad = False
+
+            running_model_loss = 0.0
+            grad_norm = torch.tensor(0.0, device=self.device)
+
+            loop = tqdm.tqdm(train_loader,
+                             desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
+                             disable=(self.local_rank!=0))
+            self.optimizer.zero_grad()
+
+            for i, batch in enumerate(loop):
+                imgs = batch['image'].to(self.device, non_blocking=True)
+                masks = batch['label'].to(self.device, non_blocking=True)
+
+                with torch.autocast(device_type='cuda', dtype=self.precision):
+                    with torch.no_grad():
+                        mu, log_var = self.vae_prior.encode(masks)
+                        prior_z = self.vae_prior.reparameterize(mu, log_var)
+                        _, latent_priors = self.vae_prior.decode(prior_z)
+                
+                    mu_hat, log_var_hat, skips = self.img_encode(imgs)
+                    skips = [s.detach().clone().requires_grad_() for s in skips]
+                    latent_priors = [lp.clone().requires_grad_() for lp in latent_priors]
+                    pred = self.decode(prior_z.clone().requires_grad_(), skips, latent_priors)
+
+                    label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
+                    loss = self.criterion(pred, label) +\
+                        self.kl_gaussian(mu_hat, log_var_hat, mu, log_var)
+
+                loss.backward()
+                running_model_loss += loss.item()
+
+
+                if ((i + 1) % agg_steps == 0) or (i + 1 == len(train_loader)):
+                    grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+
+                if self.local_rank == 0:
+                    loop.set_postfix({'Norm': grad_norm.item(), 'Loss': loss.item()})
+
+            self.scheduler.step()
+
+            val_loss, metrics = self.evaluate(val_loader)
+            if self.world_size > 1:
+                torch.cuda.synchronize(self.device)
+                dist.barrier()
+            if self.local_rank == 0 and val_loader is not None:
+                self.model_losses.append(running_model_loss / len(train_loader))
+                self.val_losses.append(val_loss)
+                self.val_metrics['dice'].append(metrics['dice'])
+                print(f"Epoch {epoch+1}/{epochs} | "
+                      f"Model Loss: {running_model_loss / len(train_loader):.5f} | "
+                      f"Val Loss: {val_loss:.5f} | "
+                      f"Val Dice: {metrics['dice']:.5f}")
+                self.plot_results()
+                self.save_checkpoint(epoch, metrics)
+
     @torch.no_grad()
     def evaluate(self, data_loader):
         self.model.eval()
