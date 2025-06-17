@@ -146,7 +146,7 @@ if __name__ == "__main__":
     }
     output_dir = "VAEPosterior"
     comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx4 + Aladdin training",
-        f"Detach skips gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
+        f"Allow skips gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

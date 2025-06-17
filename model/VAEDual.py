@@ -247,7 +247,7 @@ class VAEPosterior(nn.Module):
 
             mu_hat, log_var_hat, skips = self.img_encode(img)
             latent_priors = [lp.detach().clone().requires_grad_() for lp in latent_priors]
-            skips = [s.detach().clone().requires_grad_() for s in skips]
+            # skips = [s.detach().clone().requires_grad_() for s in skips]
             x = self.decode(prior_z.detach().clone().requires_grad_(), skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
