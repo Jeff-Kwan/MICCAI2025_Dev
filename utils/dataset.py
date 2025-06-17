@@ -117,6 +117,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                 roi_size=shape,
                 lazy=True),
             mt.OneOf(
+                transforms=[
                 mt.OneOf(       # Random spatial augmentations
                     transforms=[
                         mt.Identityd(keys=["image", "label"]),
@@ -178,7 +179,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                             holes=8, max_holes=16,
                             spatial_size=(6, 6, 6),
                             max_spatial_size=(12, 12, 12))],
-                    weights=coarse),
+                    weights=coarse)],
                 weights=(2, 1, 1),
             ),
             mt.EnsureTyped(
