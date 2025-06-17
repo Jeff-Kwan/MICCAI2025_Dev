@@ -1,4 +1,5 @@
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
 import json
 import torch
 import torch.distributed as dist
@@ -52,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 4 \
+                extension='.npy') * 2 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -72,7 +73,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=32,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -127,11 +128,11 @@ if __name__ == "__main__":
         'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (224, 160, 128),
+        'shape': (256, 160, 128),
         'compile': False,
-        'autocast': False,
+        'autocast': True,
         'sw_batch_size': 4,
-        'sw_overlap': 1/4,
+        'sw_overlap': 1/8,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
@@ -142,9 +143,9 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet Small - GT*4 + Aladdin training",
+    comments = ["AttnUNet - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
-        f"DiceFocal, 1-sample rand crop + augmentations",
+        f"DiceFocal, 1-sample rand crop + 3-choose-1 augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
 
     gpu_count = torch.cuda.device_count()
