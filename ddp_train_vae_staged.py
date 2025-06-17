@@ -87,7 +87,7 @@ def main_worker(rank: int,
 
         # Model, optimizer, scheduler, loss
         model = VAEPosterior(model_params)
-        optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
+        optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'][0], weight_decay=train_params['weight_decay'][0])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'][0])
         criterion = DiceFocalLoss(
             include_background=True, 
@@ -113,7 +113,7 @@ def main_worker(rank: int,
         trainer.train_prior(train_loader, train_params['epochs'][0])
 
         # Reinitialize optimizer, scheduler for posterior training
-        trainer.optimizer = AdamW(trainer.model.module.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
+        trainer.optimizer = AdamW(trainer.model.module.parameters(), lr=train_params['learning_rate'][1], weight_decay=train_params['weight_decay'][1])
         trainer.scheduler = lr_scheduler.CosineAnnealingLR(trainer.optimizer, T_max=train_params['epochs'][1])
         trainer.train_posterior(train_loader, val_loader, train_params['epochs'][1])
 
@@ -131,8 +131,8 @@ if __name__ == "__main__":
         'epochs': (2, 2),    # (prior, posterior)
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
-        'weight_decay': 1e-2,
+        'learning_rate': (3e-4, 3e-4),
+        'weight_decay': (1e-2, 1e-2),
         'num_classes': 14,
         'shape': (416, 224, 128),
         'beta': (0.1, 1.0, 50), # Linear ramp up [min, max, epochs] VAE beta
