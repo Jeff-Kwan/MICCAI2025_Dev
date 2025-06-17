@@ -47,7 +47,7 @@ class VAETrainer:
         # VAE params
         beta = train_params.get('beta', 1.0)
         self.beta = torch.linspace(beta[0], beta[1], beta[2], device=self.device)
-        if beta[2] < train_params['epochs']:
+        if beta[2] < train_params['epochs'][0]:
             self.beta = torch.cat([self.beta, self.beta[-1].repeat(train_params['epochs'] - beta[2])])
 
         # Optimizations
