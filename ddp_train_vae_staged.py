@@ -53,7 +53,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 10 ,#\
+                extension='.npy') * 1 ,#\
             # + get_data_files(
             #     images_dir="data/small/train_pseudo/images",
             #     labels_dir="data/small/train_pseudo/aladdin5",
@@ -113,7 +113,7 @@ def main_worker(rank: int,
         trainer.train_prior(train_loader, train_params['epochs'][0])
 
         # Reinitialize optimizer, scheduler for posterior training
-        trainer.optimizer = AdamW(trainer.model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
+        trainer.optimizer = AdamW(trainer.model.module.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         trainer.scheduler = lr_scheduler.CosineAnnealingLR(trainer.optimizer, T_max=train_params['epochs'])
         trainer.train_posterior(train_loader, val_loader, train_params['epochs'][1])
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': (100, 50),    # (prior, posterior)
+        'epochs': (2, 2),    # (prior, posterior)
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,

@@ -186,7 +186,7 @@ class VAETrainer:
                 masks = batch['label'].to(self.device, non_blocking=True)
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
-                    prior_pred, mu, log_var = self.model.vae_prior(masks)
+                    prior_pred, mu, log_var = self.model.module.vae_prior(masks)
                     label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
                     loss = self.criterion(prior_pred, label) +\
                             self.beta[epoch] * self.kl_div_normal(mu, log_var)
@@ -226,7 +226,7 @@ class VAETrainer:
             self.model.train()
 
             # Freeze VAE prior
-            for param in self.model.vae_prior.parameters():
+            for param in self.model.module.vae_prior.parameters():
                 param.requires_grad = False
 
             running_model_loss = 0.0
@@ -243,14 +243,14 @@ class VAETrainer:
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     with torch.no_grad():
-                        mu, log_var = self.vae_prior.encode(masks)
-                        prior_z = self.vae_prior.reparameterize(mu, log_var)
-                        _, latent_priors = self.vae_prior.decode(prior_z)
+                        mu, log_var = self.model.module.vae_prior.encode(masks)
+                        prior_z = self.model.module.vae_prior.reparameterize(mu, log_var)
+                        _, latent_priors = self.model.module.vae_prior.decode(prior_z)
                 
-                    mu_hat, log_var_hat, skips = self.img_encode(imgs)
+                    mu_hat, log_var_hat, skips = self.model.module.img_encode(imgs)
                     skips = [s.detach().clone().requires_grad_() for s in skips]
                     latent_priors = [lp.clone().requires_grad_() for lp in latent_priors]
-                    pred = self.decode(prior_z.clone().requires_grad_(), skips, latent_priors)
+                    pred = self.model.module.decode(prior_z.clone().requires_grad_(), skips, latent_priors)
 
                     label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
                     loss = self.criterion(pred, label) +\
