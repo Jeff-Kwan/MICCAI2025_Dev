@@ -216,10 +216,9 @@ class VAEPosterior(nn.Module):
                 LayerNormTranspose(1, channels[i+1], elementwise_affine=False, bias=False),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
-        self.merge_lat = nn.Conv3d(channels[-1] * 2, channels[-1], 1, 1, 0, bias=False)
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 3, channels[i], 1, 1, 0, bias=False)
-             for i in reversed(range(self.stages - 1))])
+             for i in reversed(range(self.stages))])
         self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
 
@@ -234,14 +233,15 @@ class VAEPosterior(nn.Module):
             x = down(x)
 
         x = self.bottleneck1(x)
+        skips.append(x)
         mu, log_var = self.mu_var(self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)).chunk(2, dim=1)
         return mu, log_var, skips
     
     def decode(self, x, skips, latent_priors):
-        x = self.merge_lat(torch.cat([x, latent_priors.pop(0)], dim=1))
+        x = self.merges[0](torch.cat([x, skips.pop(), latent_priors.pop(0)], dim=1))
         x = self.bottleneck2(x)
 
-        for up, conv, merge in zip(self.ups, self.decoder_convs, self.merges):
+        for up, conv, merge in zip(self.ups, self.decoder_convs, self.merges[1:]):
             x = up(x)
             x = merge(torch.cat([x, skips.pop(), latent_priors.pop(0)], dim=1))
             x = conv(x)
