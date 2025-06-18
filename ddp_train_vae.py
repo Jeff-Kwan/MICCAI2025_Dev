@@ -114,7 +114,7 @@ def main_worker(rank: int,
         trainer.train(train_loader, val_loader)
 
     except Exception as e:
-        print(f"Rank {rank} crashed:", traceback.format_exc())
+        print(f"Rank {rank} crashed:", traceback.format_exc(), flush=True)
     finally:
         dist.destroy_process_group()
 
