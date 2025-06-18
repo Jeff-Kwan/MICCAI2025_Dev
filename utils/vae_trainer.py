@@ -86,7 +86,7 @@ class VAETrainer:
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
 
-    def kl_div_normal(self, mu, logvar):
+    def kl_normal(self, mu, logvar):
         # Sum over latent dim - channels (1); mean over batch and img dimensions
         return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
@@ -136,8 +136,8 @@ class VAETrainer:
                     vae_recon_loss = self.criterion(prior_pred, label)
                     model_recon_loss = self.criterion(pred, label)
                     loss = model_recon_loss + vae_recon_loss +\
-                            self.beta[epoch] * self.kl_div_normal(mu, log_var) +\
-                            self.alpha[epoch] * self.js_gaussian(mu_hat, log_var_hat, mu, log_var)
+                        self.beta[epoch] * (self.kl_normal(mu, log_var) + self.kl_normal(mu_hat, log_var_hat)) +\
+                        self.alpha[epoch] * self.js_gaussian(mu_hat, log_var_hat, mu, log_var)
 
                 loss.backward()
                 running_loss += loss.item()
@@ -197,7 +197,7 @@ class VAETrainer:
                     prior_pred, mu, log_var = self.model.module.vae_prior(masks)
                     label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
                     loss = self.criterion(prior_pred, label) +\
-                            self.beta[epoch] * self.kl_div_normal(mu, log_var)
+                            self.beta[epoch] * self.kl_normal(mu, log_var)
 
                 loss.backward()
                 running_vae_loss += loss.item()

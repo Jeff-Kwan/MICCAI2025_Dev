@@ -74,14 +74,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=20,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=8,
+            num_workers=4,
             pin_memory=True,
             persistent_workers=False)
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (448, 224, 128),
-        'alpha': (0.1, 1.0, 60), # JS Match of Prior and Likelihood
+        'alpha': (0.1, 1.0, 50), # JS Match of Prior and Likelihood
         'beta': (0.1, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
