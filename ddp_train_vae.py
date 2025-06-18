@@ -8,6 +8,7 @@ from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
+import traceback
 
 from utils.dataset import get_vae_transforms, get_data_files
 from model.VAEDual import VAEPosterior
@@ -73,15 +74,15 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=48,
             pin_memory=True,
-            persistent_workers=True)
+            persistent_workers=False)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
             num_workers=8,
-            pin_memory=False,
+            pin_memory=True,
             persistent_workers=False)
 
 
@@ -111,8 +112,8 @@ def main_worker(rank: int,
             comments=comments)
         trainer.train(train_loader, val_loader)
 
-    except KeyboardInterrupt:
-        print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
+    except Exception as e:
+        print(f"Rank {rank} crashed:", traceback.format_exc())
     finally:
         dist.destroy_process_group()
 
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     }
     output_dir = "VAEPosterior"
     comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
-        f"Allow skips gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
+        f"Allow all gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
