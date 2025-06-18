@@ -54,7 +54,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
@@ -74,7 +74,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=20,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -82,8 +82,9 @@ def main_worker(rank: int,
             batch_size=1,
             sampler=val_sampler,
             num_workers=4,
+            prefetch_factor=4,
             pin_memory=True,
-            persistent_workers=False)
+            persistent_workers=True)
 
 
         # Model, optimizer, scheduler, loss
@@ -130,7 +131,7 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (448, 224, 128),
-        'alpha': (0.1, 1.0, 50), # JS Match of Prior and Likelihood
+        'alpha': (0.1, 1.0, 60), # JS Match of Prior and Likelihood
         'beta': (0.1, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
@@ -138,7 +139,7 @@ if __name__ == "__main__":
         'sw_overlap': 1/2,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [1, 2, 0, 0, 1],  
+            'spatial': [2, 2, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
@@ -146,7 +147,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx4 + Aladdin training",
         f"Allow all gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
