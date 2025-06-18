@@ -130,7 +130,7 @@ if __name__ == "__main__":
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 2e-4,
-        'weight_decay': 1e-2,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (256, 224, 160),
         'compile': False,
