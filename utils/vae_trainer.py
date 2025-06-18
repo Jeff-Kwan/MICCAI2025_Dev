@@ -258,7 +258,7 @@ class VAETrainer:
                     mu_hat, log_var_hat, skips = self.model.module.img_encode(imgs)
                     skips = [s.detach().clone().requires_grad_() for s in skips]
                     latent_priors = [lp.clone().requires_grad_() for lp in latent_priors]
-                    pred = self.model.module.decode(prior_z.clone().requires_grad_(), skips, latent_priors)
+                    pred = self.model.module.decode(skips, latent_priors)
 
                     label = interpolate(masks.float(), scale_factor=0.5, mode='nearest').long()
                     loss = self.criterion(pred, label) +\
