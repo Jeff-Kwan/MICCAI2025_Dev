@@ -4,6 +4,7 @@ import json
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import traceback
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
@@ -12,6 +13,8 @@ from monai.losses import DiceFocalLoss
 from utils.dataset import get_transforms, get_data_files
 from model.AttnUNet import AttnUNet
 from utils.ddp_trainer import DDPTrainer
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 def main_worker(rank: int,
                 world_size: int,
@@ -80,9 +83,10 @@ def main_worker(rank: int,
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=8,
+            num_workers=4,
+            prefetch_factor=4,
             pin_memory=True,
-            persistent_workers=False)
+            persistent_workers=True)
 
         # Model, optimizer, scheduler, loss
         model = AttnUNet(model_params)
@@ -111,8 +115,8 @@ def main_worker(rank: int,
             comments=comments)
         trainer.train(train_loader, val_loader)
 
-    except KeyboardInterrupt:
-        print(f"Rank {rank}: Received KeyboardInterrupt, cleaning up...")
+    except Exception as e:
+        print(f"Rank {rank} crashed:", traceback.format_exc())
     finally:
         dist.destroy_process_group()
 
@@ -128,11 +132,11 @@ if __name__ == "__main__":
         'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 160, 128),
+        'shape': (256, 224, 160),
         'compile': False,
         'autocast': True,
-        'sw_batch_size': 4,
-        'sw_overlap': 1/8,
+        'sw_batch_size': 2,
+        'sw_overlap': 1/4,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
@@ -145,7 +149,7 @@ if __name__ == "__main__":
     output_dir = "AttnUNet"
     comments = ["AttnUNet - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
-        f"DiceFocal, 1-sample rand crop + 3-choose-1 augmentations",
+        f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
 
     gpu_count = torch.cuda.device_count()
