@@ -1,5 +1,5 @@
 import os
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
 import json
 import torch
 import torch.distributed as dist
@@ -82,9 +82,8 @@ def main_worker(rank: int,
             batch_size=1,
             sampler=val_sampler,
             num_workers=4,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True)
+            pin_memory=False,
+            persistent_workers=False)
 
 
         # Model, optimizer, scheduler, loss
@@ -131,19 +130,19 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (448, 224, 128),
-        'alpha': (0.1, 1.0, 30), # JS Match of Prior and Likelihood
-        'beta': (0.1, 1.0, 30), # Linear ramp up [min, max, epochs] VAE beta
+        'alpha': (0.1, 2.0, 60), # JS Match of Prior and Likelihood
+        'beta': (0.1, 2.0, 40), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
         'sw_overlap': 1/2,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 1, 1, 1],  
+            'spatial': [1, 2, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
             # [I, Dropout, Shuffle]
-            'coarse': [2, 1, 1]  
+            'coarse': [1, 1, 1]  
         }
     }
     output_dir = "VAEPosterior"
@@ -152,7 +151,7 @@ if __name__ == "__main__":
         "No dropout stochastic depth in prior but yes posterior",
         f"beta-VAE only autoencodes labels, KL with normal and JS with each other",
         f"{train_params["shape"]} shape", 
-        f"DiceFocal, 1-sample rand crop + augmentations",
+        f"DiceFocal, 1-sample rand crop + 3-choose 1 augmentations [2, 1, 1]",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
     
     gpu_count = torch.cuda.device_count()

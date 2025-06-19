@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
+import gc
 
 class VAETrainer:
     def __init__(
@@ -159,6 +160,10 @@ class VAETrainer:
             if self.world_size > 1:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
+            
+            # Clear memory
+            gc.collect()
+            torch.cuda.empty_cache()
             if self.local_rank == 0 and val_loader is not None:
                 self.vae_losses.append(running_vae_loss / len(train_loader))
                 self.model_losses.append(running_model_loss / len(train_loader))
