@@ -56,12 +56,59 @@ def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
         for name in image_names
     ]
 
-def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
+def get_skipped_files(images_dir, labels_dir, skipped, extension = ".nii.gz"):
+    images_dir = Path(images_dir)
+    labels_dir = Path(labels_dir)
+
+    if not images_dir.is_dir():
+        raise FileNotFoundError(f"Image directory not found: {images_dir!r}")
+    if not labels_dir.is_dir():
+        raise FileNotFoundError(f"Label directory not found: {labels_dir!r}")
+
+    # Scan image directory
+    image_names = sorted(
+        entry.name
+        for entry in os.scandir(images_dir)
+        if entry.is_file() and entry.name.endswith(extension)
+    )
+    if not image_names:
+        raise RuntimeError(f"No '{extension}' files found in {images_dir!r}")
+
+    # Scan label directory once, build a set of names
+    label_names = {
+        entry.name
+        for entry in os.scandir(labels_dir)
+        if entry.is_file() and entry.name.endswith(extension)
+    }
+    if not label_names:
+        raise RuntimeError(f"No '{extension}' files found in {labels_dir!r}")
+
+    # Detect any missing labels in one go
+    missing = [name for name in image_names if name not in label_names]
+    if missing:
+        missing_list = ", ".join(repr(n) for n in missing)
+        raise ValueError(f"Missing labels for images: {missing_list}")
+
+    # Build result list
+    names = [
+        {"image": str(images_dir / name), "label": str(labels_dir / name), 
+         "base_name": name.removesuffix(".nii.gz")}
+        for name in image_names
+    ]
+
+    # Leave in only the skipped files
+    skipped_files = [
+        item for item in names if item["base_name"] in skipped
+    ]
+    assert len(skipped_files) == len(skipped), "Not all skipped files found in directories"
+    return skipped_files
+
+
+def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_label_dir, pixdim):
     # create output dirs
     os.makedirs(out_image_dir, exist_ok=True)
     os.makedirs(out_label_dir, exist_ok=True)
 
-    # define the validation transform
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -111,11 +158,11 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
     )
 
     # build the MONAI dataset
-    dataset = Dataset(data=get_data_files(images_dir, labels_dir), transform=transform)
+    dataset = Dataset(data=file_getter(images_dir, labels_dir), transform=transform)
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=192,
+        num_workers=128,
     )
 
     # iterate, transform, and save
@@ -124,13 +171,17 @@ def process_dataset(images_dir, labels_dir, out_image_dir, out_label_dir, pixdim
         label = batch["label"].numpy().squeeze().astype(np.uint8)
         base_name = batch["base_name"][0]
 
+        skipped = []
         if label.any():
             # Save as npy
             np.save(os.path.join(out_image_dir, f"{base_name}.npy"), img)
             np.save(os.path.join(out_label_dir, f"{base_name}.npy"), label)
         else:
             print(f"Skipping {base_name} due to empty label")
+            skipped.append(base_name)
             continue
+
+    return skipped
 
 
 
@@ -153,9 +204,19 @@ if __name__ == "__main__":
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
             "data/preprocessed/train_pseudo/images",
-            "data/preprocessed/train_pseudo/aladdin5",
+            "data/preprocessed/train_pseudo/pseudo",
         ),
     ]
 
+    skipped = []
     for dirs in dir_list:
-        process_dataset(*dirs, pixdim)
+        skipped += process_dataset(get_data_files, *dirs, pixdim)
+
+    process_dataset(get_skipped_files,
+                    (
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_blackbean_pseudo",
+            "data/preprocessed/train_pseudo/images",
+            "data/preprocessed/train_pseudo/pseudo",
+        ),)
+    
