@@ -265,7 +265,8 @@ class VAEPosterior(nn.Module):
             with torch.no_grad():
                 z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
                 _, latent_priors = self.vae_prior.decode(z_hat)
-            x = self.decode(skips, latent_priors._requires_grad_())
+            latent_priors = [lp.requires_grad_() for lp in latent_priors]
+            x = self.decode(skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image
