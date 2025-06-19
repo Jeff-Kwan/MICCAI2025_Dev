@@ -76,15 +76,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
-            prefetch_factor=1,
+            num_workers=42,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=8,
+            num_workers=4,
             pin_memory=False,
             persistent_workers=False)
 
@@ -126,15 +125,15 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 400,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
-        'aggregation': 2,
-        'learning_rate': 3e-4,
+        'aggregation': 1,
+        'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (256, 192, 128),
         'compile': False,
-        'autocast': True,
+        'autocast': False,
         'sw_batch_size': 2,
         'sw_overlap': 1/4,
         'data_augmentation': {
@@ -147,7 +146,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized - GT*4 + Aladdin training",
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
