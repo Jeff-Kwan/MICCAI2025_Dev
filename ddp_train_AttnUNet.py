@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet import AttnUNet
+from model.AttnUNet2 import AttnUNet
 from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -56,7 +56,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocessed/train_gt/images",
                 labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.npy') * 4 \
             + get_data_files(
                 images_dir="data/preprocessed/train_pseudo/images",
                 labels_dir="data/preprocessed/train_pseudo/aladdin5",
@@ -84,9 +84,8 @@ def main_worker(rank: int,
             batch_size=1,
             sampler=val_sampler,
             num_workers=4,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True)
+            pin_memory=False,
+            persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
         model = AttnUNet(model_params)
@@ -126,13 +125,13 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 2e-4,
+        'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (256, 224, 160),
+        'shape': (256, 192, 128),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 2,
@@ -141,13 +140,13 @@ if __name__ == "__main__":
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
-            'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
+            'intensity': [3, 2, 1, 1, 1, 1, 1],  
             # [I, Dropout, Shuffle]
             'coarse': [2, 1, 1]  
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet - GT*2 + Aladdin training",
+    comments = ["AttnUNet2 - more optimized - GT*4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
