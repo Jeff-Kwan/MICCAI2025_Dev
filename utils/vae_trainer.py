@@ -118,7 +118,7 @@ class VAETrainer:
             running_vae_loss = 0.0
             running_model_loss = 0.0
             running_loss = 0.0
-            grad_norm = torch.tensor(0.0, device=self.device)
+            grad_norm = torch.tensor(0.0, device=self.device, requires_grad=False)
 
             loop = tqdm.tqdm(train_loader,
                              desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
@@ -183,7 +183,7 @@ class VAETrainer:
 
             self.model.train()
             running_vae_loss = 0.0
-            grad_norm = torch.tensor(0.0, device=self.device)
+            grad_norm = torch.tensor(0.0, device=self.device, requires_grad=False)
 
             loop = tqdm.tqdm(train_loader,
                              desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
@@ -238,7 +238,7 @@ class VAETrainer:
             self.model.train()
 
             running_model_loss = 0.0
-            grad_norm = torch.tensor(0.0, device=self.device)
+            grad_norm = torch.tensor(0.0, device=self.device, requires_grad=False)
 
             loop = tqdm.tqdm(train_loader,
                              desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",

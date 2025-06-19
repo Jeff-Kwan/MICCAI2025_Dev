@@ -1,5 +1,5 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
+# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
 import json
 import torch
 import torch.distributed as dist
@@ -54,7 +54,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 4 \
+                extension='.npy') * 2 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
@@ -147,8 +147,10 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx4 + Aladdin training",
-        f"No latent and z gradients, beta-VAE only autoencodes labels, forward KL latent match with both gradient directions",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 1.5) - GTx2 + Aladdin training",
+        "2 way prior decoding, No latent and z gradients",
+        "No dropout stochastic depth in prior but yes posterior",
+        f"beta-VAE only autoencodes labels, KL with normal and JS with each other",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

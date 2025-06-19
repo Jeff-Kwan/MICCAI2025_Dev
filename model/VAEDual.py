@@ -100,8 +100,8 @@ class VAEPrior(nn.Module):
         convs = p["convs"]
         layers = p["layers"]
         out_c = p["out_channels"]
-        dropout = p.get("dropout", 0.0)
-        sto_depth = p.get("stochastic_depth", 0.0)
+        dropout = 0.0#p.get("dropout", 0.0)
+        sto_depth = 0.0#p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.classes = out_c + 1 # + 1 for masking
@@ -262,9 +262,10 @@ class VAEPosterior(nn.Module):
             # latent_priors = [lp.detach().clone().requires_grad_() for lp in latent_priors]
             # skips = [s.detach().clone().requires_grad_() for s in skips]
             # x = self.decode(prior_z.detach().clone().requires_grad_(), skips, latent_priors)
-            z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
-            _, latent_priors = self.vae_prior.decode(z_hat)
-            x = self.decode(skips, latent_priors)
+            with torch.no_grad():
+                z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
+                _, latent_priors = self.vae_prior.decode(z_hat)
+            x = self.decode(skips, latent_priors._requires_grad_())
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
             # During inference, latent estimation from image

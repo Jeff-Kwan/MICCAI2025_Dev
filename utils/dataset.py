@@ -116,70 +116,68 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 roi_size=shape,
                 lazy=True),
-            mt.OneOf(
+            mt.OneOf(       # Random spatial augmentations
                 transforms=[
-                mt.OneOf(       # Random spatial augmentations
-                    transforms=[
-                        mt.Identityd(keys=["image", "label"]),
-                        mt.RandAffined(     # Small affine perturbation
-                            keys=["image","label"],
-                            prob=1.0,
-                            translate_range=(16, 16, 16),
-                            rotate_range=(np.pi/9, np.pi/9, np.pi/9),
-                            scale_range=(0.1, 0.1, 0.1),
-                            mode=("bilinear", "nearest"),
-                            padding_mode="border",
-                            lazy=True),
-                        mt.RandFlipd(
-                            keys=["image", "label"],
-                            prob=1.0,
-                            spatial_axis=(0, 1),
-                            lazy=True),  # Flip in XY plane
-                        mt.RandRotate90d(
-                            keys=["image", "label"],
-                            prob=1.0,
-                            spatial_axes=(0, 1),
-                            lazy=True),  # Rotate in XY plane
-                        mt.Rand3DElasticd(
-                            keys=["image", "label"],
-                            prob=1.0,
-                            sigma_range=(2.0, 5.0),
-                            magnitude_range=(1.0, 3.0),
-                            translate_range=(16, 16, 16),
-                            rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
-                            scale_range=(0.1, 0.1, 0.1),                # ±10%
-                            mode=("bilinear", "nearest")
-                        )],
-                    weights=spatial),
-                mt.OneOf(     # Random intensity augmentations
-                    transforms=[
-                        mt.Identityd(keys=["image"]),
-                        mt.RandGaussianSmoothd(keys='image', prob=1.0),
-                        mt.RandGaussianNoised(keys='image', prob=1.0),
-                        mt.RandBiasFieldd(keys='image', prob=1.0),
-                        mt.RandAdjustContrastd(keys='image', prob=1.0),
-                        mt.RandGaussianSharpend(keys='image', prob=1.0),
-                        mt.RandHistogramShiftd(keys='image', prob=1.0)],
-                    weights=intensity),
-                mt.OneOf(   # Random coarse augmentations
-                    transforms=[
-                        mt.Identityd(keys=["image"]),
-                        mt.RandCoarseDropoutd(
-                            keys=["image"],
-                            prob=1.0,
-                            holes=1,
-                            max_holes=4,
-                            spatial_size=(16, 16, 16),
-                            max_spatial_size=(32, 32, 32)),
-                        mt.RandCoarseShuffled(
-                            keys=["image"],
-                            prob=1.0,
-                            holes=8, max_holes=16,
-                            spatial_size=(6, 6, 6),
-                            max_spatial_size=(12, 12, 12))],
-                    weights=coarse)],
-                weights=(2, 1, 1),
-            ),
+                    mt.Identityd(keys=["image", "label"]),
+                    mt.RandAffined(     # Small affine perturbation
+                        keys=["image","label"],
+                        prob=1.0,
+                        spatial_size=shape,
+                        translate_range=(8, 8, 8),
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),
+                        scale_range=(0.1, 0.1, 0.1),
+                        mode=("bilinear", "nearest"),
+                        padding_mode="border",
+                        lazy=True),
+                    mt.RandFlipd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        spatial_axis=(0, 1),
+                        lazy=True),  # Flip in XY plane
+                    mt.RandRotate90d(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        spatial_axes=(0, 1),
+                        lazy=True),  # Rotate in XY plane
+                    mt.Rand3DElasticd(
+                        keys=["image", "label"],
+                        prob=1.0,
+                        sigma_range=(2.0, 5.0),
+                        magnitude_range=(1.0, 3.0),
+                        spatial_size=shape,
+                        translate_range=(8, 8, 8),
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
+                        scale_range=(0.1, 0.1, 0.1),                # ±10%
+                        mode=("bilinear", "nearest")
+                    )],
+                weights=spatial),
+            mt.OneOf(     # Random intensity augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandGaussianSmoothd(keys='image', prob=1.0),
+                    mt.RandGaussianNoised(keys='image', prob=1.0),
+                    mt.RandBiasFieldd(keys='image', prob=1.0),
+                    mt.RandAdjustContrastd(keys='image', prob=1.0),
+                    mt.RandGaussianSharpend(keys='image', prob=1.0),
+                    mt.RandHistogramShiftd(keys='image', prob=1.0)],
+                weights=intensity),
+            mt.OneOf(   # Random coarse augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandCoarseDropoutd(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=1,
+                        max_holes=4,
+                        spatial_size=(16, 16, 16),
+                        max_spatial_size=(32, 32, 32)),
+                    mt.RandCoarseShuffled(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=8, max_holes=16,
+                        spatial_size=(6, 6, 6),
+                        max_spatial_size=(12, 12, 12))],
+                weights=coarse),
             mt.DivisiblePadd(
                 keys=["image", "label"],
                 k=16),
