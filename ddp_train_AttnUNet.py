@@ -77,13 +77,14 @@ def main_worker(rank: int,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
             num_workers=48,
+            prefetch_factor=1,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=4,
+            num_workers=8,
             pin_memory=False,
             persistent_workers=False)
 
@@ -125,11 +126,11 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 300,
+        'epochs': 400,
         'batch_size': 1,    # effectively x4
-        'aggregation': 1,
+        'aggregation': 2,
         'learning_rate': 3e-4,
-        'weight_decay': 2e-2,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (256, 192, 128),
         'compile': False,
