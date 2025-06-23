@@ -13,12 +13,12 @@ from model.AttnUNet2 import AttnUNet
 
 def get_image_files(images_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
-    image_names = [
-        entry.name
+    image_dicts = [
+        {"img": str(entry.path)}
         for entry in os.scandir(images_dir)
         if entry.is_file() and entry.name.endswith(extension)
     ]
-    return image_names
+    return image_dicts
 
 def get_spatial_transforms(pixdim):
     return mt.Compose([
@@ -63,27 +63,32 @@ def get_post_transforms(pre_transforms, output_dir):
 def run_inference(args, inference_config):
     # Load the model
     model = AttnUNet(json.load(open('./config/attn_unet.json', 'r')))
-    model = torch.load(args.model_weight, weights_only=True)
-    model.eval()
+    model.load_state_dict(torch.load(args.model_weight, weights_only=True))
+    model.eval().to(args.device)
 
     # Create dataset and dataloader
     spatial_tf = get_spatial_transforms(inference_config["pixdim"])
     intensity_tf = get_intensity_transforms(inference_config["intensities"])
-    post_tf = get_post_transforms(spatial_tf)
+    post_tf = get_post_transforms(spatial_tf, args.output_dir)
     dataset = Dataset(
         data=get_image_files(args.inputs_dir), 
         transform=mt.Compose([spatial_tf, intensity_tf]))
-    dataloader = DataLoader(dataset, batch_size=1, num_workers=inference_config["workers"])
+    dataloader = DataLoader(
+        dataset, 
+        batch_size=1, 
+        pin_memory=True,
+        num_workers=inference_config["workers"])
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # Run inference
     for data in dataloader:
         data["pred"] = sliding_window_inference(
-                    data["img"],
+                    data["img"].to(args.device, non_blocking=True),
                     roi_size=inference_config['shape'],
                     sw_batch_size=inference_config.get('sw_batch_size', 1),
                     predictor=lambda x: model(x),
                     overlap=inference_config.get('sw_overlap', 0.25),
-                    mode="gaussian").squeeze(0)
+                    mode="gaussian").squeeze(0).cpu()
         
         # Post-processing and saving results
         post_tf(data)
@@ -96,6 +101,9 @@ if __name__ == "__main__":
     parser.add_argument('--inputs_dir', type=str, default=r'./inputs', help='dir of output')
     parser.add_argument('--output_dir', type=str, default=r'./outputs', help='dir of output')
     parser.add_argument('--model_weight', type=str, default=r'./model', help='weight')
+    parser.add_argument('--device', type=str, default='cpu', help='device to run inference on')
     args = parser.parse_args()
 
     inference_config = json.load(open('./inference_config.json', 'r'))
+
+    run_inference(args, inference_config)
