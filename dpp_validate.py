@@ -20,7 +20,6 @@ def main_worker(rank: int,
                 model_path: str,
                 model_params: dict,
                 train_params: dict,
-                output_dir: str,
                 comments: list):
     """
     Entry point for each spawned process.
@@ -36,15 +35,6 @@ def main_worker(rank: int,
             world_size=world_size,
             rank=rank
         )
-
-        # 3) Only rank 0 creates output folder
-        if rank == 0:
-            timestamp = datetime.now().strftime("%H-%M")
-            date_str  = datetime.now().strftime("%Y-%m-%d")
-            full_output = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
-            os.makedirs(full_output, exist_ok=True)
-        else:
-            full_output = None
 
         # Datasets
         _, val_tf = get_transforms(
@@ -87,7 +77,7 @@ def main_worker(rank: int,
             criterion=criterion,
             scheduler=None,
             train_params=train_params,
-            output_dir=full_output,
+            output_dir=None,
             local_rank=rank,
             world_size=world_size,
             comments=comments)
@@ -128,17 +118,13 @@ if __name__ == "__main__":
             'coarse': [2, 1, 1]  
         }
     }
-    output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*4 + Aladdin training",
-        f"{train_params["shape"]} shape", 
-        f"DiceFocal, 1-sample rand crop + augmentations",
-        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
+    comments = []
 
     gpu_count = torch.cuda.device_count()
     try:
         mp.spawn(
             main_worker,
-            args=(gpu_count, model_path, model_params, train_params, output_dir, comments),
+            args=(gpu_count, model_path, model_params, train_params,  comments),
             nprocs=gpu_count,
             join=True)
     except KeyboardInterrupt:
