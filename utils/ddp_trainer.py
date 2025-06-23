@@ -198,7 +198,7 @@ class DDPTrainer:
 
         # Save best
         if self.val_metrics['dice'][-1] == max(self.val_metrics['dice']):
-            torch.save(self.model.state_dict(), os.path.join(self.output_dir, 'best_model.pth'))
+            torch.save(self.model.module.state_dict(), os.path.join(self.output_dir, 'best_model.pth'))
             self.best_results = {
                 'epoch': epoch,
                 'train_loss': self.train_losses[-1],
