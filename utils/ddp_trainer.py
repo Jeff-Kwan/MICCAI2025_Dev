@@ -62,7 +62,6 @@ class DDPTrainer:
         self.num_classes = train_params['num_classes']
         self.dice_metric = mm.DiceMetric(include_background=False)
         if self.local_rank == 0:
-            os.makedirs(output_dir, exist_ok=True)
             self.train_losses = []
             self.val_losses = []
             self.val_metrics = {'dice': []}

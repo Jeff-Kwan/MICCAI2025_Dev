@@ -5,7 +5,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import traceback
-from datetime import datetime
 from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
