@@ -117,7 +117,7 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
             mt.Spacingd(
                 keys=["image", "label"],
                 pixdim=pixdim,
-                mode=("bicubic", "nearest"),
+                mode=(3, "nearest"),
                 lazy=False,
             ),
             mt.EnsureChannelFirstd(keys=["image", "label"]),
