@@ -31,10 +31,10 @@ def get_spatial_transforms(pixdim):
 def get_intensity_transforms(intensities):
     upper, lower, mean, std = intensities
     return mt.Compose([
+        mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
         mt.ThresholdIntensityd(["img"], above=True, threshold=lower, cval=lower),
         mt.NormalizeIntensityd(["img"], subtrahend=mean, divisor=std),
-        mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
     ])
 
 def get_post_transforms(pre_transforms, output_dir):
