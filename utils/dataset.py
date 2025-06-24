@@ -13,8 +13,6 @@ def get_transforms(shape, pixdim, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], image_only=False, ensure_channel_first=True),
-            mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=["bilinear", "nearest"], lazy=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -94,17 +92,15 @@ def get_transforms(shape, pixdim, spatial, intensity, coarse):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=["bilinear", "nearest"], lazy=True),
-            mt.CropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                margin=32,
-                allow_smaller=True),
-            mt.DivisiblePadd(
-                keys=["image", "label"],
-                k=16,
-                lazy=True),
+            # mt.CropForegroundd(
+            #     keys=["image", "label"],
+            #     source_key="label",
+            #     margin=32,
+            #     allow_smaller=True),
+            # mt.DivisiblePadd(
+            #     keys=["image", "label"],
+            #     k=16,
+            #     lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
