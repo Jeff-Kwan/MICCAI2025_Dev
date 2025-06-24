@@ -209,13 +209,13 @@ if __name__ == "__main__":
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
             "data/nifti/train_pseudo/images",
-            "data/nifti/train_pseudo/pseudo",
+            "data/nifti/train_pseudo/aladdin5",
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_blackbean_pseudo",
             "data/nifti/train_pseudo/images",
-            "data/nifti/train_pseudo/pseudo",
+            "data/nifti/train_pseudo/backbean",
         )
     ]
 

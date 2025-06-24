@@ -55,15 +55,15 @@ def main_worker(rank: int,
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-                labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+                images_dir="data/nifti/train_gt/images",
+                labels_dir="data/nifti/train_gt/labels",
                 extension='.nii.gz') * 4 \
             + get_data_files(
-                images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-                labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/pseudo",
                 extension='.nii.gz'),#\
             # + get_data_files(
-            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            #     images_dir="data/nifti/train_pseudo/images",
             #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
             #     extension='.nii.gz'),
             transform=train_tf)
