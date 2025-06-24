@@ -57,7 +57,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
                 labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-                extension='.nii.gz'), * 8 \
+                extension='.nii.gz') * 8 \
             + get_data_files(
                 images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
                 labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
