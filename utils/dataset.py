@@ -14,7 +14,7 @@ def get_transforms(shape, pixdim, spatial, intensity, coarse):
         [
             mt.LoadImaged(keys=["image", "label"], image_only=False, ensure_channel_first=True),
             mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=("bilinear"), lazy=True),
+            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=["bilinear", "nearest"], lazy=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -95,7 +95,7 @@ def get_transforms(shape, pixdim, spatial, intensity, coarse):
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=("bilinear"), lazy=True),
+            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=["bilinear", "nearest"], lazy=True),
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
