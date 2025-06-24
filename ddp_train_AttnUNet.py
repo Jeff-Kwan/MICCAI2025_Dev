@@ -57,15 +57,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
                 labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-                extension='.nii.gz'), #* 8 \
-            # + get_data_files(
-            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-            #     extension='.nii.gz') \
-            # + get_data_files(
-            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            #     extension='.nii.gz'),
+                extension='.nii.gz'), * 8 \
+            + get_data_files(
+                images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+                labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+                extension='.nii.gz') \
+            + get_data_files(
+                images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+                labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -88,7 +88,7 @@ def main_worker(rank: int,
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=4,
+            num_workers=5,
             pin_memory=False,
             persistent_workers=False)
 
@@ -133,8 +133,8 @@ if __name__ == "__main__":
         'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 2e-4,
-        'weight_decay': 1e-2,
+        'learning_rate': 3e-4,
+        'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (224, 224, 112),
         'pixdim': (0.8, 0.8, 2.5),
