@@ -92,15 +92,15 @@ def get_transforms(shape, pixdim, spatial, intensity, coarse):
     val_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            # mt.CropForegroundd(
-            #     keys=["image", "label"],
-            #     source_key="label",
-            #     margin=32,
-            #     allow_smaller=True),
-            # mt.DivisiblePadd(
-            #     keys=["image", "label"],
-            #     k=16,
-            #     lazy=True),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=32,
+                allow_smaller=True),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16,
+                lazy=True),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
