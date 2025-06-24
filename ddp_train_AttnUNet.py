@@ -49,24 +49,29 @@ def main_worker(rank: int,
         # Datasets
         train_tf, val_tf = get_transforms(
             train_params['shape'],
+            train_params['pixdim'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/train_gt/images",
-                labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 4 \
-            + get_data_files(
-                images_dir="data/preprocessed/train_pseudo/images",
-                labels_dir="data/preprocessed/train_pseudo/aladdin5",
-                extension='.npy'),
+                images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
+                labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+                extension='.nii.gz'), #* 8 \
+            # + get_data_files(
+            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+            #     extension='.nii.gz') \
+            # + get_data_files(
+            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/val/images",
-                labels_dir="data/preprocessed/val/labels",
-                extension='.npy'),
+                images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
+                labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
+                extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
@@ -95,8 +100,8 @@ def main_worker(rank: int,
             include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, 
-                                 8.6, 6.7, 7.5, 4.4, 5.9, 5.0], device=rank),
+            weight=torch.tensor([0.01, 2.8, 4.9, 4.7, 5.6, 5.6, 5.7, 8.7, 
+                                 8.5, 6.6, 7.4, 4.3, 5.8, 4.9], device=rank),
             lambda_focal=1,
             lambda_dice=1,)
 
@@ -125,28 +130,29 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 300,
+        'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (224, 224, 112),
+        'pixdim': (0.8, 0.8, 2.5),
         'compile': False,
         'autocast': False,
         'sw_batch_size': 4,
         'sw_overlap': 0.25,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 1, 1, 1],  
+            'spatial': [3, 2, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
             'intensity': [3, 2, 1, 1, 1, 1, 1],  
             # [I, Dropout, Shuffle]
-            'coarse': [2, 1, 1]  
+            'coarse': [3, 1, 1]  
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*4 + Aladdin training",
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
