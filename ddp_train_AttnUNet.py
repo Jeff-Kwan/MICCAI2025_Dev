@@ -57,15 +57,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
                 labels_dir="data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-                extension='.nii.gz') * 8 \
+                extension='.nii.gz') * 4 \
             + get_data_files(
                 images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
                 labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-                extension='.nii.gz') \
-            + get_data_files(
-                images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-                labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-                extension='.nii.gz'),
+                extension='.nii.gz'),#\
+            # + get_data_files(
+            #     images_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
         'aggregation': 2,
         'learning_rate': 3e-4,
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*4 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
