@@ -149,6 +149,7 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
                 subtrahend=95.958,
                 divisor=139.964,
             ),
+            mt.EnsureChannelFirstd(keys=["image", "label"]),
         ]
     )
 
