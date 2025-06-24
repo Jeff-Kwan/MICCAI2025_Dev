@@ -149,7 +149,22 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
                 subtrahend=95.958,
                 divisor=139.964,
             ),
-            mt.EnsureChannelFirstd(keys=["image", "label"]),
+            mt.SaveImaged(
+                keys=["image"],
+                output_dir=out_image_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.float32,
+                print_log=False),
+            mt.SaveImaged(
+                keys=["label"],
+                output_dir=out_label_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.uint8,
+                print_log=False)
         ]
     )
 
@@ -160,37 +175,10 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
         batch_size=1,
         num_workers=128,
     )
-    save_img = mt.SaveImaged(
-                keys=["image"],
-                output_dir=out_image_dir,
-                output_postfix="",
-                output_ext=".nii.gz",
-                separate_folder=False,
-                output_dtype=torch.float32,
-                print_log=False,)
-    save_lbl = mt.SaveImaged(
-                keys=["label"],
-                output_dir=out_label_dir,
-                output_postfix="",
-                output_ext=".nii.gz",
-                separate_folder=False,
-                output_dtype=torch.uint8,
-                print_log=False,)
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc="Processing images"):
-        label = batch["label"].numpy().squeeze().astype(np.uint8)
-        base_name = batch["base_name"][0]
-
-        skipped = []
-        if label.any():
-            # save the image and label
-            save_img(batch)
-            save_lbl(batch)
-        else:
-            print(f"Skipping {base_name} due to empty label")
-            skipped.append(base_name)
-            continue
+        pass
 
     return skipped
 
