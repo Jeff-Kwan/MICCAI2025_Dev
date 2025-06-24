@@ -12,7 +12,7 @@ def foreground_threshold(x):
 def get_transforms(shape, pixdim, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["image", "label"], image_only=False, ensure_channel_first=True),
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
