@@ -180,7 +180,7 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
     for batch in tqdm(dataloader, desc="Processing images"):
         pass
 
-    return skipped
+    return 
 
 
 
@@ -205,17 +205,20 @@ if __name__ == "__main__":
             "data/nifti/train_pseudo/images",
             "data/nifti/train_pseudo/pseudo",
         ),
-    ]
-
-    skipped = []
-    for dirs in dir_list:
-        skipped += process_dataset(get_data_files, *dirs, pixdim)
-
-    process_dataset(get_skipped_files,
-                    (
+        (
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+            "data/nifti/train_pseudo/images",
+            "data/nifti/train_pseudo/pseudo",
+        ),
+        (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_blackbean_pseudo",
             "data/nifti/train_pseudo/images",
             "data/nifti/train_pseudo/pseudo",
-        ),)
+        )
+    ]
+
+    for dirs in dir_list:
+        process_dataset(get_data_files, *dirs, pixdim)
     
