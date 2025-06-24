@@ -9,7 +9,7 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, spatial, intensity, coarse):
+def get_transforms(shape, pixdim, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -17,6 +17,8 @@ def get_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
+            mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=("bilinear"), lazy=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -96,13 +98,8 @@ def get_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"], 
                 dtype=[torch.float32, torch.long],
                 track_meta=False),
-            mt.CropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                allow_smaller=False),
-            mt.DivisiblePadd(
-                keys=["image", "label"],
-                k=16),
+            mt.Orientationd(["image", "label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(["image", "label"], pixdim=pixdim, mode=("bilinear"), lazy=True),
         ]
     )
     return train_transform, val_transform

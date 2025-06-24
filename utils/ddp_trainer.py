@@ -159,6 +159,7 @@ class DDPTrainer:
                         predictor=lambda x: self.model(x),
                         overlap=self.train_params.get('sw_overlap', 0.25),
                         mode="gaussian",
+                        buffer_steps=1
                     )
                     aggregated[b] = logits
 

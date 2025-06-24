@@ -51,7 +51,7 @@ if __name__ == "__main__":
     matched_files = match_pred_label("./docker/outputs", "./docker/labels")
     
     # choose number of workers (e.g. number of cores)
-    n_workers = 32
+    n_workers = 50
     with mp.Pool(n_workers) as pool:
         # results is a list of (dice_array, surf_array) tuples
         results = pool.map(process_pair, matched_files)

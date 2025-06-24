@@ -131,11 +131,11 @@ if __name__ == "__main__":
         'learning_rate': 2e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 192, 128),
+        'shape': (224, 224, 112),
         'compile': False,
         'autocast': False,
-        'sw_batch_size': 2,
-        'sw_overlap': 1/4,
+        'sw_batch_size': 4,
+        'sw_overlap': 0.25,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
             'spatial': [2, 2, 1, 1, 1],  

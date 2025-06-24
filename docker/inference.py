@@ -26,13 +26,8 @@ def get_pre_transforms(pixdim, intensities):
     spatial = mt.Compose([
         mt.LoadImaged(["img"], image_only=False, ensure_channel_first=True),
         mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
-        mt.Orientationd(["img"], axcodes="RAS"),
-        mt.Spacingd(["img"], pixdim=pixdim, mode=("bilinear")),
-        # mt.CropForegroundd(
-        #         keys=["img"],
-        #         source_key="img",
-        #         select_fn=lambda x: (x > lower) & (x < upper),
-        #         allow_smaller=True),
+        mt.Orientationd(["img"], axcodes="RAS", lazy=False),
+        mt.Spacingd(["img"], pixdim=pixdim, mode=("bilinear"), lazy=False),
     ])
     intensity = mt.Compose([
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
@@ -43,6 +38,7 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms, output_dir):
     return mt.Compose([
+        mt.AsDiscreted(keys="pred", argmax=True),   # No need softmax as argmax directly
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -50,9 +46,8 @@ def get_post_transforms(pre_transforms, output_dir):
             meta_keys="pred_meta_dict",
             orig_meta_keys="img_meta_dict",
             meta_key_postfix="meta_dict",
-            nearest_interp=False,   # Smooth interpolation of logits
+            nearest_interp=True,   # Nearest Neighbour of Predictions
             to_tensor=True),
-        mt.AsDiscreted(keys="pred", argmax=True),   # No need softmax as argmax directly
         mt.SaveImaged(keys="pred",
             output_dir=output_dir, 
             output_postfix="", 
@@ -77,11 +72,6 @@ def run_inference(args, inference_config):
     dataset = Dataset(
         data=get_image_files(args.inputs_dir), 
         transform=mt.Compose([spatial_tf, intensity_tf]))
-    # dataloader = DataLoader(
-    #     dataset, 
-    #     batch_size=1, 
-    #     pin_memory=True,
-    #     num_workers=inference_config["workers"])
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Run inference
@@ -97,12 +87,14 @@ def run_inference(args, inference_config):
                     sw_batch_size=inference_config.get('sw_batch_size', 1),
                     predictor=lambda x: model(x),
                     overlap=inference_config.get('sw_overlap', 0.25),
-                    mode="gaussian").cpu().squeeze(0)
+                    mode="gaussian",
+                    buffer_steps=1).cpu().squeeze(0)
         times.append(time() - start_time)
         # Post-processing and saving results
-        # data["pred_meta_dict"] = data["img_meta_dict"]
         post_tf(data)
+
         print(sum(times) / len(times), "seconds per image")
+        
     total_time = time() - total_start_time
     print(f"Total inference time: {total_time:.2f} seconds")
     # Print average data processing time and average inference time
