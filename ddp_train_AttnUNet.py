@@ -132,7 +132,7 @@ if __name__ == "__main__":
     train_params = {
         'epochs': 200,
         'batch_size': 1,    # effectively x4
-        'aggregation': 1,
+        'aggregation': 2,
         'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
