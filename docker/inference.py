@@ -2,7 +2,7 @@ import argparse
 import json
 import torch
 import monai.transforms as mt
-from monai.data import Dataset, DataLoader
+from monai.data import Dataset
 from monai.inferers import sliding_window_inference
 from pathlib import Path
 import os
