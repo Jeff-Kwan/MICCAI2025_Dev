@@ -49,7 +49,6 @@ def main_worker(rank: int,
         # Datasets
         train_tf, val_tf = get_transforms(
             train_params['shape'],
-            train_params['pixdim'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
@@ -137,7 +136,6 @@ if __name__ == "__main__":
         'weight_decay': 2e-2,
         'num_classes': 14,
         'shape': (224, 224, 112),
-        'pixdim': (0.8, 0.8, 2.5),
         'compile': False,
         'autocast': False,
         'sw_batch_size': 4,

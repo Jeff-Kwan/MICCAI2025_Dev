@@ -9,7 +9,7 @@ def foreground_threshold(x):
     '''Define foreground from image with above smallest GT foreground intensity'''
     return x > -7.3988347
 
-def get_transforms(shape, pixdim, spatial, intensity, coarse):
+def get_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
