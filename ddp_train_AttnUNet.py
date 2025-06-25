@@ -54,22 +54,22 @@ def main_worker(rank: int,
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/nifti/train_gt/images",
-                labels_dir="data/nifti/train_gt/labels",
+                images_dir="data/small/train_gt/images",
+                labels_dir="data/small/train_gt/labels",
                 extension='.nii.gz') * 8 \
             + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/aladdin5",
+                images_dir="data/small/train_pseudo/images",
+                labels_dir="data/small/train_pseudo/aladdin5",
                 extension='.nii.gz') 
             + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
+                images_dir="data/small/train_pseudo/images",
+                labels_dir="data/small/train_pseudo/blackbean",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/nifti/val/images",
-                labels_dir="data/nifti/val/labels",
+                images_dir="data/small/val/images",
+                labels_dir="data/small/val/labels",
                 extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
@@ -135,7 +135,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (224, 224, 112),
+        'shape': (192, 192, 128),
         'compile': False,
         'autocast': False,
         'sw_batch_size': 4,
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
+    comments = ["AttnUNet2 - (1.5, 1.5, 2.5) - GT*8 + Aladdin + Blackbean training",
         f"{train_params['shape']} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

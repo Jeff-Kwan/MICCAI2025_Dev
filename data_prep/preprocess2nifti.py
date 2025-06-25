@@ -94,7 +94,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
     )
 
     # iterate, transform, and save
-    for batch in tqdm(dataloader, desc="Processing images"):
+    for batch in tqdm(dataloader, desc=f"Processing {split}"):
         pass
 
     return 
