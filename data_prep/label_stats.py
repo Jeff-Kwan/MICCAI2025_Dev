@@ -8,7 +8,7 @@ import monai.transforms as mt
 from monai.data import Dataset, ThreadDataLoader
 import matplotlib.pyplot as plt
 
-def get_data_files(images_dir, labels_dir, extension = ".npy"):
+def get_data_files(images_dir, labels_dir, extension = ".nii.gz"):
     """
     Returns a list of dicts with file paths for images and labels.
     Each dict has the keys "image" and "label".
@@ -99,11 +99,11 @@ def process_labels(datafiles, num_classes=14):
 
 if __name__ == "__main__":
     datafiles = get_data_files(
-        "data/preprocessed/train_gt/images",
-        "data/preprocessed/train_gt/labels")
+        "data/nifti/train_gt/images",
+        "data/nifti/train_gt/labels")
     # datafiles += get_data_files(
-    #     "data/preprocessed/train_pseudo/images",
-    #     "data/preprocessed/train_pseudo/aladdin5")
+    #     "data/nifti/train_pseudo/images",
+    #     "data/nifti/train_pseudo/aladdin5")
     label_counts = torch.tensor(process_labels(datafiles)).squeeze()
     # label_weights = label_counts.sum().item() / (label_counts * len(label_counts))
     # label_weights = torch.log(label_weights)

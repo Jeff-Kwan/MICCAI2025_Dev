@@ -107,7 +107,7 @@ def process_dataset(datafiles):
 
 
 if __name__ == "__main__":
-    datafiles = get_data_files("data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr", "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr")
+    datafiles = get_data_files("data/nifti/train_gt/images", "data/nifti/train_gt/labels")
     # datafiles += get_data_files("data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr", "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo")
     p_low, p_high, mean, std = process_dataset(datafiles)
     print(f"Final results: 0.5th percentile = {p_low}, 99.5th percentile = {p_high}, "

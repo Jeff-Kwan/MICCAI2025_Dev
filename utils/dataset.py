@@ -5,10 +5,6 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
-def foreground_threshold(x):
-    '''Define foreground from image with above smallest GT foreground intensity'''
-    return x > -7.3988347
-
 def get_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
@@ -28,7 +24,6 @@ def get_transforms(shape, spatial, intensity, coarse):
                         keys=["image","label"],
                         prob=1.0,
                         spatial_size=shape,
-                        translate_range=(8, 8, 8),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         mode=("bilinear", "nearest"),
@@ -50,7 +45,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                         sigma_range=(2.0, 5.0),
                         magnitude_range=(1.0, 3.0),
                         spatial_size=shape,
-                        translate_range=(8, 8, 8),
+                        translate_range=(4, 4, 4),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("bilinear", "nearest")

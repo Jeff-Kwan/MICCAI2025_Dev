@@ -80,7 +80,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=44,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -99,8 +99,8 @@ def main_worker(rank: int,
             include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([0.01, 2.8, 4.9, 4.7, 5.6, 5.6, 5.7, 8.7, 
-                                 8.5, 6.6, 7.4, 4.3, 5.8, 4.9], device=rank),
+            weight=torch.tensor([0.1, 2.9, 5.0, 4.8, 5.7, 5.7, 5.8, 8.8, 
+                                 8.6, 6.7, 7.5, 4.4, 5.9, 5.0], device=rank),
             lambda_focal=1,
             lambda_dice=1,)
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     train_params = {
         'epochs': 200,
         'batch_size': 1,    # effectively x4
-        'aggregation': 2,
+        'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
