@@ -147,21 +147,15 @@ class DDPTrainer:
 
             # sliding window inference as before
             with torch.autocast(device_type='cuda', dtype=self.precision):
-                aggregated = torch.zeros(
-                    (B, self.num_classes, *imgs.shape[2:]),
-                    device=self.device
+                aggregated = sliding_window_inference(
+                    imgs,
+                    roi_size=self.train_params['shape'],
+                    sw_batch_size=self.train_params.get('sw_batch_size', 1),
+                    predictor=lambda x: self.model(x),
+                    overlap=self.train_params.get('sw_overlap', 0.25),
+                    mode="gaussian",
+                    # buffer_steps=1
                 )
-                for b in range(B):
-                    logits = sliding_window_inference(
-                        imgs[b:b+1],
-                        roi_size=self.train_params['shape'],
-                        sw_batch_size=self.train_params.get('sw_batch_size', 1),
-                        predictor=lambda x: self.model(x),
-                        overlap=self.train_params.get('sw_overlap', 0.25),
-                        mode="gaussian",
-                        buffer_steps=1
-                    )
-                    aggregated[b] = logits
 
                 loss = self.criterion(aggregated, masks)
             # accumulate loss weighted by batch size

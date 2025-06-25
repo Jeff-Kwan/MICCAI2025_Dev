@@ -90,7 +90,7 @@ def get_transforms(shape, spatial, intensity, coarse):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                margin=32,
+                margin=48,
                 allow_smaller=True),
             mt.DivisiblePadd(
                 keys=["image", "label"],
