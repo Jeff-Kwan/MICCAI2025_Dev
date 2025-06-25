@@ -53,15 +53,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 8 \
+                extension='.nii.gz') * 1 \
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz') \
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
-                extension='.nii.gz'),
+                extension='.nii.gz') ,#\
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/blackbean",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "UNetControl"
-    comments = ["UNet Control -GT*8 + Aladdin + Blackbean training",
+    comments = ["UNet Control -GT*1 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + 3-choose-1 augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
