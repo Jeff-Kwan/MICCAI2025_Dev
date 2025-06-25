@@ -21,8 +21,8 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.convs = nn.Sequential(
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
-            nn.GroupNorm(h_c, h_c),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
+            nn.GroupNorm(h_c, h_c),
             nn.SiLU(),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
