@@ -169,9 +169,9 @@ class UNetControl(nn.Module):
 # ---------- demo ----------------------------------------------
 
 if __name__ == "__main__":
-    device = torch.device("cuda")
+    device = torch.device("cpu")
     
-    B, S1, S2, S3 = 1, 160, 160, 80
+    B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
@@ -194,13 +194,13 @@ if __name__ == "__main__":
         profile_memory=True,
         record_shapes=True
     ) as prof:
-        # with torch.inference_mode():
-        #     model.eval()
-        #     y = model(x)
-        with torch.autocast('cuda', torch.bfloat16):
+        with torch.inference_mode():
+            model.eval()
             y = model(x)
-            loss = y.sum()
-        loss.backward()
+        # with torch.autocast('cuda', torch.bfloat16):
+        #     y = model(x)
+        #     loss = y.sum()
+        # loss.backward()
 
     assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         

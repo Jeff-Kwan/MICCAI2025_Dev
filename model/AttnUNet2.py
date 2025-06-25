@@ -11,7 +11,7 @@ class ConvBlock(nn.Module):
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
             nn.GroupNorm(h_c, h_c),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.LeakyReLU(),
+            nn.SiLU(),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
@@ -34,12 +34,12 @@ class ConvLayer(nn.Module):
             x = x + self.convs[i](x)
         return x
     
-class ReGLU(nn.Module):
+class SwiGLU(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int,
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
         self.linear1 = nn.Linear(in_c, h_c * 2, bias)
-        self.act = nn.LeakyReLU()
+        self.act = nn.SiLU()
         self.linear2 = nn.Sequential(
             nn.Dropout(dropout) if dropout else nn.Identity(),
             nn.Linear(h_c, out_c, bias))
@@ -66,7 +66,7 @@ class TransformerLayer(nn.Module):
         self.mlps = nn.ModuleList([
             nn.Sequential(
                 nn.RMSNorm(in_c),
-                ReGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
+                SwiGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
-        "channels":     [24, 48, 96, 192],
+        "channels":     [24, 48, 96, 256],
         "convs":        [16, 32, 64, 32],
         "layers":       [2, 2, 2, 8],
         "dropout":      0.1,

@@ -31,12 +31,12 @@ def process_dataset(in_dir, out_dir, split, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=[split], ensure_channel_first=True),
-            mt.Orientationd(keys=[split], axcodes="RAS"),
+            mt.Orientationd(keys=[split], axcodes="RAS", lazy=True),
             mt.Spacingd(
                 keys=[split],
                 pixdim=pixdim,
                 mode= 3 if split=="image" else "nearest",
-                lazy=False,
+                lazy=True,
             ),
             mt.EnsureTyped(
                 keys=[split],
