@@ -51,19 +51,23 @@ def main_worker(rank: int,
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/train_gt/images",
-                labels_dir="data/preprocessed/train_gt/labels",
-                extension='.npy') * 2 \
+                images_dir="data/nifti/train_gt/images",
+                labels_dir="data/nifti/train_gt/labels",
+                extension='.nii.gz') * 8 \
             + get_data_files(
-                images_dir="data/preprocessed/train_pseudo/images",
-                labels_dir="data/preprocessed/train_pseudo/aladdin5",
-                extension='.npy'),
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/aladdin5",
+                extension='.nii.gz') \
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocessed/val/images",
-                labels_dir="data/preprocessed/val/labels",
-                extension='.npy'),
+                images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
+                labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
+                extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
@@ -73,15 +77,15 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=44,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=8,
-            pin_memory=True,
+            num_workers=5,
+            pin_memory=False,
             persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
@@ -128,7 +132,7 @@ if __name__ == "__main__":
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
-        'shape': (256, 160, 128),
+        'shape': (224, 224, 112),
         'compile': False,
         'autocast': True,
         'sw_batch_size': 4,
@@ -143,7 +147,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "UNetControl"
-    comments = ["UNet Control - GT*2 + Aladdin training",
+    comments = ["UNet Control -GT*8 + Aladdin + Blackbean training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + 3-choose-1 augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
