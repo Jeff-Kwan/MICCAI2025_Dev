@@ -137,7 +137,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (224, 224, 112),
         'compile': False,
-        'autocast': True,
+        'autocast': False,
         'sw_batch_size': 4,
         'sw_overlap': 0.25,
         'data_augmentation': {
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, yes autocast - GT*2 + Aladdin training",
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
