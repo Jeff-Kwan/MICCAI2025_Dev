@@ -56,15 +56,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 2 \
+                extension='.nii.gz') * 8 \
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz'), \
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/nifti/train_pseudo/blackbean",
-            #     extension='.nii.gz'),
+                extension='.nii.gz') 
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -80,7 +80,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=46,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -129,9 +129,9 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 200,
+        'epochs': 300,
         'batch_size': 1,    # effectively x4
-        'aggregation': 1,
+        'aggregation': 2,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
@@ -150,8 +150,8 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*2 + Aladdin training",
-        f"{train_params["shape"]} shape", 
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
+        f"{train_params['shape']} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
 

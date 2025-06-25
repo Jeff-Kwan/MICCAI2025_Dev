@@ -24,7 +24,7 @@ class ConvBlock(nn.Module):
             nn.GroupNorm(h_c, h_c),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.SiLU(),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
+            # nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
 
     def forward(self, x):
@@ -97,11 +97,11 @@ class Encoder(nn.Module):
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.encoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False)
+            [nn.Sequential(
+                ConvLayer(channels[i], convs[i], layers[i], bias=False),
+                LayerNormTranspose(1, channels[i]))
              for i in range(self.stages - 1)])
-        self.downs = nn.ModuleList([nn.Sequential(
-                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False),
-                LayerNormTranspose(1, channels[i+1]))
+        self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
         
     def forward(self, x):
@@ -122,8 +122,8 @@ class Decoder(nn.Module):
             [ConvLayer(channels[i], convs[i], layers[i], bias=False)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                LayerNormTranspose(1, channels[i+1]),
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
+                LayerNormTranspose(1, channels[i]))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
@@ -184,9 +184,9 @@ if __name__ == "__main__":
     B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
-        "channels":     [24, 48, 96, 256],
-        "convs":        [16, 32, 64, 32],
-        "layers":       [3, 3, 3, 8],
+        "channels":     [32, 64, 128, 256],
+        "convs":        [16, 48, 96, 32],
+        "layers":       [4, 4, 4, 8],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
