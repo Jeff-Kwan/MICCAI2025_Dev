@@ -17,7 +17,7 @@ torch_model = AttnUNet(json.load(open("configs/model/attn_unet.json")))
 torch_model.eval()
 
 trials = 1
-B, C, H, W, D = 1, 1, 280, 280, 185
+B, C, H, W, D = 1, 1, 280, 280, 200
 patch_size = (192, 192, 128)
 overlap = 0.25
 dummy_input = torch.randn(B, C, H, W, D)

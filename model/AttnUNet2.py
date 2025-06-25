@@ -24,7 +24,7 @@ class ConvBlock(nn.Module):
             nn.GroupNorm(h_c, h_c),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.SiLU(),
-            # nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
 
     def forward(self, x):
