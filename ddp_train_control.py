@@ -65,8 +65,8 @@ def main_worker(rank: int,
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-                labels_dir="data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
+                images_dir="data/nifti/val/images",
+                labels_dir="data/nifti/val/labels",
                 extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
@@ -77,7 +77,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=46,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(

@@ -177,7 +177,7 @@ if __name__ == "__main__":
         "channels":     [24, 48, 96, 256],
         "convs":        [16, 32, 64, 32],
         "layers":       [2, 2, 2, 8],
-        "dropout":      0.1,
+        "dropout":      0.05,
         "stochastic_depth": 0.1
     }
 
