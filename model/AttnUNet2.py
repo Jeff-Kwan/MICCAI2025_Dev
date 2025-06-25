@@ -5,7 +5,7 @@ from torchvision.ops import stochastic_depth
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
-                 bias: bool = False, dropout: float = 0.0):
+                 bias: bool = False):
         super().__init__()
         self.convs = nn.Sequential(
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
@@ -13,7 +13,6 @@ class ConvBlock(nn.Module):
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.SiLU(),
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c, out_c, 1, 1, 0, bias=bias))
 
     def forward(self, x):
@@ -21,12 +20,11 @@ class ConvBlock(nn.Module):
 
 
 class ConvLayer(nn.Module):
-    def __init__(self, in_c: int, conv: int, repeats: int, bias: bool = True, 
-                 dropout: float = 0.0):
+    def __init__(self, in_c: int, conv: int, repeats: int, bias: bool = True):
         super().__init__()
         self.repeats = repeats
         self.convs = nn.ModuleList([
-            ConvBlock(in_c, conv, in_c, bias, dropout)
+            ConvBlock(in_c, conv, in_c, bias)
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -87,7 +85,7 @@ class Encoder(nn.Module):
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.encoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout)
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False)
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Sequential(
                 nn.GroupNorm(channels[i], channels[i], affine=False),
@@ -109,7 +107,7 @@ class Decoder(nn.Module):
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.decoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout)
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.GroupNorm(channels[i+1], channels[i+1], affine=False),
@@ -176,8 +174,8 @@ if __name__ == "__main__":
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
         "convs":        [16, 32, 64, 32],
-        "layers":       [2, 2, 2, 8],
-        "dropout":      0.05,
+        "layers":       [4, 4, 4, 8],
+        "dropout":      0.1,
         "stochastic_depth": 0.1
     }
 
