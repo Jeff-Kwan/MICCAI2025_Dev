@@ -31,7 +31,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
             mt.Spacingd(
                 keys=[split],
                 pixdim=pixdim,
-                mode= "trilinear" if split=="image" else "nearest",
+                mode= 3 if split=="image" else "nearest",
                 lazy=False,
             ),
             mt.EnsureTyped(
