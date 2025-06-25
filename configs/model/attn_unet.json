@@ -4,5 +4,5 @@
 "convs":        [24, 48, 96, 32],
 "layers":       [4, 4, 4, 8],
 "dropout":      0.1,
-"stochastic_depth": 0.05
+"stochastic_depth": 0.1
 }
