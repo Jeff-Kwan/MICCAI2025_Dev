@@ -3,10 +3,10 @@ from torch import nn
 from torchvision.ops import stochastic_depth
 
 class LayerNormTranspose(nn.Module):
-    def __init__(self, dim: int, features: int, eps: float = 1e-6):
+    def __init__(self, dim: int, features: int):
         super().__init__()
         self.dim = dim
-        self.norm = nn.LayerNorm(features, eps, elementwise_affine=False, bias=False)
+        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
 
     def forward(self, x):
         # (..., C, ...) -> (..., ..., C) -> norm -> restore
@@ -100,8 +100,8 @@ class Encoder(nn.Module):
             [ConvLayer(channels[i], convs[i], layers[i], bias=False)
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Sequential(
-                LayerNormTranspose(1, channels[i]),
-                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
+                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False),
+                LayerNormTranspose(1, channels[i+1]))
              for i in range(self.stages - 1)])
         
     def forward(self, x):
