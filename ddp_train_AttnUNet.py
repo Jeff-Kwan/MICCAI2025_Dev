@@ -56,15 +56,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 8 \
+                extension='.nii.gz') * 2 \
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz') \
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
-                extension='.nii.gz'),
+                extension='.nii.gz'), \
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/blackbean",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -80,7 +80,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=46,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         'num_classes': 14,
         'shape': (224, 224, 112),
         'compile': False,
-        'autocast': False,
+        'autocast': True,
         'sw_batch_size': 4,
         'sw_overlap': 0.25,
         'data_augmentation': {
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
+    comments = ["AttnUNet2 - more optimized, yes autocast - GT*2 + Aladdin training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
