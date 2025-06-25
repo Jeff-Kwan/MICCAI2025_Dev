@@ -56,15 +56,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 4 \
+                extension='.nii.gz') * 8 \
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/pseudo",
-                extension='.nii.gz'),#\
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            #     extension='.nii.gz'),
+                labels_dir="data/nifti/train_pseudo/aladdin5",
+                extension='.nii.gz') \
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/attn_unet.json"))
     train_params = {
-        'epochs': 300,
+        'epochs': 200,
         'batch_size': 1,    # effectively x4
         'aggregation': 2,
         'learning_rate': 3e-4,
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "AttnUNet"
-    comments = ["AttnUNet2 - more optimized, no autocast - GT*4 + Aladdin training",
+    comments = ["AttnUNet2 - more optimized, no autocast - GT*8 + Aladdin + Blackbean training",
         f"{train_params["shape"]} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]

@@ -10,13 +10,17 @@ def get_dir_files(dir, split, extension=".nii.gz"):
     dir = Path(dir)
     if not dir.is_dir():
         raise FileNotFoundError(f"Directory not found: {dir!r}")
-    image_names = sorted(
-        {split: entry.name}
+    names = sorted(
+        entry.name
         for entry in os.scandir(dir)
-        if entry.is_file() and entry.name.endswith(extension))
-    if not image_names:
+        if entry.is_file() and entry.name.endswith(extension)
+    )
+    if not names:
         raise RuntimeError(f"No '{extension}' files found in {dir!r}")
-    return image_names
+    return [
+        {split: str(dir / name)}
+        for name in names
+    ]
 
 
 
@@ -86,7 +90,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=190,
+        num_workers=128,
     )
 
     # iterate, transform, and save
@@ -131,8 +135,8 @@ if __name__ == "__main__":
             "label", pixdim
         ),
         (
-            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_blackbean_pseudo",
-            "data/nifti/train_pseudo/backbean",
+            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+            "data/nifti/train_pseudo/blackbean",
             "label", pixdim
         )
     ]
