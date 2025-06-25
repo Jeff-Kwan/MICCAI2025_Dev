@@ -35,7 +35,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
             mt.Spacingd(
                 keys=[split],
                 pixdim=pixdim,
-                mode= 3 if split=="image" else "nearest",
+                mode= "trilinear" if split=="image" else "nearest",
                 lazy=True,
             ),
             mt.EnsureTyped(
@@ -102,41 +102,46 @@ def process_dataset(in_dir, out_dir, split, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.8, 0.8, 2.5)
+    pixdim = (1.5, 1.5, 2.5)
     data_list = [
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            "data/nifti/train_gt/images",
+            "data/small/train_gt/images",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-            "data/nifti/train_gt/labels",
+            "data/small/train_gt/labels",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-            "data/nifti/val/images",
+            "data/small/val/images",
             "image", pixdim
         ),
          (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
-            "data/nifti/val/labels",
+            "data/small/val/labels",
             "label", pixdim
         ),
         (
+            "data/FLARE-Task2-LaptopSeg/validation/Validation-Hidden-Images",
+            "data/small/val/hidden",
+            "image", pixdim
+        ),
+        (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            "data/nifti/train_pseudo/images",
+            "data/small/train_pseudo/images",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-            "data/nifti/train_pseudo/aladdin5",
+            "data/small/train_pseudo/aladdin5",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            "data/nifti/train_pseudo/blackbean",
+            "data/small/train_pseudo/blackbean",
             "label", pixdim
         )
     ]
