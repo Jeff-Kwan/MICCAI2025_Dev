@@ -152,7 +152,7 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                margin=64, # Keep some margin
+                margin=32, # Keep some margin
                 allow_smaller=True)
         ]
     )
@@ -162,7 +162,7 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=128,
+        num_workers=144,
     )
 
     # iterate, transform, and save
@@ -186,25 +186,25 @@ def process_dataset(file_getter, images_dir, labels_dir, out_image_dir, out_labe
 
 
 if __name__ == "__main__":
-    pixdim = (0.8, 0.8, 1.0)
+    pixdim = (1.5, 1.5, 2.5)
     dir_list = [
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-            "data/preprocessed/train_gt/images",
-            "data/preprocessed/train_gt/labels",
+            "data/small/train_gt/images",
+            "data/small/train_gt/labels",
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
-            "data/preprocessed/val/images",
-            "data/preprocessed/val/labels",
+            "data/small/val/images",
+            "data/small/val/labels",
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-            "data/preprocessed/train_pseudo/images",
-            "data/preprocessed/train_pseudo/pseudo",
+            "data/small/train_pseudo/images",
+            "data/small/train_pseudo/pseudo",
         ),
     ]
 
@@ -212,11 +212,12 @@ if __name__ == "__main__":
     for dirs in dir_list:
         skipped += process_dataset(get_data_files, *dirs, pixdim)
 
+    # TypeError: get_skipped_files() missing 1 required positional argument: 'skipped'
     process_dataset(get_skipped_files,
-                    (
+                    *(
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_blackbean_pseudo",
-            "data/preprocessed/train_pseudo/images",
-            "data/preprocessed/train_pseudo/pseudo",
-        ),)
+            "data/small/train_pseudo/images",
+            "data/small/train_pseudo/pseudo",
+        ), pixdim)
     
