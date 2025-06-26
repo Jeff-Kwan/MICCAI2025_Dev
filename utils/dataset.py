@@ -109,6 +109,11 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=16,
+                allow_smaller=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -198,7 +203,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
             mt.CropForegroundd(
                 keys=["image", "label"],
                 source_key="label",
-                margin=4,
+                margin=8,
                 allow_smaller=True),
             mt.DivisiblePadd(
                 keys=["image", "label"],

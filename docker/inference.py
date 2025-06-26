@@ -96,7 +96,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--inputs_dir', type=str, default=r'./inputs', help='dir of output')
     parser.add_argument('--output_dir', type=str, default=r'./outputs', help='dir of output')
-    parser.add_argument('--device', type=str, default='cuda', help='device to run inference on')
+    parser.add_argument('--device', type=str, default='cpu', help='device to run inference on')
     args = parser.parse_args()
 
     inference_config = json.load(open('./inference_config.json', 'r'))

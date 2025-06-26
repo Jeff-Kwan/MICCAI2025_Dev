@@ -54,17 +54,21 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.nii.gz') * 8 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
-                extension='.npy'),
+                extension='.nii.gz') 
+            + get_data_files(
+                images_dir="data/small/train_pseudo/images",
+                labels_dir="data/small/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
                 images_dir="data/small/val/images",
                 labels_dir="data/small/val/labels",
-                extension='.npy'),
+                extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
@@ -74,7 +78,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
+            num_workers=42,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -129,7 +133,7 @@ if __name__ == "__main__":
         'learning_rate': 5e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (448, 224, 128),
+        'shape': (384, 384, 128),
         'alpha': (0.1, 2.0, 60), # JS Match of Prior and Likelihood
         'beta': (0.1, 2.0, 40), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
