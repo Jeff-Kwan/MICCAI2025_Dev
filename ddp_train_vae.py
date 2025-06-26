@@ -129,7 +129,7 @@ if __name__ == "__main__":
         'learning_rate': 5e-4,
         'weight_decay': 2e-2,
         'num_classes': 14,
-        'shape': (448, 224, 128),
+        'shape': (432, 224, 112),
         'alpha': (0.1, 2.0, 60), # JS Match of Prior and Likelihood
         'beta': (0.1, 2.0, 40), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
