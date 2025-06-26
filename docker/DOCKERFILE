@@ -1,0 +1,28 @@
+# Dockerfile
+
+# 1. Use Python 3.12 slim base
+FROM python:3.12-slim
+
+# 2. Set a working directory
+WORKDIR /workspace
+
+# 3. (Optional) Install any system packages you need
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#         ca-certificates \
+#     && rm -rf /var/lib/apt/lists/*
+
+# 4. Copy your pip requirements
+COPY requirements.txt .
+
+# 5. Install CPU-only PyTorch, then the rest of dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 6. Copy your code and model directory into the image
+COPY inference.py inference_config.json predict.sh /workspace/
+COPY model/ /workspace/model/
+
+# 7. Make sure the entry-point script is executable
+RUN chmod +x /workspace/predict.sh
+
+# 8. When the container runs, execute predict.sh
+ENTRYPOINT ["bash", "predict.sh"]

@@ -6,6 +6,7 @@ from monai.data import Dataset
 from monai.inferers import sliding_window_inference
 from pathlib import Path
 import os
+from tqdm import tqdm
 
 # My Model
 from model.AttnUNet2 import AttnUNet
@@ -54,7 +55,8 @@ def get_post_transforms(pre_transforms, output_dir):
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
             separate_folder=False,
-            output_dtype=torch.uint8)
+            output_dtype=torch.uint8,
+            print_log=False)
         ])
 
 
@@ -62,7 +64,7 @@ def get_post_transforms(pre_transforms, output_dir):
 def run_inference(args, inference_config):
     # Load the model
     model = AttnUNet(json.load(open('./model/attn_unet.json', 'r')))
-    model.load_state_dict(torch.load(args.model_weight, weights_only=True))
+    model.load_state_dict(torch.load('./model/model.pth', weights_only=True))
     model.eval().to(args.device)
 
     # Create dataset and dataloader
@@ -75,12 +77,7 @@ def run_inference(args, inference_config):
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Run inference
-    from tqdm import tqdm
-    from time import time
-    times = []
-    total_start_time = time()
     for data in tqdm(dataset, desc="Inference"):
-        start_time = time()
         data["pred"] = sliding_window_inference(
                     data["img"].to(args.device, non_blocking=True).unsqueeze(0),
                     roi_size=inference_config['shape'],
@@ -89,17 +86,9 @@ def run_inference(args, inference_config):
                     overlap=inference_config.get('sw_overlap', 0.25),
                     mode="gaussian",
                     buffer_steps=1).cpu().squeeze(0)
-        times.append(time() - start_time)
+
         # Post-processing and saving results
         post_tf(data)
-
-        print(sum(times) / len(times), "seconds per image")
-        
-    total_time = time() - total_start_time
-    print(f"Total inference time: {total_time:.2f} seconds")
-    # Print average data processing time and average inference time
-    print(f"Average inference time: {sum(times) / len(times):.2f} seconds")
-    print(f"Average data loading time: {(total_time - sum(times)) / len(times):.2f} seconds")
 
 
 
@@ -107,7 +96,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--inputs_dir', type=str, default=r'./inputs', help='dir of output')
     parser.add_argument('--output_dir', type=str, default=r'./outputs', help='dir of output')
-    parser.add_argument('--model_weight', type=str, default=r'./model/model.pth', help='weight')
     parser.add_argument('--device', type=str, default='cuda', help='device to run inference on')
     args = parser.parse_args()
 
