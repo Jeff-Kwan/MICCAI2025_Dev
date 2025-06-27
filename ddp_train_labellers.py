@@ -94,7 +94,6 @@ def main_worker(rank: int,
             persistent_workers=False)
 
         # Model, optimizer, scheduler, loss
-        model = AttnUNet(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
         criterion = DiceFocalLoss(
