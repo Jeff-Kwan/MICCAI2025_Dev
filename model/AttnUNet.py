@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
-from torch.utils import checkpoint
+# from torch.utils import checkpoint
 
 class LayerNormTranspose(nn.Module):
     def __init__(self, dim: int, features: int):
@@ -31,10 +31,10 @@ class ConvBlock(nn.Module):
         return self.convs(x)
 
     def forward(self, x):
-        if self.training and x.requires_grad:
-            return checkpoint.checkpoint(self._inner_forward, x, use_reentrant=False)
-        else:
-            return self._inner_forward(x)
+        # if self.training and x.requires_grad:
+        #     return checkpoint.checkpoint(self._inner_forward, x, use_reentrant=False)
+        # else:
+        return self._inner_forward(x)
 
 
 class ConvLayer(nn.Module):
