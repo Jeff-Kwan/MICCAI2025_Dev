@@ -46,6 +46,24 @@ class TransformerLayer(nn.Module):
         return x
     
 
+def get_1d_sinusoidal_pos_embed(length: int, dim: int, device: torch.device):
+    """
+    Generate a 1D sinusoidal positional embedding table of shape (length, dim).
+    """
+    # each pair of channels uses one sine and one cosine, so dim must be even
+    if dim % 2 != 0:
+        raise ValueError("Dimension for sinusoidal embed must be even.")
+    position = torch.arange(length, dtype=torch.float, device=device).unsqueeze(1)  # (L,1)
+    div_term = torch.exp(
+        torch.arange(0, dim, 2, dtype=torch.float, device=device)
+        * -(torch.log(torch.tensor(10000.0)) / dim)
+    )  # (dim/2,)
+    pe = torch.zeros(length, dim, device=device)
+    pe[:, 0::2] = torch.sin(position * div_term)
+    pe[:, 1::2] = torch.cos(position * div_term)
+    return pe.unsqueeze(0)
+
+
 class ViTSeg(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
@@ -60,6 +78,7 @@ class ViTSeg(nn.Module):
 
         self.patch_embed = nn.Conv3d(self.in_c, self.embed_dim, (8, 8, 8), (8, 8, 8), 0, bias=False)
         self.patch_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=False, bias=False)
+        self.position_embed = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.layers = nn.ModuleList([
             TransformerLayer(self.embed_dim, self.head_dim, self.layers, bias=True,
                              dropout=self.dropout, sto_depth=self.sto_depth)
@@ -71,13 +90,21 @@ class ViTSeg(nn.Module):
             nn.Upsample(scale_factor=(4, 4, 2), mode='trilinear', align_corners=False))
         
     def forward(self, x):
+        # Patch embedding
         x = self.patch_embed(x)
         B, C, S1, S2, S3 = x.shape
         x = x.permute(0, 2, 3, 4, 1).reshape(B, S1*S2*S3, C)
         x = self.patch_norm(x)
 
+        # Positional embeddings - cleanly in and out of residual stream
+        pos_embed = get_1d_sinusoidal_pos_embed(S1*S2*S3, self.embed_dim, x.device)
+        pos_embed = self.position_embed(pos_embed)
+        x = x + pos_embed   # Add positional embedding
+
         for layer in self.layers:
             x = layer(x)
+
+        x = x - pos_embed   # Remove positional embedding
 
         x = self.out_norm(x)
         x = x.permute(0, 2, 1).reshape(B, C, S1, S2, S3)
