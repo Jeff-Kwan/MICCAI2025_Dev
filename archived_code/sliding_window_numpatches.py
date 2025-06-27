@@ -21,7 +21,7 @@ def compute_num_patches(image_size, roi_size, overlap):
 
 image_size = [256, 256, 200]
 roi_size = [160, 160, 128]
-overlap = 0.25
+overlap = 0.5
 
 num_patches = compute_num_patches(image_size, roi_size, overlap)
 total_patches = math.prod(num_patches)

@@ -1,24 +1,26 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Fragmentation
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
 import json
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import traceback
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
-import traceback
 
-from utils.dataset import get_vae_transforms, get_data_files
-from model.VAEDual import VAEPosterior
-from utils.vae_trainer import VAETrainer
+from utils.dataset import get_transforms, get_data_files
+from model.AttnUNet import AttnUNet
+from model.ViTSeg import ViTSeg
+from model.ConvSeg import ConvSeg
+from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def main_worker(rank: int,
                 world_size: int,
-                model_params: dict,
+                model,
                 train_params: dict,
                 output_dir: str,
                 comments: list):
@@ -47,26 +49,30 @@ def main_worker(rank: int,
             full_output = None
 
         # Datasets
-        train_tf, val_tf = get_vae_transforms(
+        train_tf, val_tf = get_transforms(
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
             train_params['data_augmentation']['coarse'])
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/small/train_gt/images",
-                labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 2 \
+                images_dir="data/nifti/train_gt/images",
+                labels_dir="data/nifti/train_gt/labels",
+                extension='.nii.gz') * 1 \
             + get_data_files(
-                images_dir="data/small/train_pseudo/images",
-                labels_dir="data/small/train_pseudo/pseudo",
-                extension='.npy'),
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/aladdin5",
+                extension='.nii.gz') 
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/small/val/images",
-                labels_dir="data/small/val/labels",
-                extension='.npy'),
+                images_dir="data/nifti/val/images",
+                labels_dir="data/nifti/val/labels",
+                extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
@@ -87,9 +93,8 @@ def main_worker(rank: int,
             pin_memory=False,
             persistent_workers=False)
 
-
         # Model, optimizer, scheduler, loss
-        model = VAEPosterior(model_params)
+        model = AttnUNet(model_params)
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'])
         criterion = DiceFocalLoss(
@@ -100,8 +105,9 @@ def main_worker(rank: int,
             lambda_focal=1,
             lambda_dice=1,)
 
+
         # Initialize trainer and start
-        trainer = VAETrainer(
+        trainer = DDPTrainer(
             model=model,
             optimizer=optimizer,
             criterion=criterion,
@@ -114,54 +120,55 @@ def main_worker(rank: int,
         trainer.train(train_loader, val_loader)
 
     except Exception as e:
-        print(f"Rank {rank} crashed:", traceback.format_exc(), flush=True)
+        print(f"Rank {rank} crashed:", traceback.format_exc())
     finally:
         dist.destroy_process_group()
 
 
-if __name__ == "__main__":
-    # If needed:    pkill -f -- '--multiprocessing-fork'
-    # Load configs
-    model_params = json.load(open("configs/model/vae.json"))
-    train_params = {
-        'epochs': 300,    # Prior posterior together
-        'batch_size': 1,    # effectively x4
-        'aggregation': 1,
-        'learning_rate': 5e-4,
-        'weight_decay': 2e-2,
-        'num_classes': 14,
-        'shape': (432, 224, 112),
-        'alpha': (0.1, 2.0, 60), # JS Match of Prior and Likelihood
-        'beta': (0.1, 2.0, 40), # Linear ramp up [min, max, epochs] VAE beta
-        'compile': False,
-        'autocast': True,
-        'sw_batch_size': 1,
-        'sw_overlap': 1/2,
-        'data_augmentation': {
-            # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 1, 1, 1],  
-            # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
-            'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
-            # [I, Dropout, Shuffle]
-            'coarse': [1, 1, 1]  
-        }
-    }
-    output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 2.5) - GTx2 + Aladdin training",
-        "2 way prior decoding, No latent and z gradients",
-        "No dropout stochastic depth in prior but yes posterior",
-        f"beta-VAE only autoencodes labels, KL with normal and JS with each other",
-        f"{train_params["shape"]} shape", 
-        f"DiceFocal, 1-sample rand crop + 3-choose 1 augmentations [2, 1, 1]",
-        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"]
-    
+def mp_train(model,
+             train_params: dict,
+             output_dir: str,
+             comments: list):
     gpu_count = torch.cuda.device_count()
     try:
         mp.spawn(
             main_worker,
-            args=(gpu_count, model_params, train_params, output_dir, comments),
+            args=(gpu_count, model, train_params, output_dir, comments),
             nprocs=gpu_count,
             join=True)
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")
         mp.get_context('spawn')._shutdown()
+
+
+def get_comments(output_dir, train_params):
+    return [
+        f"{output_dir} - GT*1 + Aladdin + Blackbean Initial training",
+        f"{train_params['shape']} shape", 
+        f"DiceFocal, 1-sample rand crop + augmentations",
+        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
+    ]
+
+
+if __name__ == "__main__":
+    # If needed:    pkill -f -- '--multiprocessing-fork'
+    architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
+
+    for architecture in architectures:
+        model_params = json.load(open(f"configs\labellers\{architecture}\model.json"))
+        train_params = json.load(open(f"configs\labellers\{architecture}\train.json"))
+        output_dir = f"{architecture}"
+        comments = get_comments(output_dir, train_params)
+        
+        print(f"Starting training for {architecture}...")
+        if architecture == "AttnUNet":
+            model = AttnUNet(model_params)
+        elif architecture == "ConvSeg":
+            model = ConvSeg(model_params)
+        elif architecture == "ViTSeg":
+            model = ViTSeg(model_params)
+        else:
+            raise ValueError(f"Unknown architecture: {architecture}")
+        mp_train(model, train_params, output_dir, comments)
+    
+    

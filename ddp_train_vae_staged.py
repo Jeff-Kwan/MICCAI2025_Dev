@@ -13,6 +13,8 @@ from utils.dataset import get_vae_transforms, get_data_files
 from model.VAEDual import VAEPosterior
 from utils.vae_trainer import VAETrainer
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 def main_worker(rank: int,
                 world_size: int,
                 model_params: dict,

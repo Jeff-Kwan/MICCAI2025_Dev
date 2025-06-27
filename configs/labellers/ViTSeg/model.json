@@ -1,0 +1,9 @@
+{
+"in_channels": 1,
+"out_channels": 14,
+"embed_dim": 512,
+"layers": 8,
+"head_dim": 64,
+"dropout": 0.2,
+"sto_depth": 0.1
+}

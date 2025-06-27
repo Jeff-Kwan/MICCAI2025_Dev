@@ -169,7 +169,7 @@ class UNetControl(nn.Module):
 # ---------- demo ----------------------------------------------
 
 if __name__ == "__main__":
-    device = torch.device("cpu")
+    device = torch.device("cuda")
     
     B, S1, S2, S3 = 1, 224, 224, 112
     params = {
