@@ -49,9 +49,9 @@ def get_data_files(dir1, dir2, extension = ".nii.gz"):
 def create_soft_pseudo(dir1, dir2, soft_labels_dir, weights, extension = ".nii.gz"):
     data_files = get_data_files(dir1, dir2, extension)
 
-    load_transform = mt.Compose(
+    load_transform = mt.Compose([
         mt.LoadImaged(["lbl1", "lbl2"]),
-        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True))
+        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True)])
     saver = mt.SaveImaged(
         keys=["soft"],
         meta_keys=["lbl1_meta_dict"],
