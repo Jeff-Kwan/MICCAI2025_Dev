@@ -1,7 +1,6 @@
-torch
-monai
+numpy==1.26.4
+torch==2.6.0+cpu
+monai==1.4.0
+nibabel==5.3.2
 tqdm
-argparse
-json
-pathlib
-os
+--extra-index-url https://download.pytorch.org/whl/cpu

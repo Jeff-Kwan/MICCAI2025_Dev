@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torchvision.ops import stochastic_depth
 
 class LayerNormTranspose(nn.Module):
     def __init__(self, dim: int, features: int):
@@ -84,9 +83,8 @@ class TransformerLayer(nn.Module):
         x = x.permute(0, 2, 3, 4, 1).reshape(B, S1*S2*S3, C)
         for i in range(self.repeats):
             norm_x = self.mha_norms[i](x)
-            x = x + stochastic_depth(self.MHAs[i](norm_x, norm_x, norm_x, need_weights=False)[0], 
-                                     self.sto_depth, 'row', self.training)
-            x = x + stochastic_depth(self.mlps[i](x), self.sto_depth, 'row', self.training)
+            x = x + self.MHAs[i](norm_x, norm_x, norm_x, need_weights=False)[0]
+            x = x + self.mlps[i](x)
         x = x.permute(0, 2, 1).reshape(B, C, S1, S2, S3)
         return x
 

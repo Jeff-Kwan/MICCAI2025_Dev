@@ -64,7 +64,7 @@ def get_post_transforms(pre_transforms, output_dir):
 def run_inference(args, inference_config):
     # Load the model
     model = AttnUNet(json.load(open('./model/attn_unet.json', 'r')))
-    model.load_state_dict(torch.load('./model/model.pth', weights_only=True))
+    model.load_state_dict(torch.load('./model/model.pth', map_location='cpu', weights_only=True))
     model.eval().to(args.device)
 
     # Create dataset and dataloader
@@ -72,10 +72,10 @@ def run_inference(args, inference_config):
                                                   inference_config["intensities"])
     post_tf = get_post_transforms(spatial_tf, args.output_dir)
     dataset = Dataset(
-        data=get_image_files(args.inputs_dir), 
+        data=get_image_files(args.input_dir), 
         transform=mt.Compose([spatial_tf, intensity_tf]))
     os.makedirs(args.output_dir, exist_ok=True)
-
+    
     # Run inference
     for data in tqdm(dataset, desc="Inference"):
         data["pred"] = sliding_window_inference(
@@ -94,7 +94,7 @@ def run_inference(args, inference_config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--inputs_dir', type=str, default=r'./inputs', help='dir of output')
+    parser.add_argument('--input_dir', type=str, default=r'./inputs', help='dir of output')
     parser.add_argument('--output_dir', type=str, default=r'./outputs', help='dir of output')
     parser.add_argument('--device', type=str, default='cpu', help='device to run inference on')
     args = parser.parse_args()

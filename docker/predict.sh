@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# predict.sh
+set -eu pipefail
 
-set -euo pipefail
+# locations are fixed by the challenge harness:
+INPUT_DIR=/workspace/inputs
+OUTPUT_DIR=/workspace/outputs
 
-# FLARE mounts the test scans at /input and expects your NIfTI outputs in /output
+# ensure output dir exists
+mkdir -p "$OUTPUT_DIR"
+
+# example invocation; adjust flags as needed:
 python inference.py \
-  --inputs_dir "/input" \
-  --output_dir "/output" \
-  --device "cpu"
+    --input_dir "$INPUT_DIR" \
+    --output_dir "$OUTPUT_DIR"
