@@ -1,84 +1,73 @@
 import os
 from pathlib import Path
 import monai.transforms as mt
-from monai.data import Dataset
 from monai.networks.utils import one_hot
 import torch
 from torch.nn.functional import normalize
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
 
 
-def get_data_files(dir1, dir2, extension = ".nii.gz"):
-    """
-    Returns a list of dicts with file paths for images and labels.
-    Each dict has the keys "image" and "label".
-
-    Raises:
-        FileNotFoundError: if either directory does not exist.
-        RuntimeError: if no files with the given extension are found.
-        ValueError: if any image is missing a matching label.
-    """
+def get_data_files(dir1, dir2, extension=".nii.gz"):
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
-    # Scan image directory
-    labels_1_names = sorted(
-        entry.name
-        for entry in os.scandir(dir1)
-        if entry.is_file() and entry.name.endswith(extension))
-
-    # Scan label directory once, build a set of names
-    labels_2_names = sorted(
-        entry.name
-        for entry in os.scandir(dir2)
-        if entry.is_file() and entry.name.endswith(extension))
-
-    # Detect any missing labels in one go
-    missing = [name for name in labels_1_names if name not in labels_2_names]
+    names1 = sorted([e.name for e in os.scandir(dir1) if e.is_file() and e.name.endswith(extension)])
+    names2 = sorted([e.name for e in os.scandir(dir2) if e.is_file() and e.name.endswith(extension)])
+    missing = [n for n in names1 if n not in names2]
     if missing:
-        missing_list = ", ".join(repr(n) for n in missing)
-        raise ValueError(f"Missing labels correspondence: {missing_list}")
-
-    # Build result list
-    return [
-        {"lbl1": str(dir1 / name), "lbl2": str(dir2 / name), 
-         "base_name": name.removesuffix(".nii.gz")}
-        for name in labels_1_names
-    ]
+        raise ValueError(f"Missing labels: {missing}")
+    return [{"lbl1": str(dir1 / n), "lbl2": str(dir2 / n), "base_name": n.removesuffix(extension)} for n in names1]
 
 
-def create_soft_pseudo(dir1, dir2, soft_labels_dir, weights, extension = ".nii.gz"):
-    data_files = get_data_files(dir1, dir2, extension)
+# Will be initialized in each worker process
+def init_worker(weights, soft_labels_dir, extension):
+    global load_transform, saver, w0, w1
+    w0, w1 = weights
 
     load_transform = mt.Compose([
         mt.LoadImaged(["lbl1", "lbl2"], ensure_channel_first=True),
-        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True)])
+        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True),
+    ])
     saver = mt.SaveImaged(
         keys=["soft"],
         meta_keys=["lbl1_meta_dict"],
         output_dir=soft_labels_dir,
         output_postfix="",
-        output_ext=".nii.gz",
+        output_ext=extension,
         separate_folder=False,
         output_dtype=torch.float32,
-        print_log=False)
-    dataset = Dataset(data=data_files, transform=load_transform)
+        print_log=False
+    )
+    # Ensure output directory exists
+    Path(soft_labels_dir).mkdir(parents=True, exist_ok=True)
 
-    for data in tqdm(dataset, desc="Soft-Labelling"):
-        lbl1 = one_hot(data["lbl1"].unsqueeze(0), 14).float().squeeze(0)
-        lbl2 = one_hot(data["lbl2"].unsqueeze(0), 14).float().squeeze(0)
 
-        # Create soft pseudo-label
-        data["soft"] = normalize(weights[0] * lbl1 + weights[1] * lbl2, p=1, dim=0)
+def process_item(item):
+    data = load_transform(item)
+    lbl1 = one_hot(data["lbl1"].unsqueeze(0), num_classes=14).float().squeeze(0)
+    lbl2 = one_hot(data["lbl2"].unsqueeze(0), num_classes=14).float().squeeze(0)
 
-        # Save the soft pseudo-label
-        saver(data)
+    # compute soft labels and normalize
+    data["soft"] = normalize(w0 * lbl1 + w1 * lbl2, p=1, dim=0)
+    saver(data)
+
 
 if __name__ == "__main__":
     aladdin5 = "data/nifti/train_pseudo/aladdin5"
     blackbean = "data/nifti/train_pseudo/blackbean"
     soft_labels = "data/nifti/train_pseudo/soft_labels"
-
-    weights = [0.6, 0.4]    # Trust Aladdin5 labels more
+    extension = ".nii.gz"
+    weights = [0.6, 0.4]
     os.makedirs(soft_labels, exist_ok=True)
-    create_soft_pseudo(aladdin5, blackbean, soft_labels, weights, extension=".nii.gz")
+
+    files = get_data_files(aladdin5, blackbean, extension)
+    # spawn worker pool
+    with Pool(
+        processes=cpu_count(),
+        initializer=init_worker,
+        initargs=(weights, soft_labels, extension)
+    ) as pool:
+        # imap_unordered to allow progress bar
+        for _ in tqdm(pool.imap_unordered(process_item, files), total=len(files), desc="Soft-Labelling MP"):
+            pass
