@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 import monai.transforms as mt
-from monai.data import Dataset, DataLoader
+from monai.data import Dataset
 from monai.networks.utils import one_hot
 import torch
 from torch.nn.functional import normalize
+from tqdm import tqdm
 
 
 def get_data_files(dir1, dir2, extension = ".nii.gz"):
@@ -50,7 +51,7 @@ def create_soft_pseudo(dir1, dir2, soft_labels_dir, weights, extension = ".nii.g
     data_files = get_data_files(dir1, dir2, extension)
 
     load_transform = mt.Compose([
-        mt.LoadImaged(["lbl1", "lbl2"]),
+        mt.LoadImaged(["lbl1", "lbl2"], ensure_channel_first=True),
         mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True)])
     saver = mt.SaveImaged(
         keys=["soft"],
@@ -63,9 +64,9 @@ def create_soft_pseudo(dir1, dir2, soft_labels_dir, weights, extension = ".nii.g
         print_log=False)
     dataset = Dataset(data=data_files, transform=load_transform)
 
-    for data in dataset:
-        lbl1 = one_hot(data["lbl1"][0].permute(3, 0, 1, 2)).float()
-        lbl2 = one_hot(data["lbl2"][0].permute(3, 0, 1, 2)).float()
+    for data in tqdm(dataset, desc="Soft-Labelling"):
+        lbl1 = one_hot(data["lbl1"].unsqueeze(0), 14).float().squeeze(0)
+        lbl2 = one_hot(data["lbl2"].unsqueeze(0), 14).float().squeeze(0)
 
         # Create soft pseudo-label
         data["soft"] = normalize(weights[0] * lbl1 + weights[1] * lbl2, p=1, dim=0)
