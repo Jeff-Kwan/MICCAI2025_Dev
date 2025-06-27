@@ -58,7 +58,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 1 /
+                extension='.nii.gz') * 1 
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
