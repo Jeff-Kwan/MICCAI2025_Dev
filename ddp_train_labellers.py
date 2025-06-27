@@ -124,22 +124,6 @@ def main_worker(rank: int,
         dist.destroy_process_group()
 
 
-def mp_train(model,
-             train_params: dict,
-             output_dir: str,
-             comments: list):
-    gpu_count = torch.cuda.device_count()
-    try:
-        mp.spawn(
-            main_worker,
-            args=(gpu_count, model, train_params, output_dir, comments),
-            nprocs=gpu_count,
-            join=True)
-    except KeyboardInterrupt:
-        print("KeyboardInterrupt caught in main process. Terminating children...")
-        mp.get_context('spawn')._shutdown()
-
-
 def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*1 + Aladdin + Blackbean Initial training",
@@ -151,6 +135,7 @@ def get_comments(output_dir, train_params):
 
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
+    gpu_count = torch.cuda.device_count()
     architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
 
     for architecture in architectures:
@@ -168,6 +153,15 @@ if __name__ == "__main__":
             model = ViTSeg(model_params)
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
-        mp_train(model, train_params, output_dir, comments)
+        
+        try:
+            mp.spawn(
+                main_worker,
+                args=(gpu_count, model, train_params, output_dir, comments),
+                nprocs=gpu_count,
+                join=True)
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt caught in main process. Terminating children...")
+            mp.get_context('spawn')._shutdown()
     
     
