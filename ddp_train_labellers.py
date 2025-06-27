@@ -58,7 +58,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 1 \
+                extension='.nii.gz') * 1 /
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
@@ -155,11 +155,11 @@ if __name__ == "__main__":
     architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
 
     for architecture in architectures:
-        model_params = json.load(open(f"configs\labellers\{architecture}\model.json"))
-        train_params = json.load(open(f"configs\labellers\{architecture}\train.json"))
+        model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
+        train_params = json.load(open(f"configs/labellers/{architecture}/train.json"))
         output_dir = f"{architecture}"
         comments = get_comments(output_dir, train_params)
-        
+
         print(f"Starting training for {architecture}...")
         if architecture == "AttnUNet":
             model = AttnUNet(model_params)
