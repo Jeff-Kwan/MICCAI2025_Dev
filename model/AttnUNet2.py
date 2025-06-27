@@ -40,8 +40,8 @@ class ConvLayer(nn.Module):
             for _ in range(repeats)])
 
     def forward(self, x):
-        for i in range(self.repeats):
-            x = x + self.convs[i](x)
+        for conv in self.convs:
+            x = x + conv(x)
         return x
     
 class SwiGLU(nn.Module):
@@ -82,11 +82,11 @@ class TransformerLayer(nn.Module):
     def forward(self, x):
         B, C, S1, S2, S3 = x.shape
         x = x.permute(0, 2, 3, 4, 1).reshape(B, S1*S2*S3, C)
-        for i in range(self.repeats):
-            norm_x = self.mha_norms[i](x)
-            x = x + stochastic_depth(self.MHAs[i](norm_x, norm_x, norm_x, need_weights=False)[0], 
+        for norm, mha, mlp in zip(self.mha_norms, self.MHAs, self.mlps):
+            norm_x = norm(x)
+            x = x + stochastic_depth(mha(norm_x, norm_x, norm_x, need_weights=False)[0], 
                                      self.sto_depth, 'row', self.training)
-            x = x + stochastic_depth(self.mlps[i](x), self.sto_depth, 'row', self.training)
+            x = x + stochastic_depth(mlp(x), self.sto_depth, 'row', self.training)
         x = x.permute(0, 2, 1).reshape(B, C, S1, S2, S3)
         return x
 

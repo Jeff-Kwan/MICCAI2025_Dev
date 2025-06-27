@@ -1,14 +1,13 @@
 import torch
 from torch import nn
-# from torch.utils import checkpoint
 from torchvision.ops import stochastic_depth
+from torch.utils import checkpoint
 
 class LayerNormTranspose(nn.Module):
-    def __init__(self, dim: int, features: int, eps: float = 1e-6,
-                 elementwise_affine: bool = True, bias: bool = True):
+    def __init__(self, dim: int, features: int):
         super().__init__()
         self.dim = dim
-        self.norm = nn.LayerNorm(features, eps, elementwise_affine, bias)
+        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
 
     def forward(self, x):
         # (..., C, ...) -> (..., ..., C) -> norm -> restore
@@ -18,7 +17,7 @@ class LayerNormTranspose(nn.Module):
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_c: int, h_c: int, out_c: int,
+    def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
         self.convs = nn.Sequential(
@@ -27,38 +26,31 @@ class ConvBlock(nn.Module):
             nn.SiLU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
-        
-    def _inner(self, x):
+
+    def _inner_forward(self, x):
         return self.convs(x)
 
     def forward(self, x):
-        # if self.training and x.requires_grad:
-        #     return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
-        # else:
-        return self._inner(x)
+        if self.training and x.requires_grad:
+            return checkpoint.checkpoint(self._inner_forward, x, use_reentrant=False)
+        else:
+            return self._inner_forward(x)
 
 
 class ConvLayer(nn.Module):
-    def __init__(self, in_c: int, conv: int, repeats: int, bias: bool = True, 
-                 dropout: float = 0.0, sto_depth: float = 0.0):
+    def __init__(self, in_c: int, conv: int, repeats: int, bias: bool = True, dropout: float = 0.0):
         super().__init__()
-        self.sto_depth = sto_depth
         self.repeats = repeats
         self.convs = nn.ModuleList([
-            nn.ModuleList([
-                ConvBlock(in_c, conv, in_c, bias, dropout),
-                ConvBlock(in_c, conv, in_c, bias, dropout)])
-            for _ in range(repeats)
-        ])
+            ConvBlock(in_c, conv, in_c, bias, dropout)
+            for _ in range(repeats)])
 
     def forward(self, x):
-        for i in range(self.repeats):
-            x = x + stochastic_depth(self.convs[i][0](x), self.sto_depth, 'row', self.training)
-            x = x + stochastic_depth(self.convs[i][1](x), self.sto_depth, 'row', self.training)
+        for conv in self.convs:
+            x = x + conv(x)
         return x
     
 class SwiGLU(nn.Module):
-    """Channel-wise SwiGLU MLP."""
     def __init__(self, in_c: int, h_c: int, out_c: int,
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
@@ -68,15 +60,10 @@ class SwiGLU(nn.Module):
             nn.Dropout(dropout) if dropout else nn.Identity(),
             nn.Linear(h_c, out_c, bias))
         
-    def _inner(self, x):
-        x1, x2 = self.linear1(x).chunk(2, dim=-1)
-        return self.linear2(self.act(x1) * x2)
-
     def forward(self, x):
-        # if self.training and x.requires_grad:
-        #     return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
-        # else:
-        return self._inner(x)
+        x1, x2 = self.linear1(x).chunk(2, dim=-1)
+        x = self.linear2(self.act(x1) * x2)
+        return x
 
 
 class TransformerLayer(nn.Module):
@@ -101,26 +88,26 @@ class TransformerLayer(nn.Module):
     def forward(self, x):
         B, C, S1, S2, S3 = x.shape
         x = x.permute(0, 2, 3, 4, 1).reshape(B, S1*S2*S3, C)
-        for i in range(self.repeats):
-            norm_x = self.mha_norms[i](x)
-            x = x + stochastic_depth(self.MHAs[i](norm_x, norm_x, norm_x, need_weights=False)[0], 
+        for norm, mha, mlp in zip(self.mha_norms, self.MHAs, self.mlps):
+            norm_x = norm(x)
+            x = x + stochastic_depth(mha(norm_x, norm_x, norm_x, need_weights=False)[0], 
                                      self.sto_depth, 'row', self.training)
-            x = x + stochastic_depth(self.mlps[i](x), self.sto_depth, 'row', self.training)
+            x = x + stochastic_depth(mlp(x), self.sto_depth, 'row', self.training)
         x = x.permute(0, 2, 1).reshape(B, C, S1, S2, S3)
         return x
 
 
 class Encoder(nn.Module):
-    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0, sto_depth: float = 0.0):
+    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0):
         super().__init__()
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.encoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+            [nn.Sequential(
+                ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout),
+                LayerNormTranspose(1, channels[i]))
              for i in range(self.stages - 1)])
-        self.downs = nn.ModuleList([nn.Sequential(
-                LayerNormTranspose(1, channels[i], elementwise_affine=False, bias=False),
-                nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False))
+        self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
         
     def forward(self, x):
@@ -133,16 +120,16 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0, sto_depth: float = 0.0):
+    def __init__(self, channels: list, convs: list, layers: list, dropout: float = 0.0):
         super().__init__()
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.decoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth)
+            [ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                LayerNormTranspose(1, channels[i+1], elementwise_affine=False, bias=False),
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
+                LayerNormTranspose(1, channels[i]))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
@@ -168,15 +155,15 @@ class AttnUNet(nn.Module):
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
 
-        self.in_conv = nn.Conv3d(1, channels[0], 2, 2, 0, bias=False)
+        self.in_conv = nn.Conv3d(1, channels[0], (2, 2, 1), (2, 2, 1), 0, bias=False)
         
-        self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
+        self.encoder = Encoder(channels, convs, layers, dropout)
         self.bottleneck = TransformerLayer(channels[-1], convs[-1], layers[-1],
-                        bias=True, dropout=dropout, sto_depth=sto_depth)
-        self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
+                        bias=False, dropout=dropout, sto_depth=sto_depth)
+        self.decoder = Decoder(channels, convs, layers, dropout)
 
-        self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_norm = LayerNormTranspose(1, channels[0])
+        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
 
         
     def forward(self, x):
@@ -198,15 +185,15 @@ class AttnUNet(nn.Module):
 # ---------- demo ----------------------------------------------
 
 if __name__ == "__main__":
-    device = torch.device("cpu")
+    device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 256, 192, 128
+    B, S1, S2, S3 = 1, 128, 128, 64
     params = {
         "out_channels": 14,
-        "channels":     [24, 48, 96, 192],
-        "convs":        [16, 32, 64, 32],
-        "layers":       [2, 2, 2, 6],
-        "dropout":      0.1,
+        "channels":     [48, 96, 192, 512],
+        "convs":        [32, 64, 128, 32],
+        "layers":       [8, 8, 8, 12],
+        "dropout":      0.2,
         "stochastic_depth": 0.1
     }
 
@@ -223,13 +210,14 @@ if __name__ == "__main__":
         profile_memory=True,
         record_shapes=True
     ) as prof:
-        with torch.inference_mode():
-            model.eval()
-            y = model(x)
-        # with torch.autocast('cuda', torch.bfloat16):
+        # with torch.inference_mode():
+        #     model.eval()
+        #     # with torch.autocast('cuda', torch.bfloat16):
         #     y = model(x)
-        #     loss = y.sum()
-        # loss.backward()
+        with torch.autocast('cuda', torch.bfloat16):
+            y = model(x)
+            loss = y.sum()
+        loss.backward()
 
     assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         

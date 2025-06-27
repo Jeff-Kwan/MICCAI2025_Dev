@@ -102,46 +102,46 @@ def process_dataset(in_dir, out_dir, split, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (1.5, 1.5, 2.5)
+    pixdim = (0.8, 0.8, 2.5)
     data_list = [
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            "data/small/train_gt/images",
+            "data/nifti/train_gt/images",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-            "data/small/train_gt/labels",
+            "data/nifti/train_gt/labels",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-            "data/small/val/images",
+            "data/nifti/val/images",
             "image", pixdim
         ),
          (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
-            "data/small/val/labels",
+            "data/nifti/val/labels",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Hidden-Images",
-            "data/small/val/hidden",
+            "data/nifti/val/hidden",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            "data/small/train_pseudo/images",
+            "data/nifti/train_pseudo/images",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-            "data/small/train_pseudo/aladdin5",
+            "data/nifti/train_pseudo/aladdin5",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            "data/small/train_pseudo/blackbean",
+            "data/nifti/train_pseudo/blackbean",
             "label", pixdim
         )
     ]
