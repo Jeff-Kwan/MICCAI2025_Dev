@@ -45,7 +45,7 @@ class Encoder(nn.Module):
         self.encoder_convs = nn.ModuleList(
             [nn.Sequential(
                 ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth),
-                nn.GroupNorm(channels[i]//8, channels[i]))
+                nn.GroupNorm(channels[i]//16, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
@@ -69,7 +69,7 @@ class Decoder(nn.Module):
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
-                nn.GroupNorm(channels[i]//8, channels[i]))
+                nn.GroupNorm(channels[i]//16, channels[i]))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
