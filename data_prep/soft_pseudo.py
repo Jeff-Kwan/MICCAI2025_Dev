@@ -9,43 +9,6 @@ from multiprocessing import Pool, cpu_count
 
 import torch
 
-def quantize_tensor_dim0(input_tensor: torch.Tensor) -> torch.Tensor:
-    """
-    Quantizes a float tensor along dim=0 so that each slice sums to 255 (uint8),
-    while preserving the original proportions as closely as possible.
-
-    Args:
-        input_tensor: Tensor of shape (C, …) with non-negative floats.
-    Returns:
-        A uint8 tensor of the same shape, summing to 255 along dim=0.
-    """
-    # ensure float32 and compute slice sums
-    x = input_tensor.to(dtype=torch.float32)
-    sums = x.sum(dim=0, keepdim=True)
-    # guard against zero‐sum slices
-    sums = torch.where(sums == 0, torch.tensor(1.0, device=sums.device), sums)
-
-    # scale so each slice sums to 255
-    scaled = x.mul(255.0).div_(sums)
-
-    # get integer floors and residuals
-    floors = scaled.to(torch.int64)           # truncates toward zero, same as floor for ≥0
-    residuals = scaled - floors
-
-    # compute how many counts are missing per slice
-    deficits = (255 - floors.sum(dim=0, keepdim=True)).to(torch.int64)
-
-    # compute, for each element, its rank among residuals in its slice
-    # 1st argsort gives permutation of channels by descending residual;
-    # 2nd argsort inverts that to give rank positions.
-    rank = residuals.argsort(dim=0, descending=True).argsort(dim=0)
-
-    # add one to the top‐deficit channels in each slice
-    floors += (rank < deficits).to(torch.int64)
-
-    # cast back to uint8
-    return floors.to(torch.uint8)
-
 
 def get_data_files(dir1, dir2, extension=".nii.gz"):
     dir1 = Path(dir1)
@@ -57,6 +20,40 @@ def get_data_files(dir1, dir2, extension=".nii.gz"):
     if missing:
         raise ValueError(f"Missing labels: {missing}")
     return [{"lbl1": str(dir1 / n), "lbl2": str(dir2 / n), "base_name": n.removesuffix(extension)} for n in names1]
+
+
+def quantize_tensor_dim0(x: torch.Tensor) -> torch.Tensor:
+    """
+    Quantizes a float tensor along dim=0 so that each slice sums to 255 (uint8),
+    while preserving the original proportions as closely as possible.
+
+    Args:
+        x: Tensor of shape (C, …) with non-negative floats.
+    Returns:
+        A uint8 tensor of the same shape, summing to 255 along dim=0.
+    """
+    sums = x.sum(dim=0, keepdim=True)
+    # Avoid division by zero
+    sums = torch.where(sums == 0, torch.tensor(1.0, device=sums.device), sums)
+
+    # Scale to 255
+    scaled = x * 255.0 / sums
+
+    # Take integer floor
+    floors = scaled.floor()
+    residuals = scaled - floors
+
+    # Compute number of counts still needed to reach 255 in each slice
+    deficits = (255 - floors.sum(dim=0, keepdim=True))
+
+    # Rank residuals in each slice (descending)
+    rank = residuals.argsort(dim=0, descending=True).argsort(dim=0)
+
+    # Add 1 to the channels with the highest residuals until sum is 255
+    add_one = (rank < deficits).to(torch.uint8)
+    result = floors + add_one
+
+    return result.to(torch.uint8)
 
 
 # Will be initialized in each worker process
@@ -88,7 +85,7 @@ def process_item(item):
     lbl2 = one_hot(data["lbl2"].unsqueeze(0), num_classes=14).float().squeeze(0)
 
     # compute soft labels and normalize
-    data["soft"] = normalize(w0 * lbl1 + w1 * lbl2, p=1, dim=0)
+    data["soft"] = quantize_tensor_dim0(normalize(w0 * lbl1 + w1 * lbl2, p=1, dim=0))
     saver(data)
 
 

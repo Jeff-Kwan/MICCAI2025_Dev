@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 from torchvision.ops import stochastic_depth
 
 class SwiGLU(nn.Module):
