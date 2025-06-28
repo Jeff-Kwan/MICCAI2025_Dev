@@ -161,9 +161,9 @@ if __name__ == "__main__":
         "sw_overlap": 0.5,
     }
     device = torch.device("cuda:0")
-    in_dir = "./data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
-    label_dir = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"
-    out_dir = "./data/inference"
+    in_dir = r"./data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
+    label_dir = r"data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels"
+    out_dir = r"./data/inference"
     run_inference(in_dir, out_dir, model, inference_config, device)
     print("Inference completed. Now evaluating...")
 
