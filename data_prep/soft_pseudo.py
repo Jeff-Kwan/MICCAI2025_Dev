@@ -3,7 +3,6 @@ from pathlib import Path
 import monai.transforms as mt
 from monai.networks.utils import one_hot
 import torch
-from torch.nn.functional import normalize
 from tqdm import tqdm
 from multiprocessing import Pool
 
@@ -56,7 +55,7 @@ def process_item(item):
 
 
 if __name__ == "__main__":
-    workers = 160
+    workers = 128
     aladdin5 = "data/nifti/train_pseudo/aladdin5"
     blackbean = "data/nifti/train_pseudo/blackbean"
     soft_labels = "data/nifti/train_pseudo/soft_labels"
