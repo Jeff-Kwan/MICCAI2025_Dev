@@ -66,7 +66,7 @@ class DDPTrainer:
         if self.local_rank == 0:
             self.train_losses = []
             self.val_losses = []
-            self.val_metrics = {'dice': []}
+            self.val_metrics = {'dice': [], 'class_dice': []}
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
@@ -116,10 +116,11 @@ class DDPTrainer:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
-                metrics["dice"] = sum(metrics["class_dice"]) / len(metrics["class_dice"])
+                metrics["dice"] = float(sum(metrics["class_dice"]) / len(metrics["class_dice"]))
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
+                self.val_metrics['class_dice'].append(metrics['class_dice'])
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"Train Loss: {self.train_losses[-1]:.5f} | "
                       f"Val Loss: {val_loss:.5f} | "
@@ -157,7 +158,7 @@ class DDPTrainer:
                     predictor=lambda x: self.model(x),
                     overlap=self.train_params.get('sw_overlap', 0.25),
                     mode="gaussian",
-                    # buffer_steps=1
+                    buffer_steps=None
                 )
 
                 loss = self.criterion(aggregated, masks)
@@ -178,7 +179,8 @@ class DDPTrainer:
             dist.all_reduce(sample_count, op=dist.ReduceOp.SUM)
 
         total_loss = loss_sum.item() / max(sample_count.item(), 1)
-        total_dice = list(self.dice_metric.aggregate().cpu().numpy().squeeze())
+        total_dice = list(self.dice_metric.aggregate().cpu().numpy())
+        total_dice = [float(d) for d in total_dice]  # Convert to float for JSON serialization
         return total_loss, {'class_dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
