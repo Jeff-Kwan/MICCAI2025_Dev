@@ -58,15 +58,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz'),# * 2
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/nifti/train_pseudo/aladdin5",
-            #     extension='.nii.gz') 
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/nifti/train_pseudo/blackbean",
-            #     extension='.nii.gz'),
+                extension='.nii.gz') * 2
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/aladdin5",
+                extension='.nii.gz') 
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/blackbean",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -106,7 +106,6 @@ def main_worker(rank: int,
 
 
         # Initialize trainer and start
-        train_params["epochs"] = 1
         trainer = DDPTrainer(
             model=model,
             optimizer=optimizer,
