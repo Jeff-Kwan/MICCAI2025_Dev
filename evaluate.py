@@ -48,7 +48,7 @@ def process_pair(pair):
 
 if __name__ == "__main__":
     # gather your list of dicts just like before
-    matched_files = match_pred_label("./docker/outputs", "./docker/labels")
+    matched_files = match_pred_label(r"./data/inference", r"data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels")
     
     # choose number of workers (e.g. number of cores)
     n_workers = 50
@@ -62,16 +62,15 @@ if __name__ == "__main__":
     surf_array = np.stack(surf_list, axis=0)      # same shape
     
     # per-class means
-    class_dices = np.nanmean(dice_array, axis=0)  # mean across samples
-    class_surfs = np.nanmean(surf_array, axis=0)  # mean across samples
-
-    # overall means
-    mean_dice = class_dices.mean()
-    mean_surf = class_surfs.mean()
+    class_dices = np.nanmean(dice_array, axis=0).squeeze()
+    class_surfs = np.nanmean(surf_array, axis=0).squeeze()
+    mean_dice   = class_dices.mean()
+    mean_surf   = class_surfs.mean()
 
     print("Per-class Dices:", class_dices)
     print("Per-class Surface Dices:", class_surfs)
     print("Mean Dice:", mean_dice, "|||", "Mean Surface Dice:", mean_surf)
 
-    w = (1.01 - class_dices) / (1.01 - class_dices).mean()
-    print("Class weights:", [round(float(x), 3) for x in w])
+    weights = list((1.01 - class_dices) / (1.01 - class_dices).mean())
+    print("Class weights:", [round(w, 3) for w in weights])
+
