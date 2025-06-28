@@ -16,19 +16,11 @@ class ConvBlock(nn.Module):
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=bias))
-        self.SE = nn.Sequential(
-            nn.AdaptiveAvgPool3d(1),
-            nn.LayerNorm([in_c, 1, 1, 1]),
-            nn.Conv3d(in_c, in_c//4, 1, 1, 0),
-            nn.GELU(),
-            nn.Conv3d(in_c//4, out_c, 1, 1, 0),
-            nn.Softplus())
         
     def forward(self, x):
-        se = self.SE(x)
         x = self.in_conv(x)
         x = torch.cat([x + self.conv1(x), x + self.conv2(x)], dim=1)
-        return self.out_conv(x) * se
+        return self.out_conv(x)
 
 
 class ConvLayer(nn.Module):
@@ -111,7 +103,7 @@ class ConvSeg(nn.Module):
                                     bias=False, dropout=dropout, sto_depth=sto_depth)
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
+        self.out_norm = nn.GroupNorm(channels[0], channels[0], affine=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
 
         
