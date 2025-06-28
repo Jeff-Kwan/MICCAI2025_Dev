@@ -50,18 +50,19 @@ def get_1d_sinusoidal_pos_embed(length: int, dim: int, device: torch.device):
     """
     Generate a 1D sinusoidal positional embedding table of shape (length, dim).
     """
-    # each pair of channels uses one sine and one cosine, so dim must be even
-    if dim % 2 != 0:
-        raise ValueError("Dimension for sinusoidal embed must be even.")
-    position = torch.arange(length, dtype=torch.float, device=device).unsqueeze(1)  # (L,1)
-    div_term = torch.exp(
-        torch.arange(0, dim, 2, dtype=torch.float, device=device)
-        * -(torch.log(torch.tensor(10000.0)) / dim)
-    )  # (dim/2,)
-    pe = torch.zeros(length, dim, device=device)
-    pe[:, 0::2] = torch.sin(position * div_term)
-    pe[:, 1::2] = torch.cos(position * div_term)
-    return pe.unsqueeze(0)
+    with torch.no_grad():
+        # each pair of channels uses one sine and one cosine, so dim must be even
+        if dim % 2 != 0:
+            raise ValueError("Dimension for sinusoidal embed must be even.")
+        position = torch.arange(length, dtype=torch.float, device=device).unsqueeze(1)  # (L,1)
+        div_term = torch.exp(
+            torch.arange(0, dim, 2, dtype=torch.float, device=device)
+            * -(torch.log(torch.tensor(10000.0)) / dim)
+        )  # (dim/2,)
+        pe = torch.zeros(length, dim, device=device)
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        return pe.unsqueeze(0)
 
 
 class ViTSeg(nn.Module):

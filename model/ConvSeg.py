@@ -1,53 +1,33 @@
 import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
-# from torch.utils import checkpoint
-
-class LayerNormTranspose(nn.Module):
-    def __init__(self, dim: int, features: int):
-        super().__init__()
-        self.dim = dim
-        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
-
-    def forward(self, x):
-        # (..., C, ...) -> (..., ..., C) -> norm -> restore
-        x = x.transpose(self.dim, -1)
-        x = self.norm(x)
-        return x.transpose(self.dim, -1)
 
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Sequential(
-            nn.GroupNorm(in_c, in_c),
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias))
+        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
         self.conv1 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
         self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
-            nn.SiLU(),
+            nn.GroupNorm(h_c*2, h_c*2),
+            nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=bias))
-        self.SnE = nn.Sequential(
+        self.SE = nn.Sequential(
             nn.AdaptiveAvgPool3d(1),
             nn.LayerNorm([in_c, 1, 1, 1]),
-            nn.Conv3d(in_c, h_c//2, 1, 1, 0, bias=bias),
-            nn.SiLU(),
-            nn.Conv3d(h_c//2, out_c, 1, 1, 0, bias=bias),
-            nn.Sigmoid())
-
-    def _inner_forward(self, x):
-        sne = self.SnE(x)
-        x = self.in_conv(x)
-        x = torch.cat([self.conv1(x), self.conv2(x)], dim=1)
-        return self.out_conv(x) * sne
-
+            nn.Conv3d(in_c, in_c//4, 1, 1, 0),
+            nn.GELU(),
+            nn.Conv3d(in_c//4, out_c, 1, 1, 0),
+            nn.Softplus())
+        
     def forward(self, x):
-        # if self.training and x.requires_grad:
-        #     return checkpoint.checkpoint(self._inner_forward, x, use_reentrant=False)
-        # else:
-        return self._inner_forward(x)
+        se = self.SE(x)
+        x = self.in_conv(x)
+        x = torch.cat([x + self.conv1(x), x + self.conv2(x)], dim=1)
+        return self.out_conv(x) * se
 
 
 class ConvLayer(nn.Module):
@@ -73,7 +53,7 @@ class Encoder(nn.Module):
         self.encoder_convs = nn.ModuleList(
             [nn.Sequential(
                 ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, sto_depth=sto_depth),
-                LayerNormTranspose(1, channels[i]))
+                nn.GroupNorm(1, channels[i], affine=False))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
@@ -97,7 +77,7 @@ class Decoder(nn.Module):
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
-                LayerNormTranspose(1, channels[i]))
+                nn.GroupNorm(1, channels[i], affine=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
@@ -130,7 +110,7 @@ class ConvSeg(nn.Module):
                                     bias=False, dropout=dropout, sto_depth=sto_depth)
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = LayerNormTranspose(1, channels[0])
+        self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
         self.out_conv = nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
 
         
