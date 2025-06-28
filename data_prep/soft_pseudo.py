@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import monai.transforms as mt
-from monai.networks.utils import one_hot
+from torch.nn import functional as F
 import torch
 from tqdm import tqdm
 from multiprocessing import Pool
@@ -28,7 +28,7 @@ def init_worker(weights, soft_labels_dir, extension):
 
     load_transform = mt.Compose([
         mt.LoadImaged(["lbl1", "lbl2"], ensure_channel_first=True),
-        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.uint8, track_meta=True),
+        mt.EnsureTyped(["lbl1", "lbl2"], dtype=torch.long, track_meta=True),
     ])
     saver = mt.SaveImaged(
         keys=["soft"],
@@ -46,11 +46,15 @@ def init_worker(weights, soft_labels_dir, extension):
 
 def process_item(item):
     data = load_transform(item)
-    lbl1 = one_hot(data["lbl1"].unsqueeze(0), num_classes=14).float().squeeze(0)
-    lbl2 = one_hot(data["lbl2"].unsqueeze(0), num_classes=14).float().squeeze(0)
-
-    # compute soft labels and normalize
-    data["soft"] = w1 * lbl1 + w2 * lbl2
+    # strip off the channel dim and make sure long for one_hot
+    lbl1 = data["lbl1"].squeeze(0)
+    lbl2 = data["lbl2"].squeeze(0)
+    # one-hot → [H,W,(D),14], permute → [14,H,W,(D)], uint8
+    oh1 = F.one_hot(lbl1, num_classes=14).permute(3,0,1,2).to(torch.uint8)
+    oh2 = F.one_hot(lbl2, num_classes=14).permute(3,0,1,2).to(torch.uint8)
+    # integer mixing
+    soft = oh1.mul(w1) + oh2.mul(w2)
+    data["soft"] = soft
     saver(data)
 
 
