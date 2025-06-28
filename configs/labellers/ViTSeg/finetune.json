@@ -6,7 +6,7 @@
 "weight_decay": 5e-3,
 "num_classes": 14,
 "shape": [192, 192, 96],
-"weights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+"weights": [0.27, 0.59, 0.354, 1.015, 0.439, 0.792, 1.495, 1.64, 2.104, 1.382, 0.74, 1.6, 0.578],
 "compile": false,
 "autocast": true,
 "sw_batch_size": 2,
