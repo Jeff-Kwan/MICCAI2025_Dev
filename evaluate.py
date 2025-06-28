@@ -37,7 +37,7 @@ def process_pair(pair):
     label = one_hot(data["label"].unsqueeze(0), num_classes=14)
     # compute per-class dice (exclude background) and surface-dice
     dice_vals = mm.compute_dice(
-        y_pred=pred, y=label, include_background=False
+        y_pred=pred, y=label, include_background=False, ignore_empty=False
     ).numpy()
     surf_vals = mm.compute_surface_dice(
         y_pred=pred, y=label,
@@ -71,5 +71,7 @@ if __name__ == "__main__":
 
     print("Per-class Dices:", class_dices)
     print("Per-class Surface Dices:", class_surfs)
-    print("Mean Dice:", mean_dice)
-    print("Mean Surface Dice:", mean_surf)
+    print("Mean Dice:", mean_dice, "|||", "Mean Surface Dice:", mean_surf)
+
+    w = (1.01 - class_dices) / (1.01 - class_dices).mean()
+    print("Class weights:", [round(float(x), 3) for x in w])

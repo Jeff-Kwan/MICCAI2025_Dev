@@ -60,7 +60,9 @@ class DDPTrainer:
 
         # Only rank 0 writes metrics
         self.num_classes = train_params['num_classes']
-        self.dice_metric = mm.DiceMetric(include_background=False)
+        self.dice_metric = mm.DiceMetric(include_background=False, 
+                                         ignore_empty=False,
+                                         reduction='mean_batch')
         if self.local_rank == 0:
             self.train_losses = []
             self.val_losses = []
@@ -114,6 +116,7 @@ class DDPTrainer:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
+                metrics["dice"] = sum(metrics["class_dice"]) / len(metrics["class_dice"])
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
@@ -175,8 +178,8 @@ class DDPTrainer:
             dist.all_reduce(sample_count, op=dist.ReduceOp.SUM)
 
         total_loss = loss_sum.item() / max(sample_count.item(), 1)
-        total_dice = float(self.dice_metric.aggregate())
-        return total_loss, {'dice': total_dice}
+        total_dice = list(self.dice_metric.aggregate().cpu().numpy().squeeze())
+        return total_loss, {'class_dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
         # Save last
