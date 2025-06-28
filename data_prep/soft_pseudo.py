@@ -59,7 +59,7 @@ def process_item(item):
 
 
 if __name__ == "__main__":
-    workers = 128
+    workers = 64
     aladdin5 = "data/nifti/train_pseudo/aladdin5"
     blackbean = "data/nifti/train_pseudo/blackbean"
     soft_labels = "data/nifti/train_pseudo/soft_labels"
