@@ -93,6 +93,7 @@ def process_item(item):
 
 
 if __name__ == "__main__":
+    workers = 160
     aladdin5 = "data/nifti/train_pseudo/aladdin5"
     blackbean = "data/nifti/train_pseudo/blackbean"
     soft_labels = "data/nifti/train_pseudo/soft_labels"
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     files = get_data_files(aladdin5, blackbean, extension)
     # spawn worker pool
     with Pool(
-        processes=cpu_count(),
+        processes=workers,
         initializer=init_worker,
         initargs=(weights, soft_labels, extension)
     ) as pool:
