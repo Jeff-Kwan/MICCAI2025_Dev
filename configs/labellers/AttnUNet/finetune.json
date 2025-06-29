@@ -1,7 +1,7 @@
 {
 "epochs": 10,
 "batch_size": 1,
-"aggregation": 1,
+"aggregation": 2,
 "learning_rate": 1e-4,
 "weight_decay": 5e-3,
 "num_classes": 14,
@@ -12,8 +12,8 @@
 "sw_batch_size": 2,
 "sw_overlap": 0.25,
 "data_augmentation": {
-    "spatial": [3, 3, 1, 1, 1],
-    "intensity": [3, 2, 1, 1, 1, 1, 1],  
-    "coarse": [1, 0, 0]  
+    "spatial": [2, 3, 1, 1, 1],
+    "intensity": [2, 2, 1, 1, 1, 1, 1],  
+    "coarse": [4, 1, 1]  
     }
 }
