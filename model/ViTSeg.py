@@ -2,12 +2,12 @@ import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
 
-class SwiGLU(nn.Module):
+class MishGLU(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int,
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
         self.linear1 = nn.Linear(in_c, h_c * 2, bias)
-        self.act = nn.SiLU()
+        self.act = nn.Mish()
         self.linear2 = nn.Sequential(
             nn.Dropout(dropout) if dropout else nn.Identity(),
             nn.Linear(h_c, out_c, bias))
@@ -25,15 +25,15 @@ class TransformerLayer(nn.Module):
         self.sto_depth = sto_depth
         self.repeats = repeats
         self.mha_norms = nn.ModuleList([
-            nn.LayerNorm(in_c) for _ in range(repeats)])
+            nn.RMSNorm(in_c) for _ in range(repeats)])
         self.MHAs = nn.ModuleList([
             nn.MultiheadAttention(in_c, in_c//head_dim, dropout=dropout, 
                         batch_first=True, bias=bias)
             for _ in range(repeats)])
         self.mlps = nn.ModuleList([
             nn.Sequential(
-                nn.LayerNorm(in_c),
-                SwiGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
+                nn.RMSNorm(in_c),
+                MishGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -61,7 +61,7 @@ def get_1d_sinusoidal_pos_embed(length: int, dim: int, device: torch.device):
         pe = torch.zeros(length, dim, device=device)
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        return pe.unsqueeze(0)
+    return pe.unsqueeze(0).requires_grad_(True)
 
 
 class ViTSeg(nn.Module):
@@ -77,14 +77,15 @@ class ViTSeg(nn.Module):
         self.sto_depth = p['sto_depth']
 
         self.patch_embed = nn.Conv3d(self.in_c, self.embed_dim, (8, 8, 8), (8, 8, 8), 0, bias=False)
-        self.patch_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=False, bias=False)
+
+        self.patch_norm = nn.RMSNorm(self.embed_dim, elementwise_affine=False)
         self.position_embed = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.layers = nn.ModuleList([
             TransformerLayer(self.embed_dim, self.head_dim, self.layers, bias=True,
                              dropout=self.dropout, sto_depth=self.sto_depth)
             for _ in range(self.layers)
         ])
-        self.out_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=False, bias=False)
+        self.out_norm = nn.RMSNorm(self.embed_dim, elementwise_affine=False)
         self.out_conv = nn.Sequential(
             nn.ConvTranspose3d(self.embed_dim, self.out_c, (2, 2, 4), (2, 2, 4), 0, bias=False),
             nn.Upsample(scale_factor=(4, 4, 2), mode='trilinear', align_corners=False))
@@ -123,7 +124,7 @@ if __name__ == "__main__":
         "out_channels": 14,
         "embed_dim": 512,
         "layers": 8,
-        "head_dim": 64,
+        "head_dim": 32,
         "dropout": 0.2,
         "sto_depth": 0.1
     }
