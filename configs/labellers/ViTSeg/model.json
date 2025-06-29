@@ -4,6 +4,6 @@
 "embed_dim": 512,
 "layers": 8,
 "head_dim": 64,
-"dropout": 0.2,
+"dropout": 0.1,
 "sto_depth": 0.1
 }

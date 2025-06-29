@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
     # architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
-    architectures = ["ConvSeg"]
+    architectures = ["ViTSeg"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
