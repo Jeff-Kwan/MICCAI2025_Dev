@@ -1,9 +1,9 @@
 {
-"epochs": 10,
+"epochs": 20,
 "batch_size": 1,
 "aggregation": 2,
-"learning_rate": 1e-4,
-"weight_decay": 5e-3,
+"learning_rate": 3e-5,
+"weight_decay": 2e-3,
 "num_classes": 14,
 "shape": [256, 256, 112],
 "weights": [0.288, 0.78, 0.303, 0.838, 0.416, 0.794, 1.479, 1.619, 2.164, 1.332, 0.768, 1.339, 0.879],
