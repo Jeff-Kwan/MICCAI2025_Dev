@@ -48,6 +48,7 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms):
     return mt.Compose([
+        mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
         mt.Invertd(
             keys="pred",
@@ -184,7 +185,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet
     model_config    = json.load(open("configs/labellers/AttnUNet/model.json", "r"))
-    model_path      = "output/2025-06-28/15-24-AttnUNet/model.pth"
+    model_path      = "output/Labeller/Base-AttnUNet/model.pth"
     autocast        = True
     num_classes     = 14
 
@@ -193,7 +194,7 @@ if __name__ == "__main__":
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [256, 256, 112],
         "sw_batch_size": 2,
-        "sw_overlap": 0.25,
+        "sw_overlap": 0.75,
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"

@@ -48,6 +48,13 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms):
     return mt.Compose([
+        mt.MeanEnsembled(
+            keys=["AttnUNet", "ConvSeg", "ViTSeg"],
+            output_key="pred",
+            weights=[1, 1, 1]
+            ),
+        mt.DeleteItemsd(keys=["AttnUNet", "ConvSeg", "ViTSeg"]),
+        mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
         mt.Invertd(
             keys="pred",
@@ -70,20 +77,17 @@ def cpu_post(pair, data, inference_config, num_classes):
     inverter = get_post_transforms(spatial_tf)
 
     # Prepare data for inversion
-    data["pred"] = data["AttnUNet"] + \
-                data["ConvSeg"] + \
-                data["ViTSeg"]
     pred_inv = inverter(data)["pred"].unsqueeze(0)
 
     # Load and one-hot label
     lbl_data = LoadImaged(["label"], ensure_channel_first=True)({"label": pair["label"]})
     label = lbl_data["label"].unsqueeze(0)
 
-    # pred_oh = one_hot(pred_inv, num_classes=num_classes)
-    # lbl_oh  = one_hot(label, num_classes=num_classes)
+    pred_oh = one_hot(pred_inv, num_classes=num_classes)
+    lbl_oh  = one_hot(label, num_classes=num_classes)
 
     dice_vals = compute_dice(
-        y_pred=pred_inv, y=label,
+        y_pred=pred_oh, y=lbl_oh,
         include_background=False, ignore_empty=False
     ).numpy()
     # surf_vals = compute_surface_dice(
@@ -122,12 +126,12 @@ def run_and_score(
                     with torch.autocast("cuda", dtype):
                         data[key] = sliding_window_inference(
                             img,
-                            roi_size=models["shape"],
+                            roi_size=models[key]["shape"],
                             sw_batch_size=inference_config.get("sw_batch_size", 1),
-                            predictor=models[key],
+                            predictor=models[key]["model"],
                             overlap=inference_config.get("sw_overlap", 0.25),
                             mode="gaussian",
-                        ).cpu()
+                        ).cpu().squeeze(0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
@@ -157,12 +161,12 @@ def worker(
     device = torch.device(f"cuda:{gpu_id}")
 
     # Build & load model
-    models = {}
+    models = {key: {} for key in model_init.keys()}
     for key in model_init.keys():
-        models[key] = model_init[key]["class"](model_init[key]["config"])
+        models[key]["model"] = model_init[key]["class"](model_init[key]["config"])
         state = torch.load(model_init[key]["path"], map_location=device, weights_only=True)
-        models[key].load_state_dict(state)
-        models[key].to(device).eval()
+        models[key]["model"].load_state_dict(state)
+        models[key]["model"].to(device).eval()
         models[key]["shape"] = model_init[key]["shape"]
 
     # Run inference + CPU post
@@ -222,7 +226,7 @@ if __name__ == "__main__":
     metrics = manager.list()
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 64
+    total_cpus = 48
     cpus_per_gpu = max(1, total_cpus // ngpus)
 
     # Spawn one process per GPU
@@ -262,5 +266,5 @@ if __name__ == "__main__":
     print("Mean Dice:", mean_dice)
     # print("Mean Surface Dice:", mean_surf)
 
-    weights = list((1.01 - class_dices) / (1.01 - class_dices).mean())
-    print("Class weights:", [round(w, 3) for w in weights])
+    # weights = list((1.01 - class_dices) / (1.01 - class_dices).mean())
+    # print("Class weights:", [round(w, 3) for w in weights])

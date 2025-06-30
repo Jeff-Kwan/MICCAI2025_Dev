@@ -129,9 +129,9 @@ def run_inference(
                         data[key] = F.softmax(
                         sliding_window_inference(
                             img,
-                            roi_size=models["shape"],
+                            roi_size=models[key]["shape"],
                             sw_batch_size=inference_config.get("sw_batch_size", 1),
-                            predictor=models[key],
+                            predictor=models[key]["model"],
                             overlap=inference_config.get("sw_overlap", 0.25),
                             mode="gaussian",
                         ), dim=1).cpu()
@@ -164,12 +164,12 @@ def worker(
     device = torch.device(f"cuda:{gpu_id}")
 
     # Build & load model
-    models = {}
+    models = {key: {} for key in model_init.keys()}
     for key in model_init.keys():
-        models[key] = model_init[key]["class"](model_init[key]["config"])
+        models[key]["model"] = model_init[key]["class"](model_init[key]["config"])
         state = torch.load(model_init[key]["path"], map_location=device, weights_only=True)
-        models[key].load_state_dict(state)
-        models[key].to(device).eval()
+        models[key]["model"].load_state_dict(state)
+        models[key]["model"].to(device).eval()
         models[key]["shape"] = model_init[key]["shape"]
 
     # Run inference + CPU post
