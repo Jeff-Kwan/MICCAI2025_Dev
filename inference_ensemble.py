@@ -54,12 +54,9 @@ def get_post_transforms(pre_transforms):
         mt.MeanEnsembled(
             keys=["AttnUNet", "ConvSeg", "ViTSeg"],
             output_key="pred",
-            weights=torch.tensor([[1.0, 1.002, 1.003, 1.008, 1.039, 1.013, 1.017, 1.039, 
-                                   1.048, 0.995, 1.056, 1.015, 1.057, 0.996], 
-                                   [1.0, 1.007, 1.004, 1.009, 1.025, 1.009, 1.023, 1.097, 
-                                    1.111, 1.309, 1.036, 1.002, 1.044, 0.996], 
-                                    [1.0, 0.991, 0.993, 0.983, 0.935, 0.977, 0.959, 0.864, 
-                                     0.841, 0.696, 0.909, 0.983, 0.899, 1.008]]).view(3, 14, 1, 1, 1)
+            weights=torch.tensor([[1/3, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0,],
+                    [1/3, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,],
+                    [1/3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,]]).view(3, 14, 1, 1, 1)
             ),
         mt.DeleteItemsd(keys=["AttnUNet", "ConvSeg", "ViTSeg"]),
         mt.AsDiscreted(keys="pred", argmax=True),
