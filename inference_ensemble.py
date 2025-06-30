@@ -1,5 +1,8 @@
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
 import json
 import torch
+import torch.nn.functional as F
 import monai.transforms as mt
 from monai.inferers import sliding_window_inference
 from monai.transforms import LoadImaged
@@ -16,7 +19,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_CO
 from model.AttnUNet import AttnUNet
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
-from model.AttnUNet2 import AttnUNet as AttnUNet2
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
@@ -48,13 +50,18 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms):
     return mt.Compose([
+        mt.GaussianSmoothd(keys=["AttnUNet", "ConvSeg", "ViTSeg"], sigma=0.5),
         mt.MeanEnsembled(
             keys=["AttnUNet", "ConvSeg", "ViTSeg"],
             output_key="pred",
-            weights=[1, 1, 1]
+            weights=torch.tensor([[1.0, 1.002, 1.003, 1.008, 1.039, 1.013, 1.017, 1.039, 
+                                   1.048, 0.995, 1.056, 1.015, 1.057, 0.996], 
+                                   [1.0, 1.007, 1.004, 1.009, 1.025, 1.009, 1.023, 1.097, 
+                                    1.111, 1.309, 1.036, 1.002, 1.044, 0.996], 
+                                    [1.0, 0.991, 0.993, 0.983, 0.935, 0.977, 0.959, 0.864, 
+                                     0.841, 0.696, 0.909, 0.983, 0.899, 1.008]]).view(3, 14, 1, 1, 1)
             ),
         mt.DeleteItemsd(keys=["AttnUNet", "ConvSeg", "ViTSeg"]),
-        mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
         mt.Invertd(
             keys="pred",
@@ -124,14 +131,14 @@ def run_and_score(
                 # GPU inference
                 for key in models.keys():
                     with torch.autocast("cuda", dtype):
-                        data[key] = sliding_window_inference(
+                        data[key] = F.log_softmax(sliding_window_inference(
                             img,
                             roi_size=models[key]["shape"],
                             sw_batch_size=inference_config.get("sw_batch_size", 1),
                             predictor=models[key]["model"],
                             overlap=inference_config.get("sw_overlap", 0.25),
                             mode="gaussian",
-                        ).cpu().squeeze(0)
+                        ).cpu().squeeze(0), dim=0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
@@ -208,7 +215,7 @@ if __name__ == "__main__":
         "pixdim": [0.8, 0.8, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "sw_batch_size": 2,
-        "sw_overlap": 0.25,
+        "sw_overlap": 0.5,
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"

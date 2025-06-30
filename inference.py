@@ -1,3 +1,5 @@
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
 import json
 import torch
 import monai.transforms as mt
@@ -183,18 +185,18 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = AttnUNet
-    model_config    = json.load(open("configs/labellers/AttnUNet/model.json", "r"))
-    model_path      = "output/Labeller/Base-AttnUNet/model.pth"
+    model_class     = ViTSeg
+    model_config    = json.load(open("configs/labellers/ViTSeg/model.json", "r"))
+    model_path      = "output/Labeller/Base-ViTSeg/model.pth"
     autocast        = True
     num_classes     = 14
 
     inference_config = {
         "pixdim": [0.8, 0.8, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
-        "shape": [256, 256, 112],
+        "shape": [192, 192, 96],
         "sw_batch_size": 2,
-        "sw_overlap": 0.75,
+        "sw_overlap": 0.5,
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
