@@ -3,7 +3,7 @@
 "batch_size": 1,
 "aggregation": 1,
 "learning_rate": 1e-5,
-"weight_decay": 1e-4,
+"weight_decay": 1e-5,
 "num_classes": 14,
 "shape": [224, 224, 128],
 "weights": [0.3, 0.856, 0.336, 0.973, 0.477, 0.859, 1.422, 1.616, 1.418, 1.535, 0.825, 1.484, 0.898],
