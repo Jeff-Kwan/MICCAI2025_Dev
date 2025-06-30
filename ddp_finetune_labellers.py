@@ -58,15 +58,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 40
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz') 
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
-                extension='.nii.gz'),
+                extension='.nii.gz') * 20,
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/aladdin5",
+            #     extension='.nii.gz') 
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/blackbean",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -126,7 +126,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT * 40 + Aladdin + Blackbean Fine Tuning",
+        f"{output_dir} - GT*20 Fine Tuning",
         f"{train_params['shape']} shape", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
