@@ -1,11 +1,11 @@
 {
 "epochs": 100,
 "batch_size": 1,
-"aggregation": 1,
+"aggregation": 2,
 "learning_rate": 3e-4,
 "weight_decay": 1e-2,
 "num_classes": 14,
-"shape": [160, 160, 80],
+"shape": [128, 128, 80],
 "compile": false,
 "autocast": true,
 "sw_batch_size": 2,
