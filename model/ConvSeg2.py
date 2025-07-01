@@ -128,7 +128,7 @@ class ConvSeg2(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 128, 128, 128
+    B, S1, S2, S3 = 1, 160, 160, 80
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
