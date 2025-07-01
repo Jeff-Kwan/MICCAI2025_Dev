@@ -5,10 +5,29 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
+class SafeCropForegroundd(mt.MapTransform):
+    def __init__(self, keys, source_key, shape, margin=0):
+        super().__init__(keys)
+        self.source_key = source_key
+        self.cropforeground = mt.CropForegroundd(keys=keys, source_key=source_key,
+                                    margin=margin, allow_smaller=True, lazy=True)
+        self.randcrop = mt.RandSpatialCropd(keys=keys, roi_size=shape, lazy=True)
+        
+
+    def __call__(self, data):
+        if data.get(self.source_key).any():  # Check if mask has any non-zero values
+            self.cropforeground(data)
+        return self.randcrop(data)
+
 def get_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            # SafeCropForegroundd(
+            #     keys=["image", "label"],
+            #     source_key="label",
+            #     shape=shape,
+            #     margin=8),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,

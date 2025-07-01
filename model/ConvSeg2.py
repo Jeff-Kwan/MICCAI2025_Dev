@@ -10,16 +10,17 @@ class ConvBlock(nn.Module):
         self.in_conv = nn.Sequential(
             nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
             nn.GroupNorm(h_c, h_c))
-        self.conv1 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
-        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
+        self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
+        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
+        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c*3, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
         
     def forward(self, x):
         x = self.in_conv(x)
-        x = torch.cat([x, self.conv1(x), self.conv2(x)], dim=1)
+        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
         return self.out_conv(x)
 
 
