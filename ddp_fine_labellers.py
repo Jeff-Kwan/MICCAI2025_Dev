@@ -59,7 +59,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 8
+                extension='.nii.gz') * 16
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
@@ -127,7 +127,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier",
+        f"{output_dir} - GT*16 + Aladdin + Blackbean - Loss modifier",
         f"{train_params['shape']} shape -  fine shape prediction, crop by label class (0.001 background avoid errors)", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
