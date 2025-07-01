@@ -83,7 +83,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=48,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -127,8 +127,8 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*16 + Aladdin + Blackbean",
-        f"{train_params['shape']} shape", 
+        f"{output_dir} - GT*16 + Aladdin + Blackbean - Loss modifier",
+        f"{train_params['shape']} shape -  fine shape prediction?", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
