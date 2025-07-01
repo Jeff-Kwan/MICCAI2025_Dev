@@ -59,7 +59,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 16
+                extension='.nii.gz') * 8
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/aladdin5",
@@ -83,16 +83,16 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=48,
-            pin_memory=True,
+            num_workers=42,
+            pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=4,
+            num_workers=2,
             pin_memory=False,
-            persistent_workers=False)
+            persistent_workers=True)
 
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
@@ -127,8 +127,8 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*16 + Aladdin + Blackbean - Loss modifier",
-        f"{train_params['shape']} shape -  fine shape prediction?", 
+        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier",
+        f"{train_params['shape']} shape -  fine shape prediction, crop by label class (0.001 background avoid errors)", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]

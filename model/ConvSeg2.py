@@ -7,18 +7,19 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
+        self.in_conv = nn.Sequential(
+            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
+            nn.GroupNorm(h_c, h_c))
         self.conv1 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
         self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
-            nn.GroupNorm(h_c*2, h_c*2),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c*3, out_c, 1, 1, 0, bias=bias))
         
     def forward(self, x):
         x = self.in_conv(x)
-        x = torch.cat([x + self.conv1(x), x + self.conv2(x)], dim=1)
+        x = torch.cat([x, self.conv1(x), self.conv2(x)], dim=1)
         return self.out_conv(x)
 
 
@@ -127,10 +128,10 @@ class ConvSeg2(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 96, 96, 96
+    B, S1, S2, S3 = 1, 128, 128, 128
     params = {
         "out_channels": 14,
-        "channels":     [24, 48, 96, 192],
+        "channels":     [32, 64, 128, 256],
         "convs":        [16, 32, 64, 128],
         "layers":       [4, 4, 4, 8],
         "dropout":      0.1,
