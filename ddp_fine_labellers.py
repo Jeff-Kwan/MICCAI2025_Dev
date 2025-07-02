@@ -83,7 +83,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=42,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -127,8 +127,8 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier",
-        f"{train_params['shape']} shape -  fine shape prediction, crop by label class (0.001 background avoid errors)", 
+        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier by intial training dice error",
+        f"{train_params['shape']} shape - Cubic interpolation; fine shape prediction, 128 margin (safe) foreground crop", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
