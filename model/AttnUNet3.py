@@ -161,7 +161,7 @@ class AttnUNet3(nn.Module):
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
         self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
-        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
+        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=True)
 
         
     def forward(self, x):
