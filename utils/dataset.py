@@ -27,7 +27,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                 keys=["image", "label"],
                 source_key="label",
                 shape=shape,
-                margin=24),
+                margin=16),
             # mt.RandSpatialCropd(
             #     keys=["image", "label"], 
             #     roi_size=shape,

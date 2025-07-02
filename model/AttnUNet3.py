@@ -2,37 +2,23 @@ import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
 
-class LayerNormTranspose(nn.Module):
-    def __init__(self, dim: int, features: int):
-        super().__init__()
-        self.dim = dim
-        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
-
-    def forward(self, x):
-        # (..., C, ...) -> (..., ..., C) -> norm -> restore
-        x = x.transpose(self.dim, -1)
-        x = self.norm(x)
-        return x.transpose(self.dim, -1)
-
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Sequential(
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c, h_c))
-        self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
-        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias)
-        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias)
+        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
+        self.conv1 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
+        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*2, h_c*2),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=bias))
         
     def forward(self, x):
         x = self.in_conv(x)
-        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
+        x = torch.cat([x + self.conv1(x), x + self.conv2(x)], dim=1)
         return self.out_conv(x)
 
 
@@ -107,7 +93,7 @@ class Encoder(nn.Module):
             [nn.Sequential(
                 ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, 
                           sto_depth=sto_depth * (i+1) / self.stages),
-                LayerNormTranspose(1, channels[i]))
+                nn.GroupNorm(channels[i]//8, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
@@ -132,7 +118,7 @@ class Decoder(nn.Module):
                        sto_depth=sto_depth * (i+1) / self.stages)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                LayerNormTranspose(1, channels[i+1]),
+                nn.GroupNorm(channels[i+1]//8, channels[i+1]),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
@@ -166,7 +152,7 @@ class AttnUNet3(nn.Module):
                         bias=False, dropout=dropout, sto_depth=sto_depth)
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = LayerNormTranspose(1, channels[0])
+        self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
         self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
 
         
@@ -214,14 +200,14 @@ if __name__ == "__main__":
         profile_memory=True,
         record_shapes=True
     ) as prof:
-        with torch.inference_mode():
-            model.eval()
-            # with torch.autocast('cuda', torch.bfloat16):
-            y = model(x)
-        # with torch.autocast('cuda', torch.bfloat16):
+        # with torch.inference_mode():
+        #     model.eval()
+        #     # with torch.autocast('cuda', torch.bfloat16):
         #     y = model(x)
-        #     loss = y.sum()
-        # loss.backward()
+        with torch.autocast('cuda', torch.bfloat16):
+            y = model(x)
+            loss = y.sum()
+        loss.backward()
 
     assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
         
