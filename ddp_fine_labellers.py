@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet import AttnUNet
+from model.AttnUNet3 import AttnUNet3
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 from model.ConvSeg2 import ConvSeg2
@@ -83,7 +83,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
+            num_workers=30,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -137,7 +137,7 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["ConvSeg2"]
+    architectures = ["AttnUNet3"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
@@ -146,8 +146,8 @@ if __name__ == "__main__":
         comments = get_comments(output_dir, train_params)
 
         print(f"Starting training for {architecture}...")
-        if architecture == "AttnUNet":
-            model = AttnUNet(model_params)
+        if architecture == "AttnUNet3":
+            model = AttnUNet3(model_params)
         elif architecture == "ConvSeg":
             model = ConvSeg(model_params)
         elif architecture == "ViTSeg":

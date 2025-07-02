@@ -1,0 +1,19 @@
+{
+"epochs": 80,
+"batch_size": 1,
+"aggregation": 1,
+"learning_rate": 3e-4,
+"weight_decay": 1e-2,
+"num_classes": 14,
+"shape": [224, 224, 96],
+"weights": [1.0, 3.326, 1.071, 3.603, 1.605, 3.394, 6.634, 7.297, 9.874, 5.935, 3.272, 5.973, 3.796],
+"compile": false,
+"autocast": true,
+"sw_batch_size": 2,
+"sw_overlap": 0.25,
+"data_augmentation": {
+    "spatial": [3, 3, 1, 1, 1],  
+    "intensity": [3, 2, 1, 1, 1, 1, 1],  
+    "coarse": [3, 1, 1]  
+    }
+}

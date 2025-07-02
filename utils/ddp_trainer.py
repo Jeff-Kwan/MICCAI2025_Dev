@@ -6,6 +6,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import tqdm
 import matplotlib.pyplot as plt
+import numpy as np
 import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
@@ -70,6 +71,9 @@ class DDPTrainer:
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
+            self.class_names = ["Liver", "Right kidney", "Spleen", "Pancreas", 
+                                "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", 
+                                "Gallbladder", "Esophagus", "Stomach", "Duodenum", "Left kidney"]
 
     def train(self, train_loader, val_loader=None):
         if self.local_rank == 0:
@@ -239,3 +243,18 @@ class DDPTrainer:
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'training_curves.png'))
         plt.close(fig)
+
+        # Plot class dice
+        plt.figure(figsize=(12, 6))
+        class_dice = np.array(self.val_metrics["class_dice"]).transpose().tolist()
+        for name, dice in zip(self.class_names, class_dice):
+            plt.plot(dice, label=name)
+        plt.xlabel("Epoch")
+        plt.ylabel("Dice")
+        plt.title("Dice Score for Each Organ over Training")
+        plt.ylim(0, 1)
+        plt.legend(loc='lower right')
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'class_dice.png'))
+        plt.close()
