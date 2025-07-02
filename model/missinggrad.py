@@ -1,6 +1,7 @@
 import torch
 from monai.losses import DiceFocalLoss
-from VAEDual import VAEPosterior
+# from VAEDual import VAEPosterior
+from AttnUNet3 import AttnUNet3
 
 
 def find_missing_gradients(model):
@@ -26,18 +27,20 @@ def training_step(model, imgs, masks, optimizer, criterion, kl_div_normal, mse):
     optimizer.zero_grad()
 
     # Forward pass
-    pred, mu_hat, log_var_hat, prior_pred, mu, log_var = model(imgs, masks)
+    # pred, mu_hat, log_var_hat, prior_pred, mu, log_var = model(imgs, masks)
+    pred = model(imgs)
 
     # Composite loss
-    vae_recon_loss   = criterion(prior_pred, masks)
-    model_recon_loss = criterion(pred,       masks)
-    loss = (
-        model_recon_loss
-        + vae_recon_loss
-        + kl_div_normal(mu, log_var)
-        + mse(mu_hat, mu.detach().clone().requires_grad_())
-        + mse(log_var_hat, log_var.detach().clone().requires_grad_())
-    )
+    # vae_recon_loss   = criterion(prior_pred, masks)
+    # model_recon_loss = criterion(pred,       masks)
+    # loss = (
+    #     model_recon_loss
+    #     + vae_recon_loss
+    #     + kl_div_normal(mu, log_var)
+    #     + mse(mu_hat, mu.detach().clone().requires_grad_())
+    #     + mse(log_var_hat, log_var.detach().clone().requires_grad_())
+    # )
+    loss = criterion(pred, masks)
 
     # Backward
     loss.backward()
@@ -68,14 +71,22 @@ B, C, H, W, D = 8, 14, 48, 48, 48
 x = torch.randn(B, 1, H, W, D).cuda()
 y = torch.randint(0, C, (B, 1, H, W, D)).cuda()
 
-model = VAEPosterior({
-        "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
-        "convs":        [32, 48, 64, 32],
-        "layers":       [1, 1, 1, 1],
-        "dropout":      0.1,
-        "stochastic_depth": 0.1
-    }).cuda().train()
+# model = VAEPosterior({
+#         "out_channels": 14,
+#         "channels":     [32, 64, 128, 256],
+#         "convs":        [32, 48, 64, 32],
+#         "layers":       [1, 1, 1, 1],
+#         "dropout":      0.1,
+#         "stochastic_depth": 0.1
+#     }).cuda().train()
+model = AttnUNet3({
+    "out_channels": 14,
+    "channels":     [16, 48, 128, 384],
+    "convs":        [8, 24, 64, 64],
+    "layers":       [4, 4, 4, 8],
+    "dropout":      0.1,
+    "stochastic_depth": 0.1
+}).cuda().train()
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 

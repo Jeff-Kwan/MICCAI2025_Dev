@@ -74,7 +74,6 @@ class TransformerLayer(nn.Module):
         assert in_c % head_dim == 0, "in_c must be divisible by head_dim"
         self.sto_depth = sto_depth
         self.repeats = repeats
-        self.pos_embed = nn.Linear(in_c, in_c)
         self.mha_norms = nn.ModuleList([
             nn.LayerNorm(in_c) for _ in range(repeats)])
         self.MHAs = nn.ModuleList([
