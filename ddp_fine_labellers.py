@@ -127,7 +127,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier by intial training dice error",
+        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier by intial max dice / dice",
         f"{train_params['shape']} shape - Cubic interpolation; fine shape prediction, 128 margin (safe) foreground crop", 
         f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"

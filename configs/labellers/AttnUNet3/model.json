@@ -1,8 +1,9 @@
 {
 "out_channels": 14,
 "channels":     [16, 48, 128, 384],
-"convs":        [8, 24, 64, 64],
-"layers":       [4, 4, 4, 8],
+"convs":        [8, 24, 64, 96],
+"head_dim":     64,
+"layers":       [4, 4, 4, 4],
 "dropout":      0.1,
 "stochastic_depth": 0.1
 }

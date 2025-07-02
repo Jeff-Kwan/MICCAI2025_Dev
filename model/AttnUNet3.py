@@ -7,18 +7,20 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
-        self.conv1 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
-        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
+        self.in_conv = nn.Sequential(
+            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
+            nn.GroupNorm(h_c, h_c))
+        self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
+        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias)
+        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias)
         self.out_conv = nn.Sequential(
-            nn.GroupNorm(h_c*2, h_c*2),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
         
     def forward(self, x):
         x = self.in_conv(x)
-        x = torch.cat([x + self.conv1(x), x + self.conv2(x)], dim=1)
+        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
         return self.out_conv(x)
 
 
@@ -69,7 +71,7 @@ class TransformerLayer(nn.Module):
         self.mlps = nn.ModuleList([
             nn.Sequential(
                 nn.LayerNorm(in_c),
-                SwiGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
+                SwiGLU(in_c, in_c*4, in_c, bias=bias, dropout=dropout))
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -140,6 +142,7 @@ class AttnUNet3(nn.Module):
         channels = p["channels"]
         convs = p["convs"]
         layers = p["layers"]
+        head_dim = p["head_dim"]
         out_c = p["out_channels"]
         dropout = p.get("dropout", 0.0)
         sto_depth = p.get("stochastic_depth", 0.0)
@@ -148,8 +151,13 @@ class AttnUNet3(nn.Module):
         self.in_conv = nn.Conv3d(1, channels[0], 1, 1, 0, bias=False)
         
         self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
-        self.bottleneck = TransformerLayer(channels[-1], convs[-1], layers[-1],
-                        bias=False, dropout=dropout, sto_depth=sto_depth)
+        self.bottleneck = nn.Sequential(
+            *[nn.Sequential(
+                ConvLayer(channels[-1], convs[-1], 1, 
+                      bias=False, dropout=dropout, sto_depth=sto_depth),
+                TransformerLayer(channels[-1], head_dim, 1,
+                        bias=False, dropout=dropout, sto_depth=sto_depth))
+                for _ in range(layers[-1])])
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
         self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
@@ -181,8 +189,9 @@ if __name__ == "__main__":
     params = {
         "out_channels": 14,
         "channels":     [16, 48, 128, 384],
-        "convs":        [8, 24, 64, 64],
-        "layers":       [4, 4, 4, 8],
+        "convs":        [8, 24, 64, 96],
+        "head_dim":     64,
+        "layers":       [4, 4, 4, 4],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
