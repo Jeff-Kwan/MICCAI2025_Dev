@@ -216,10 +216,10 @@ class AttnUNet3(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 224, 224, 96
+    B, S1, S2, S3 = 1, 192, 160, 96
     params = {
         "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
+        "channels":     [24, 48, 96, 256],
         "convs":        [12, 24, 48, 64],
         "layers":       [4, 4, 4, 8],
         "dropout":      0.1,
