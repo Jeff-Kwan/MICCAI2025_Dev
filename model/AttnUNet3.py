@@ -132,8 +132,8 @@ class Decoder(nn.Module):
                        sto_depth=sto_depth * (i+1) / self.stages)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
-                LayerNormTranspose(1, channels[i]))
+                LayerNormTranspose(1, channels[i+1]),
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
