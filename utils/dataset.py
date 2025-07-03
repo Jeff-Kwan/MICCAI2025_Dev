@@ -19,9 +19,8 @@ class SafeCropForegroundd(mt.MapTransform):
             self.cropforeground(data)
         return self.randcrop(data)
 
-def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
-    label_interp = "nearest" if label_nearest else "trilinear"
-    label_dtype = torch.long if label_nearest else torch.float32
+def get_transforms(shape, spatial, intensity, coarse, soft=False):
+    label_dtype = torch.float32 if soft else torch.long
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -47,7 +46,8 @@ def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
                         spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
-                        mode=("trilinear", label_interp),
+                        translate_range=(4, 4, 4),
+                        mode=("trilinear", "nearest"),
                         padding_mode="border",
                         lazy=True),
                     mt.RandFlipd(
@@ -69,7 +69,7 @@ def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
                         translate_range=(4, 4, 4),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
-                        mode=("trilinear", label_interp)
+                        mode=("trilinear", "nearest")
                     )],
                 weights=spatial),
             mt.OneOf(     # Random intensity augmentations
@@ -99,11 +99,12 @@ def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
                         spatial_size=(6, 6, 6),
                         max_spatial_size=(12, 12, 12))],
                 weights=coarse),
-            mt.Identityd(keys=["label"]) if label_nearest else
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, label_dtype],
                 track_meta=False),
+            mt.NormalizeIntensityd(keys="label", subtrahend=0.0, divisor=255.0) if soft else
+                mt.Identityd(keys=["label"]),
         ]
     )
     val_transform = mt.Compose(

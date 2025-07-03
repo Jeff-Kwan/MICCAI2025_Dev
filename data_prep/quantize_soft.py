@@ -82,7 +82,8 @@ def process_dataset(in_dir, out_dir):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=64)
+        num_workers=32,
+        prefetch_factor=16)
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc=f"Processing GT to Soft"):
@@ -97,5 +98,5 @@ if __name__ == "__main__":
         "data/nifti/train_pseudo/softquant"),
     ]
     for label in labels:
-        process_dataset(labels)
+        process_dataset(*label)
         
