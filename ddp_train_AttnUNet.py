@@ -51,19 +51,16 @@ def main_worker(rank: int,
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'])
+            train_params['data_augmentation']['coarse'],
+            label_nearest=False)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
-                labels_dir="data/small/train_gt/labels",
+                labels_dir="data/small/train_gt/softlabels",
                 extension='.nii.gz') * 8 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
-                labels_dir="data/small/train_pseudo/aladdin5",
-                extension='.nii.gz') 
-            + get_data_files(
-                images_dir="data/small/train_pseudo/images",
-                labels_dir="data/small/train_pseudo/blackbean",
+                labels_dir="data/small/train_pseudo/softlabels",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(

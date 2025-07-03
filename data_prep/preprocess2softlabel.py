@@ -53,10 +53,12 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
-            mt.EnsureTyped(
+            mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
                 keys=["aladdin", "blackbean"],
-                dtype=torch.long,
-                track_meta=True),
+                pixdim=pixdim,
+                mode="nearest",
+                lazy=True),
             mt.ThresholdIntensityd(
                 keys=["aladdin", "blackbean"],
                 above=False,
@@ -74,13 +76,6 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 output_key="label"),
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
-            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["label"],
-                pixdim=pixdim,
-                mode="trilinear",
-                lazy=True,
-            ),
             NormalizeChannelSumd(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
@@ -99,7 +94,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=24,
+        num_workers=32,
     )
 
     # iterate, transform, and save
@@ -110,6 +105,61 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
 
 
 
+def process_gt(in_dir, out_dir, pixdim):
+    # create output dirs
+    os.makedirs(out_dir, exist_ok=True)
+
+    transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["label"], ensure_channel_first=True),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode="nearest",
+                lazy=True),
+            mt.AsDiscreted(
+                keys=["label"],
+                to_onehot=14),  # 14 classes
+            mt.EnsureTyped(
+                keys=["label"],
+                dtype=torch.float32,
+                track_meta=True),
+            mt.SaveImaged(
+                keys=["label"],
+                output_dir=out_dir,
+                output_postfix="",
+                output_ext=".nii.gz",
+                separate_folder=False,
+                output_dtype=torch.float32,
+                print_log=False),
+            mt.DeleteItemsd(keys=["label"])
+        ]
+    )
+
+    # build the MONAI dataset
+    dir = Path(in_dir)
+    if not dir.is_dir():
+        raise FileNotFoundError(f"Directory not found: {dir!r}")
+    names = sorted(
+        entry.name
+        for entry in os.scandir(dir)
+        if entry.is_file() and entry.name.endswith(".nii.gz")
+    )
+    dataset = Dataset(data=[{"label": str(dir / name)} for name in names], transform=transform)
+    dataloader = ThreadDataLoader(
+        dataset,
+        batch_size=1,
+        num_workers=32,
+    )
+
+    # iterate, transform, and save
+    for batch in tqdm(dataloader, desc=f"Processing GT to Soft"):
+        pass
+
+    return 
+
+
 if __name__ == "__main__":
     pixdim = (0.8, 0.8, 2.5)
     process_dataset(
@@ -117,4 +167,7 @@ if __name__ == "__main__":
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
         "data/nifti/train_pseudo/softlabel",
         pixdim)
-    
+    process_gt(
+        "data/FLARE-Task2-LaptopSeg/train_gt/labels",
+        "data/nifti/train_gt/softlabel",
+        pixdim)

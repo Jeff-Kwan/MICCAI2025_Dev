@@ -19,7 +19,9 @@ class SafeCropForegroundd(mt.MapTransform):
             self.cropforeground(data)
         return self.randcrop(data)
 
-def get_transforms(shape, spatial, intensity, coarse):
+def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
+    label_interp = "nearest" if label_nearest else "trilinear"
+    label_dtype = torch.long if label_nearest else torch.float32
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -45,7 +47,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                         spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
-                        mode=("bilinear", "nearest"),
+                        mode=("trilinear", label_interp),
                         padding_mode="border",
                         lazy=True),
                     mt.RandFlipd(
@@ -67,7 +69,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                         translate_range=(4, 4, 4),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
-                        mode=("bilinear", "nearest")
+                        mode=("trilinear", label_interp)
                     )],
                 weights=spatial),
             mt.OneOf(     # Random intensity augmentations
@@ -99,7 +101,7 @@ def get_transforms(shape, spatial, intensity, coarse):
                 weights=coarse),
             mt.EnsureTyped(
                 keys=["image", "label"], 
-                dtype=[torch.float32, torch.long],
+                dtype=[torch.float32, label_dtype],
                 track_meta=False),
         ]
     )
@@ -144,7 +146,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                                 translate_range=(8, 8, 8),
                                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                                 scale_range=(0.1, 0.1, 0.1),
-                                mode=("bilinear", "nearest"),
+                                mode=("trilinear", "nearest"),
                                 padding_mode="border",
                                 lazy=True),
                             mt.RandFlipd(
@@ -166,7 +168,7 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                                 translate_range=(8, 8, 8),
                                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                                 scale_range=(0.1, 0.1, 0.1),                # ±10%
-                                mode=("bilinear", "nearest")
+                                mode=("trilinear", "nearest")
                             )],
                         weights=spatial),
                     mt.OneOf(     # Random intensity augmentations
