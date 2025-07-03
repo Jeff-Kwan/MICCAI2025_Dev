@@ -20,17 +20,21 @@ from utils.ddp_trainer import DDPTrainer
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 class SoftDiceFocalLoss(torch.nn.Module):
-    def __init__(self, include_background=True, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
+    def __init__(self, include_background=True, softmax=True, weight=None, 
+                 lambda_focal=1.0, lambda_dice=1.0, gamma=2.0):
         super().__init__()
         self.dice_loss = DiceLoss(
             include_background=include_background,
             to_onehot_y=False,
             softmax=softmax,
             weight=weight,
+            smooth_nr=1e-6,
+            smooth_dr=1e-6,
             soft_label=True)    # Use soft labels
         self.focal_loss = FocalLoss(
             include_background=include_background,
             to_onehot_y=False,
+            gamma=gamma,
             use_softmax=softmax,
             weight=weight)
         self.lambda_focal = lambda_focal
@@ -120,7 +124,8 @@ def main_worker(rank: int,
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
-            lambda_focal=1,
+            gamma=1.0,
+            lambda_focal=10,
             lambda_dice=1)  
 
 
