@@ -86,7 +86,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softlabel",
-                extension='.nii.gz') * 2
+                extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/softlabel",
@@ -149,7 +149,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*2 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
+        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose", 
         f"DiceCE (hard dice), 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
