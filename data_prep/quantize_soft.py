@@ -1,4 +1,9 @@
+import os
+from pathlib import Path
+from tqdm import tqdm
 import torch
+import monai.transforms as mt
+from monai.data import Dataset, ThreadDataLoader
 
 def quantize_tensor_dim0(x: torch.Tensor) -> torch.Tensor:
     """
@@ -32,18 +37,3 @@ def quantize_tensor_dim0(x: torch.Tensor) -> torch.Tensor:
     result = floors + add_one
 
     return result.to(torch.uint8)
-
-
-
-# Test
-x = torch.randn(14, 256, 256, 256).abs() * 100
-y = quantize_tensor_dim0(x)
-assert y.shape == x.shape, "Output shape mismatch"
-assert y.dtype == torch.uint8, "Output dtype should be uint8"
-# Check that each slice sums to 255
-assert (y.sum(dim=0) == 255).all(), "Each slice should sum to 255"
-print("Quantization successful, each slice sums to 255.")
-
-dequant_y = y.float() / 255
-assert torch.allclose(y.sum(dim=0), torch.ones_like(y).float()), "Each dequantized slice should sum to 1"
-print("Dequantization successful, each slice sums to 1.0")
