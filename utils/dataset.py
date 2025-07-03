@@ -20,7 +20,7 @@ class SafeCropForegroundd(mt.MapTransform):
         return self.randcrop(data)
 
 def get_transforms(shape, spatial, intensity, coarse, soft=False):
-    label_dtype = torch.float32 if soft else torch.long
+    label_dtype = torch.uint8 if soft else torch.long
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),

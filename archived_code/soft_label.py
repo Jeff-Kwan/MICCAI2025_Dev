@@ -3,9 +3,10 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-B, C, H, W, D = 1, 14, 32, 32, 32
+B, C, H, W, D = 1, 14, 16, 16, 16
 x = torch.randn(B, C, H, W, D)
 y = F.softmax(torch.randn(B, C, H, W, D), dim=1)    # Use soft labels
+y = y.to(torch.float16)
 
 class SoftDiceFocalLoss(nn.Module):
     def __init__(self, include_background=True, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):

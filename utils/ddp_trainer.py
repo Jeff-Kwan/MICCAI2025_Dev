@@ -75,7 +75,7 @@ class DDPTrainer:
                                 "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", 
                                 "Gallbladder", "Esophagus", "Stomach", "Duodenum", "Left kidney"]
 
-    def train(self, train_loader, val_loader=None):
+    def train(self, train_loader, val_loader=None, soft=False):
         if self.local_rank == 0:
             self.start_time = time.time()
 
@@ -98,6 +98,8 @@ class DDPTrainer:
             for i, batch in enumerate(loop):
                 imgs = batch['image'].to(self.device, non_blocking=True)
                 masks = batch['label'].to(self.device, non_blocking=True)
+                if soft:
+                    masks = masks.float() / 255.0  # Convert to float on GPU
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     outputs = self.model(imgs)

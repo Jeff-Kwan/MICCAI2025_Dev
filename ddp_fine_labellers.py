@@ -102,8 +102,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=36,
-            prefetch_factor=4,
+            num_workers=24,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -111,7 +110,6 @@ def main_worker(rank: int,
             batch_size=1,
             sampler=val_sampler,
             num_workers=2,
-            prefetch_factor=8,
             pin_memory=False,
             persistent_workers=True)
 
@@ -137,7 +135,7 @@ def main_worker(rank: int,
             local_rank=rank,
             world_size=world_size,
             comments=comments)
-        trainer.train(train_loader, val_loader)
+        trainer.train(train_loader, val_loader, soft=True)
 
     except Exception as e:
         print(f"Rank {rank} crashed:", traceback.format_exc())
