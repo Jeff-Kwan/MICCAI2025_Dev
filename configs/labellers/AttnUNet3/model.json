@@ -4,6 +4,6 @@
 "convs":        [24, 48, 96, 128],
 "head_dim":     32,
 "layers":       [4, 4, 4, 6],
-"dropout":      0.1,
+"dropout":      0.2,
 "stochastic_depth": 0.1
 }

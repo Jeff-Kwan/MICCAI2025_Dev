@@ -120,12 +120,13 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
-        criterion = DiceCELoss(  # Use soft labels
+        criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
-            lambda_ce=0.3,
-            lambda_dice=0.7)
+            gamma=1.0,
+            lambda_focal=1,
+            lambda_dice=1)
 
 
         # Initialize trainer and start
