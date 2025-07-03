@@ -121,7 +121,8 @@ class Decoder(nn.Module):
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.GroupNorm(channels[i+1]//8, channels[i+1]),
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
+                nn.Conv3d(channels[i], channels[i], 3, 1, 1, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
@@ -161,11 +162,10 @@ class AttnUNet3(nn.Module):
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
-        # self.out_conv = nn.Sequential(
-        #     nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False),
-        #     nn.Upsample(scale_factor=(2, 2, 1), mode='trilinear', align_corners=False))
-        self.out_conv = nn.ConvTranspose3d(
-            channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
+        # self.out_conv = nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
+        self.out_conv = nn.Sequential(
+            nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False),
+            nn.Conv3d(out_c, out_c, 3, 1, 1, bias=False))
 
         
     def forward(self, x):
@@ -189,11 +189,11 @@ class AttnUNet3(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 224, 224, 112
+    B, S1, S2, S3 = 1, 256, 256, 128
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
-        "convs":        [12, 24, 48, 96],
+        "convs":        [24, 48, 96, 128],
         "head_dim":     32,
         "layers":       [4, 4, 4, 6],
         "dropout":      0.1,

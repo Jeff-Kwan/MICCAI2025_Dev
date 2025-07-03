@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
-from monai.losses import DiceLoss, FocalLoss
+from monai.losses import DiceLoss, FocalLoss, DiceCELoss
 
 from utils.dataset import get_transforms, get_data_files
 from model.AttnUNet3 import AttnUNet3
@@ -106,7 +106,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=32,
+            num_workers=30,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -120,13 +120,12 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
-        criterion = SoftDiceFocalLoss(  # Use soft labels
+        criterion = DiceCELoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
-            gamma=1.0,
-            lambda_focal=10,
-            lambda_dice=1)  
+            lambda_ce=0.3,
+            lambda_dice=0.7)
 
 
         # Initialize trainer and start
@@ -151,8 +150,8 @@ def main_worker(rank: int,
 def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*2 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
-        f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
-        f"DiceFocal, 1-sample rand crop + augmentations -> also 0.2 label Gaussian smoothing",
+        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose", 
+        f"DiceCE (hard dice), 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
 
