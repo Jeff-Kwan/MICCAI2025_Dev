@@ -19,17 +19,27 @@ from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-class SoftDiceFocalLoss(DiceLoss, FocalLoss):
-    def __init__(self, include_background=True, to_onehot_y=False, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
-        DiceLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, softmax=softmax, weight=weight, soft_label=True)
-        FocalLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, use_softmax=softmax, weight=weight)
+class SoftDiceFocalLoss(torch.nn.Module):
+    def __init__(self, include_background=True, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
+        super().__init__()
+        self.dice_loss = DiceLoss(
+            include_background=include_background,
+            to_onehot_y=False,
+            softmax=softmax,
+            weight=weight,
+            soft_label=True)    # Use soft labels
+        self.focal_loss = FocalLoss(
+            include_background=include_background,
+            to_onehot_y=False,
+            use_softmax=softmax,
+            weight=weight)
         self.lambda_focal = lambda_focal
         self.lambda_dice = lambda_dice
 
-    def forward(self, inputs, targets):
-        dice_loss = super().forward(inputs, targets)
-        focal_loss = super().forward(inputs, targets)
-        return self.lambda_dice * dice_loss + self.lambda_focal * focal_loss
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        l_dice = self.dice_loss(inputs, targets)
+        l_focal = self.focal_loss(inputs, targets)
+        return self.lambda_dice * l_dice + self.lambda_focal * l_focal
 
 def main_worker(rank: int,
                 world_size: int,
@@ -92,8 +102,8 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=40,
-            pin_memory=True,
+            num_workers=42,
+            pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
@@ -108,7 +118,6 @@ def main_worker(rank: int,
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
-            to_onehot_y=False, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
             lambda_focal=1,

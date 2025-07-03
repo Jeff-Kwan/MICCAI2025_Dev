@@ -1,26 +1,36 @@
 from monai.losses import DiceLoss, FocalLoss
 import torch
+import torch.nn as nn
 from torch.nn import functional as F
 
 B, C, H, W, D = 1, 14, 32, 32, 32
 x = torch.randn(B, C, H, W, D)
 y = F.softmax(torch.randn(B, C, H, W, D), dim=1)    # Use soft labels
 
-class SoftDiceFocalLoss(DiceLoss, FocalLoss):
-    def __init__(self, include_background=True, to_onehot_y=False, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
-        DiceLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, softmax=softmax, weight=weight, soft_label=True)
-        FocalLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, use_softmax=softmax, weight=weight)
+class SoftDiceFocalLoss(nn.Module):
+    def __init__(self, include_background=True, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
+        super().__init__()
+        self.dice_loss = DiceLoss(
+            include_background=include_background,
+            to_onehot_y=False,
+            softmax=softmax,
+            weight=weight,
+            soft_label=True)    # Use soft labels
+        self.focal_loss = FocalLoss(
+            include_background=include_background,
+            to_onehot_y=False,
+            use_softmax=softmax,
+            weight=weight)
         self.lambda_focal = lambda_focal
         self.lambda_dice = lambda_dice
 
-    def forward(self, inputs, targets):
-        dice_loss = super().forward(inputs, targets)
-        focal_loss = super().forward(inputs, targets)
-        return self.lambda_dice * dice_loss + self.lambda_focal * focal_loss
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        l_dice = self.dice_loss(inputs, targets)
+        l_focal = self.focal_loss(inputs, targets)
+        return self.lambda_dice * l_dice + self.lambda_focal * l_focal
 
 criterion = SoftDiceFocalLoss(
     include_background=True, 
-    to_onehot_y=False, 
     softmax=True, 
     weight=torch.tensor([0.01] + [1.0] * 13))
 
