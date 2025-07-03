@@ -102,8 +102,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=20,
-            prefetch_factor=8,
+            num_workers=32,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(

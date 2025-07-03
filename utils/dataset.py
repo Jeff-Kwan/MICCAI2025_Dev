@@ -24,11 +24,6 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            # SafeCropForegroundd(
-            #     keys=["image", "label"],
-            #     source_key="label",
-            #     shape=shape,
-            #     margin=16),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 
                 roi_size=shape,
@@ -103,8 +98,6 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                 keys=["image", "label"], 
                 dtype=[torch.float32, label_dtype],
                 track_meta=False),
-            mt.NormalizeIntensityd(keys="label", subtrahend=0.0, divisor=255.0) if soft else
-                mt.Identityd(keys=["label"]),
         ]
     )
     val_transform = mt.Compose(
