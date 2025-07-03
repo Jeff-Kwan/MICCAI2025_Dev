@@ -12,7 +12,7 @@
 "sw_batch_size": 2,
 "sw_overlap": 0.25,
 "data_augmentation": {
-    "spatial": [3, 3, 1, 1, 1],  
+    "spatial": [3, 3, 1, 1, 0],  
     "intensity": [3, 2, 1, 1, 1, 1, 1],  
     "coarse": [3, 1, 1]  
     }
