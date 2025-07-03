@@ -45,5 +45,5 @@ assert (y.sum(dim=0) == 255).all(), "Each slice should sum to 255"
 print("Quantization successful, each slice sums to 255.")
 
 dequant_y = y.float() / 255
-assert torch.allclose(y.sum(dim=0), torch.ones_like(y).float()), "Each dequantized slice should sum to 1"
+assert torch.allclose(dequant_y.sum(dim=0), torch.tensor(1.0)), "Each dequantized slice should sum to 1"
 print("Dequantization successful, each slice sums to 1.0")
