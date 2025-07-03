@@ -117,7 +117,7 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            val_loss, metrics = self.evaluate(val_loader)
+            val_loss, metrics = self.evaluate(val_loader, one_hot_loss=soft)
             if self.world_size > 1:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
@@ -136,7 +136,7 @@ class DDPTrainer:
 
 
     @torch.no_grad()
-    def evaluate(self, data_loader):
+    def evaluate(self, data_loader, one_hot_loss=False):
         self.model.eval()
         # local accumulators
         loss_sum = torch.tensor(0.0, device=self.device)
@@ -152,6 +152,8 @@ class DDPTrainer:
         ):
             imgs = batch['image'].to(self.device, non_blocking=True)
             masks = batch['label'].to(self.device, non_blocking=True)
+            if one_hot_loss:    # Convert first
+                masks = one_hot(masks, num_classes=self.num_classes)
             B = imgs.size(0)
             sample_count += B
 
@@ -176,8 +178,9 @@ class DDPTrainer:
                 torch.argmax(aggregated, dim=1, keepdim=True),
                 num_classes=self.num_classes
             )
-            gts = one_hot(masks, num_classes=self.num_classes)
-            self.dice_metric(y_pred=preds, y=gts)
+            if not one_hot_loss:    # Convert later
+                masks = one_hot(masks, num_classes=self.num_classes)
+            self.dice_metric(y_pred=preds, y=masks)
 
         # Aggregate loss and sample count across all ranks
         if self.world_size > 1:
