@@ -13,7 +13,6 @@ class QuantizeTensorDim0d(mt.MapTransform):
     """
     Dictionary-based MONAI transform to quantize a float tensor along dim=0 so that each slice sums to 255 (uint8),
     preserving original proportions as closely as possible.
-    Invert with: mt.NormalizeIntensityd(keys="label", subtrahend=0.0, divisor=255.0)
 
     Args:
         keys: Key or list of keys in the input dictionary whose values are torch.Tensors to be quantized.
@@ -34,16 +33,40 @@ class QuantizeTensorDim0d(mt.MapTransform):
 
     @staticmethod
     def _quantize(x: torch.Tensor) -> torch.Tensor:
+        # 1) compute channel‐sums and clamp zeros to 1 in-place
         sums = x.sum(dim=0, keepdim=True)
-        sums = torch.where(sums == 0, torch.tensor(1.0, device=sums.device), sums)
-        scaled = x * 255.0 / sums
-        floors = scaled.floor()
-        residuals = scaled - floors
-        deficits = 255 - floors.sum(dim=0, keepdim=True)
-        rank = residuals.argsort(dim=0, descending=True).argsort(dim=0)
-        add_one = (rank < deficits).to(torch.uint8)
-        result = floors + add_one
-        return result.to(torch.uint8)
+        sums.clamp_(min=1.0)                     # avoid div-by-zero via in-place clamp :contentReference[oaicite:0]{index=0}
+
+        # 2) scale each channel so sum→255
+        scaled = x.mul(255.0).div_(sums)
+
+        # 3) get integer floor via a single cast and compute residuals
+        floors = scaled.to(torch.uint8)          # float→uint8 is a truncation cast :contentReference[oaicite:1]{index=1}
+        residuals = scaled - floors.float()
+
+        # 4) compute how many “ones” to distribute per spatial location
+        deficits = (255 - floors.sum(dim=0, keepdim=True))
+
+        # 5) vectorize the “largest‐residual” selection
+        C = x.size(0)
+        # flatten spatial dims into one axis
+        res_flat = residuals.view(C, -1)         # shape [C, N]
+        def_flat = deficits.view(-1)            # shape [N]
+
+        # single sort along channel axis
+        _, idx_flat = res_flat.sort(dim=0, descending=True)  # one sort call :contentReference[oaicite:2]{index=2}
+
+        # build a mask in sorted order: for each pixel j, top def_flat[j] channels get +1
+        dr = torch.arange(C, device=x.device).view(C, 1)
+        mask_sorted = dr < def_flat.unsqueeze(0)            # shape [C, N]
+
+        # scatter the mask back to original channel positions
+        mask_flat = torch.zeros_like(mask_sorted)
+        mask_flat.scatter_(0, idx_flat, mask_sorted)
+
+        # reshape mask to [C, ...] and form final result
+        mask = mask_flat.view_as(x).to(torch.uint8)
+        return (floors + mask).to(torch.uint8)
 
 
 def process_dataset(in_dir, out_dir):
