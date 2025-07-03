@@ -66,7 +66,7 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("trilinear", "nearest")
                     )],
-                weights=spatial, lazy=True),
+                weights=spatial),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -98,7 +98,7 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                 keys=["image", "label"], 
                 dtype=[torch.float32, label_dtype],
                 track_meta=False),
-        ], lazy=True    # Force lazy loading in general
+        ]
     )
     val_transform = mt.Compose(
         [
