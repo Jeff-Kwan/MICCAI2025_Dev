@@ -1,9 +1,9 @@
+nibabel
+tqdm
+scipy
+matplotlib
+monai==1.5.0 --no-deps
 huggingface-hub
 torch
 torchvision
 numpy
-nibabel
-tqdm
-monai
-scipy
-matplotlib

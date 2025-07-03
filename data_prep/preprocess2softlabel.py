@@ -94,7 +94,8 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=32,
+        num_workers=36,
+        prefetch_factor=8,
     )
 
     # iterate, transform, and save
@@ -112,12 +113,6 @@ def process_gt(in_dir, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["label"],
-                pixdim=pixdim,
-                mode="nearest",
-                lazy=True),
             mt.AsDiscreted(
                 keys=["label"],
                 to_onehot=14),  # 14 classes
@@ -125,6 +120,13 @@ def process_gt(in_dir, out_dir, pixdim):
                 keys=["label"],
                 dtype=torch.float32,
                 track_meta=True),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode="trilinear",
+                lazy=True),
+            NormalizeChannelSumd(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
                 output_dir=out_dir,
@@ -144,14 +146,12 @@ def process_gt(in_dir, out_dir, pixdim):
     names = sorted(
         entry.name
         for entry in os.scandir(dir)
-        if entry.is_file() and entry.name.endswith(".nii.gz")
-    )
+        if entry.is_file() and entry.name.endswith(".nii.gz"))
     dataset = Dataset(data=[{"label": str(dir / name)} for name in names], transform=transform)
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=32,
-    )
+        num_workers=50)
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc=f"Processing GT to Soft"):
@@ -162,10 +162,10 @@ def process_gt(in_dir, out_dir, pixdim):
 
 if __name__ == "__main__":
     pixdim = (0.8, 0.8, 2.5)
-    process_gt(
-        "data/FLARE-Task2-LaptopSeg/train_gt/labels",
-        "data/nifti/train_gt/softlabel",
-        pixdim)
+    # process_gt(
+    #     "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+    #     "data/nifti/train_gt/softlabel",
+    #     pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",

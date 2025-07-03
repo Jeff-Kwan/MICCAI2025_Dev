@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
-from monai.losses import DiceFocalLoss
+from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_transforms, get_data_files
 from model.AttnUNet3 import AttnUNet3
@@ -18,6 +18,18 @@ from model.ConvSeg2 import ConvSeg2
 from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
+
+class SoftDiceFocalLoss(DiceLoss, FocalLoss):
+    def __init__(self, include_background=True, to_onehot_y=False, softmax=True, weight=None, lambda_focal=1.0, lambda_dice=1.0):
+        DiceLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, softmax=softmax, weight=weight, soft_label=True)
+        FocalLoss.__init__(self, include_background=include_background, to_onehot_y=to_onehot_y, use_softmax=softmax, weight=weight)
+        self.lambda_focal = lambda_focal
+        self.lambda_dice = lambda_dice
+
+    def forward(self, inputs, targets):
+        dice_loss = super().forward(inputs, targets)
+        focal_loss = super().forward(inputs, targets)
+        return self.lambda_dice * dice_loss + self.lambda_focal * focal_loss
 
 def main_worker(rank: int,
                 world_size: int,
@@ -54,19 +66,16 @@ def main_worker(rank: int,
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'])
+            train_params['data_augmentation']['coarse'],
+            label_nearest=False)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
-                labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 8
+                labels_dir="data/nifti/train_gt/softlabel",
+                extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz') 
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
+                labels_dir="data/nifti/train_pseudo/softlabel",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
@@ -83,7 +92,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=40,
             pin_memory=True,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -97,13 +106,13 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
-        criterion = DiceFocalLoss(
+        criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
-            to_onehot_y=True, 
+            to_onehot_y=False, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
             lambda_focal=1,
-            lambda_dice=1,)
+            lambda_dice=1)  
 
 
         # Initialize trainer and start
@@ -127,9 +136,9 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*8 + Aladdin + Blackbean - Loss modifier by dice error * 10 + 1",
-        f"{train_params['shape']} shape - Cubic interpolation; fine shape prediction, 128 margin (safe) foreground crop", 
-        f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
+        f"{output_dir} - GT*2 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
+        f"{train_params['shape']} shape - Cubic interpolation; fine shape prediction", 
+        f"DiceFocal, 1-sample rand crop + augmentations -> also 0.2 label Gaussian smoothing",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
 

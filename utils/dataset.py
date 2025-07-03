@@ -99,6 +99,9 @@ def get_transforms(shape, spatial, intensity, coarse, label_nearest=True):
                         spatial_size=(6, 6, 6),
                         max_spatial_size=(12, 12, 12))],
                 weights=coarse),
+            mt.Identityd(keys=["label"]) if label_nearest else
+            mt.RandGaussianSmoothd(keys='label', prob=0.2,
+                sigma_x=(0.25, 1.0), sigma_y=(0.25, 1.0), sigma_z=(0.25, 1.0)),
             mt.EnsureTyped(
                 keys=["image", "label"], 
                 dtype=[torch.float32, label_dtype],
