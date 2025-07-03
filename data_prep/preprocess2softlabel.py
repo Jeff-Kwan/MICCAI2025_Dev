@@ -162,12 +162,12 @@ def process_gt(in_dir, out_dir, pixdim):
 
 if __name__ == "__main__":
     pixdim = (0.8, 0.8, 2.5)
+    process_gt(
+        "data/FLARE-Task2-LaptopSeg/train_gt/labels",
+        "data/nifti/train_gt/softlabel",
+        pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
         "data/nifti/train_pseudo/softlabel",
-        pixdim)
-    process_gt(
-        "data/FLARE-Task2-LaptopSeg/train_gt/labels",
-        "data/nifti/train_gt/softlabel",
         pixdim)
