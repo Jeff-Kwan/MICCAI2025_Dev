@@ -5,5 +5,5 @@ dice = np.array([
 0.81629777, 0.7979219, 0.72656524, 0.8356327, 0.9093802, 0.8346007,
 0.8948825
 ])
-weights = np.max(dice) / dice
+weights = (1-dice)*10 + 1
 print(np.round(weights, 3).tolist())

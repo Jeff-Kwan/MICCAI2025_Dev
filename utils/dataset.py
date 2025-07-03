@@ -23,15 +23,15 @@ def get_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-            SafeCropForegroundd(
-                keys=["image", "label"],
-                source_key="label",
-                shape=shape,
-                margin=16),
-            # mt.RandSpatialCropd(
-            #     keys=["image", "label"], 
-            #     roi_size=shape,
-            #     lazy=True),
+            # SafeCropForegroundd(
+            #     keys=["image", "label"],
+            #     source_key="label",
+            #     shape=shape,
+            #     margin=16),
+            mt.RandSpatialCropd(
+                keys=["image", "label"], 
+                roi_size=shape,
+                lazy=True),
             mt.DivisiblePadd(
                 keys=["image", "label"],
                 k=16,

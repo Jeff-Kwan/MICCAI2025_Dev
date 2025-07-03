@@ -148,7 +148,7 @@ class AttnUNet3(nn.Module):
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
 
-        self.in_conv = nn.Conv3d(1, channels[0], 1, 1, 0, bias=False)
+        self.in_conv = nn.Conv3d(1, channels[0], (2, 2, 1), (2, 2, 1), 0, bias=False)
         
         self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
         self.bottleneck = nn.Sequential(
@@ -160,8 +160,12 @@ class AttnUNet3(nn.Module):
                 for _ in range(layers[-1])])
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
-        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=True)
+        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
+        # self.out_conv = nn.Sequential(
+        #     nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False),
+        #     nn.Upsample(scale_factor=(2, 2, 1), mode='trilinear', align_corners=False))
+        self.out_conv = nn.ConvTranspose3d(
+            channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
 
         
     def forward(self, x):
@@ -176,7 +180,7 @@ class AttnUNet3(nn.Module):
         # Decoder
         x = self.decoder(x, skips)
 
-        x = self.out_norm(x)
+        x = self.out_norm(x.permute(0, 2, 3, 4 , 1)).permute(0, 4, 1, 2, 3)
         x = self.out_conv(x)
         return x
 
@@ -185,13 +189,13 @@ class AttnUNet3(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 192, 192, 96
+    B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
-        "channels":     [16, 48, 128, 384],
-        "convs":        [8, 24, 64, 96],
-        "head_dim":     64,
-        "layers":       [4, 4, 4, 4],
+        "channels":     [32, 64, 128, 256],
+        "convs":        [12, 24, 48, 96],
+        "head_dim":     32,
+        "layers":       [4, 4, 4, 6],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
