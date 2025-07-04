@@ -85,11 +85,11 @@ def main_worker(rank: int,
         train_ds = Dataset(
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
-                labels_dir="data/nifti/train_gt/softlabel",
+                labels_dir="data/nifti/train_gt/softquant",
                 extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/softlabel",
+                labels_dir="data/nifti/train_pseudo/softquant",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
@@ -106,7 +106,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=32,
+            num_workers=36,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
@@ -120,11 +120,11 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
-        criterion = DiceCELoss(  # Use soft labels
+        criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
-            lambda_ce=1,
+            lambda_focal=1,
             lambda_dice=2)
 
 
@@ -151,7 +151,7 @@ def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose", 
-        f"DiceCE (1x ce 2x hard dice), 1-sample rand crop + augmentations",
+        f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
 
