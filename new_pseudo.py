@@ -4,12 +4,14 @@ import json
 import torch
 import monai.transforms as mt
 from monai.inferers import sliding_window_inference
+from monai.data import ThreadDataLoader, Dataset
 from pathlib import Path
 import torch.multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # --- your model imports ---
 from utils.quantize import QuantizeNormalized
@@ -57,7 +59,7 @@ def cpu_post(data, inference_config):
     # Prepare
     data = prep_tf(data)
     alpha = inference_config["ema_alpha"]
-    class_weights = torch.tensor(inference_config["class_weights"]).view(1, -1, 1, 1, 1)
+    class_weights = torch.tensor(inference_config["class_weights"]).view(-1, 1, 1, 1)
 
     # EMA
     data["label"] = alpha * data["label"] + (1-alpha) * data["pred"] * class_weights
@@ -69,21 +71,26 @@ def cpu_post(data, inference_config):
 @torch.inference_mode()
 def run_and_save(
     chunk, inference_config, model, device,
-    gpu_id, n_cpu_workers
+    gpu_id, n_cpu_workers, max_prefetch
 ):
     # Pre-build loader
-    loader = mt.LoadImaged(["img"], ensure_channel_first=True)
+    dataloader = ThreadDataLoader(
+        Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
+        batch_size=1,
+        num_workers=n_cpu_workers,
+        pin_memory=True,
+        persistent_workers=True,
+        use_thread_workers=True
+    )
     deleter = mt.DeleteItemsd(["img"])
 
     # Inference + dispatch to CPU pool
-    max_prefetch = 2
     in_flight = set()
-    with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
-        for pair in tqdm(chunk, desc=f"GPU {gpu_id}", unit="img"):
+    with ProcessPoolExecutor(max_workers=max_prefetch) as executor:
+        for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
                 # CPU → GPU prep
-                data = loader(pair)
-                img = data["img"].to(device).unsqueeze(0)
+                img = data["img"].to(device, non_blocking=True)
 
                 # GPU inference
                 if inference_config["autocast"]:
@@ -108,7 +115,7 @@ def run_and_save(
                     ).cpu().squeeze(0)
 
             except Exception as e:
-                print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
+                print(f"[ERROR] GPU {gpu_id} failed: {e}")
 
             # Done with image
             data = deleter(data)
@@ -131,7 +138,7 @@ def run_and_save(
 def worker(
     gpu_id, chunks, inference_config,
     model_class, model_config, model_path,
-    n_cpu_workers
+    n_cpu_workers, max_prefetch
 ):
     torch.cuda.set_device(gpu_id)
     device = torch.device(f"cuda:{gpu_id}")
@@ -150,6 +157,7 @@ def worker(
         device=device,
         gpu_id=gpu_id,
         n_cpu_workers=n_cpu_workers,
+        max_prefetch=max_prefetch
         )
 
 if __name__ == "__main__":
@@ -159,13 +167,13 @@ if __name__ == "__main__":
     model_path      = "output/2025-07-04/06-44-AttnUNet3/model.pth"
 
     inference_config = {
-        "images_dir": "data/nifti/train_gt/images",
-        "labels_dir": "data/nifti/train_gt/softquant",
-        "output_dir": "data/nifti/train_gt/softiterated",
+        "images_dir": "data/nifti/train_pseudo/images",
+        "labels_dir": "data/nifti/train_pseudo/softquant",
+        "output_dir": "data/nifti/train_pseudo/softiterated",
         "ema_alpha": 0.5,  # EMA factor keep original label
         "class_weights": [1.0] * 14,
         "shape": [224, 224, 112],
-        "sw_batch_size": 2,
+        "sw_batch_size": 1,
         "sw_overlap": 0.5,
         "autocast": True,
     }
@@ -178,8 +186,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 64
-    cpus_per_gpu = max(1, total_cpus // ngpus)
+    cpus_per_gpu = 2   # Dataloading
+    max_prefetch = 46   # Postprocessing
 
     # Spawn one process per GPU
     try:
@@ -192,6 +200,7 @@ if __name__ == "__main__":
                 model_config,
                 model_path,
                 cpus_per_gpu,
+                max_prefetch
             ),
             nprocs=ngpus,
             join=True,
