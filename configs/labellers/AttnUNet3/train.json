@@ -10,7 +10,7 @@
 "weights": [1.277, 1.921, 1.296, 1.998, 1.444, 1.94, 2.837, 3.021, 3.734, 2.644, 1.906, 2.654, 2.051],
 "compile": false,
 "autocast": true,
-"sw_batch_size": 4,
+"sw_batch_size": 2,
 "sw_overlap": 0.25,
 "data_augmentation": {
     "spatial": [3, 3, 1, 1, 1],  
