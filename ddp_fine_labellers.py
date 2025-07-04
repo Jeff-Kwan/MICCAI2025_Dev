@@ -120,13 +120,12 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
-        criterion = SoftDiceFocalLoss(  # Use soft labels
+        criterion = DiceCELoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.01] + train_params["weights"], device=rank),
-            gamma=1.0,
-            lambda_focal=1,
-            lambda_dice=1)
+            lambda_ce=1,
+            lambda_dice=2)
 
 
         # Initialize trainer and start
@@ -152,7 +151,7 @@ def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose", 
-        f"DiceCE (hard dice), 1-sample rand crop + augmentations",
+        f"DiceCE (1x ce 2x hard dice), 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
 
