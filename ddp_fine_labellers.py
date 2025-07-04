@@ -117,7 +117,7 @@ def main_worker(rank: int,
 
         # Model, optimizer, scheduler, loss
         optimizer = AdamW(model.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=1e-6)
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_params['epochs'], eta_min=train_params['min_lr'])
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
