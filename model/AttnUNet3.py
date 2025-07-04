@@ -179,7 +179,7 @@ class AttnUNet3(nn.Module):
         # Decoder
         x = self.decoder(x, skips)
 
-        x = self.out_norm(x.permute(0, 2, 3, 4 , 1)).permute(0, 4, 1, 2, 3)
+        x = self.out_norm(x.permute(0, 2, 3, 4, 1)).permute(0, 4, 1, 2, 3)
         x = self.out_conv(x)
         return x
 
