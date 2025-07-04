@@ -28,8 +28,6 @@ class SoftDiceFocalLoss(torch.nn.Module):
             to_onehot_y=False,
             softmax=softmax,
             weight=weight,
-            smooth_nr=1e-6,
-            smooth_dr=1e-6,
             soft_label=True)    # Use soft labels
         self.focal_loss = FocalLoss(
             include_background=include_background,
@@ -106,7 +104,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=42,
             pin_memory=False,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -150,7 +148,7 @@ def main_worker(rank: int,
 def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
-        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose", 
+        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]

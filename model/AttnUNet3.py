@@ -7,13 +7,12 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Sequential(
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c, h_c))
+        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
         self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
-        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias)
-        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias)
+        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
+        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*4, h_c*4),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
@@ -71,7 +70,7 @@ class TransformerLayer(nn.Module):
         self.mlps = nn.ModuleList([
             nn.Sequential(
                 nn.LayerNorm(in_c),
-                SwiGLU(in_c, in_c*4, in_c, bias=bias, dropout=dropout))
+                SwiGLU(in_c, in_c*2, in_c, bias=bias, dropout=dropout))
             for _ in range(repeats)])
 
     def forward(self, x):
@@ -124,7 +123,7 @@ class Decoder(nn.Module):
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
-             nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
+             nn.Conv3d(channels[i] * 2, channels[i], 3, 1, 1, bias=False)
              for i in reversed(range(self.stages - 1))])
 
     def forward(self, x, skips):
@@ -161,10 +160,9 @@ class AttnUNet3(nn.Module):
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
         self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
-        # self.out_conv = nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False)
         self.out_conv = nn.Sequential(
-            nn.ConvTranspose3d(channels[0], out_c, (2, 2, 1), (2, 2, 1), 0, bias=False),
-            nn.Conv3d(out_c, out_c, 3, 1, 1, bias=False))
+            nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
 
         
     def forward(self, x):
@@ -193,8 +191,8 @@ if __name__ == "__main__":
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
         "convs":        [24, 48, 96, 128],
-        "head_dim":     32,
-        "layers":       [4, 4, 4, 6],
+        "head_dim":     64,
+        "layers":       [4, 4, 4, 4],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
