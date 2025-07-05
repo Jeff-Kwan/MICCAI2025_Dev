@@ -90,9 +90,9 @@ if __name__ == "__main__":
         
 
         # plot overall graphs
-        plot_metrics["train_losses"].append(metrics["train_losses"])
-        plot_metrics["val_losses"].append(metrics["val_losses"])
-        plot_metrics["val_metrics"]["dice"].append(metrics["val_metrics"]["dice"])
-        plot_metrics["val_metrics"]["class_dice"].append(metrics["val_metrics"]["class_dice"])
+        plot_metrics["train_losses"] += metrics["train_losses"]
+        plot_metrics["val_losses"] += metrics["val_losses"]
+        plot_metrics["val_metrics"]["dice"] += metrics["val_metrics"]["dice"]
+        plot_metrics["val_metrics"]["class_dice"] += (metrics["val_metrics"]["class_dice"])
         plot_results(plot_metrics, output_dir_base)
             

@@ -62,9 +62,10 @@ def cpu_post(data, inference_config):
     data = prep_tf(data)
     alpha = inference_config["ema_alpha"]
     class_weights = torch.tensor(inference_config["class_weights"]).view(-1, 1, 1, 1)
+    alpha = 1 - (1-alpha) * class_weights
 
     # EMA
-    data["label"] = alpha * data["label"] + (1-alpha) * data["pred"] * class_weights
+    data["label"] = alpha * data["label"] + (1-alpha) * data["pred"]
 
     # Quantize and save
     data = post_tf(data)
