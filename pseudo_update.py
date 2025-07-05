@@ -1,5 +1,6 @@
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
+import argparse
 import json
 import torch
 import monai.transforms as mt
@@ -16,6 +17,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 # --- your model imports ---
 from utils.quantize import QuantizeNormalized
 from model.AttnUNet3 import AttnUNet3
+from model.ConvSeg import ConvSeg
 
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
@@ -86,6 +88,8 @@ def run_and_save(
 
     # Inference + dispatch to CPU pool
     in_flight = set()
+    autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
+    overlap_range = [inference_config["sw_overlap"][0], inference_config["sw_overlap"][1] - inference_config["sw_overlap"][0]]
     with ProcessPoolExecutor(max_workers=max_prefetch) as executor:
         for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
@@ -93,26 +97,17 @@ def run_and_save(
                 img = data["img"].to(device, non_blocking=True)
 
                 # GPU inference
-                if inference_config["autocast"]:
-                    with torch.autocast("cuda", torch.bfloat16):
-                        data["pred"] = torch.softmax(   # softmax logits
-                            sliding_window_inference(
-                            img,
-                            roi_size=inference_config["shape"],
-                            sw_batch_size=inference_config.get("sw_batch_size", 1),
-                            predictor=model,
-                            overlap=inference_config.get("sw_overlap", 0.25),
-                            mode="gaussian",
-                        ), dim=1).cpu().squeeze(0)
-                else:
-                    data["pred"] = sliding_window_inference(
+                overlap = overlap_range[0] + torch.rand(1).item() * overlap_range[1]
+                with torch.autocast("cuda", autocast):
+                    data["pred"] = torch.softmax(   # softmax logits
+                        sliding_window_inference(
                         img,
                         roi_size=inference_config["shape"],
                         sw_batch_size=inference_config.get("sw_batch_size", 1),
                         predictor=model,
-                        overlap=inference_config.get("sw_overlap", 0.25),
+                        overlap=overlap,
                         mode="gaussian",
-                    ).cpu().squeeze(0)
+                    ), dim=1).cpu().squeeze(0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed: {e}")
@@ -162,21 +157,20 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = AttnUNet3 
-    model_config    = json.load(open("configs/labellers/AttnUNet3/model.json", "r"))
-    model_path      = "output/2025-07-04/06-44-AttnUNet3/model.pth"
+    parser = argparse.ArgumentParser(description="Update soft pseudo labels inference.")
+    parser.add_argument("--config", type=str, default="inference_config.json",
+                        help="Path to the inference configuration file.")
+    parser.add_argument("--model_path", type=str, default=None,
+                        help="Path to the pre-trained model weights.")
+    args = parser.parse_args()
+    inference_config = json.load(open(args.config, "r"))
 
-    inference_config = {
-        "images_dir": "data/nifti/train_pseudo/images",
-        "labels_dir": "data/nifti/train_pseudo/softquant",
-        "output_dir": "data/nifti/train_pseudo/softiterated",
-        "ema_alpha": 0.5,  # EMA factor keep original label
-        "class_weights": [1.0] * 14,
-        "shape": [224, 224, 112],
-        "sw_batch_size": 1,
-        "sw_overlap": 0.5,
-        "autocast": True,
-    }
+    if inference_config["model_class"] == "AttnUNet3":
+        model_class = AttnUNet3
+    elif inference_config["model_class"] == "ConvSeg":
+        model_class = ConvSeg
+    model_config    = json.load(open(inference_config["model_config"], "r"))
+    model_path      = args.model_path
 
     # Prepare data & split
     all_pairs = get_image_label_pairs(inference_config["images_dir"],
