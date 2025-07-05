@@ -8,9 +8,9 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 if __name__ == "__main__":
     iterations = 10
     architecture = "ConvSeg"
-    model_params = "configs\labellers\ConvSeg\model.json"
-    train_params = "configs\labellers\ConvSeg\pseudo_train.json"
-    infer_params = "configs\labellers\ConvSeg\pseudo_update.json"
+    model_params = "configs/labellers/ConvSeg/model.json"
+    train_params = "configs/labellers/ConvSeg/pseudo_train.json"
+    infer_params = "configs/labellers/ConvSeg/pseudo_update.json"
 
 
     for iter in range(iterations):
