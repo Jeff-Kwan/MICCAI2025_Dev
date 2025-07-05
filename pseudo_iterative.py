@@ -63,6 +63,13 @@ if __name__ == "__main__":
     for iter in range(iterations):
         output_dir = f"{output_dir_base}/Iter_{iter+1}"
 
+        # Create new labels
+        subprocess.run([
+            "python", "pseudo_update.py",
+            "--config", infer_params,
+            "--model_path", model_path
+        ])
+
         # Fine tune process
         subprocess.run([
             "python", "pseudo_train.py",
@@ -90,11 +97,4 @@ if __name__ == "__main__":
         plot_metrics["val_metrics"]["dice"] += metrics["val_metrics"]["dice"]
         plot_metrics["val_metrics"]["class_dice"] += (metrics["val_metrics"]["class_dice"])
         plot_results(plot_metrics, output_dir_base)
-
-        # Create new labels
-        subprocess.run([
-            "python", "pseudo_update.py",
-            "--config", infer_params,
-            "--model_path", model_path
-        ])
             
