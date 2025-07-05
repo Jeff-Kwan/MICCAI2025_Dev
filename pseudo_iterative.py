@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-def plot_results(metrics, output_dir, class_names):
+def plot_results(metrics, output_dir):
         class_names = ["Liver", "Right kidney", "Spleen", "Pancreas", 
                         "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", 
                         "Gallbladder", "Esophagus", "Stomach", "Duodenum", "Left kidney"]
