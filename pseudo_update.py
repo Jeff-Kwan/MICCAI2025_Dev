@@ -37,6 +37,7 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 # --- CPU-side post-processing function ---
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
+        mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["label"], dtype=torch.float32),
         mt.NormalizeIntensityd(
@@ -100,15 +101,17 @@ def run_and_save(
                 # GPU inference
                 overlap = overlap_range[0] + torch.rand(1).item() * overlap_range[1]
                 with torch.autocast("cuda", autocast):
-                    data["pred"] = torch.softmax(   # softmax logits
-                        sliding_window_inference(
+                    data["pred"] = sliding_window_inference(
                         img,
                         roi_size=inference_config["shape"],
                         sw_batch_size=inference_config.get("sw_batch_size", 1),
                         predictor=model,
                         overlap=overlap,
                         mode="gaussian",
-                    ), dim=1).cpu().squeeze(0)
+                        sw_device=device,
+                        device=torch.device("cpu"),
+                        buffer_steps=2,
+                    ).cpu().squeeze(0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed: {e}")
