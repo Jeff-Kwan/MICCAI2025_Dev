@@ -5,6 +5,7 @@ import json
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def plot_results(metrics, output_dir):
@@ -40,7 +41,7 @@ def plot_results(metrics, output_dir):
         plt.xlabel("Epoch")
         plt.ylabel("Dice")
         plt.title("Dice Score for Each Organ over Training")
-        plt.ylim(0, 1)
+        plt.ylim(0.5, 1)
         plt.legend(loc='lower right')
         plt.grid()
         plt.tight_layout()
@@ -55,7 +56,8 @@ if __name__ == "__main__":
     train_params = "configs/labellers/ConvSeg/pseudo_train.json"
     infer_params = "configs/labellers/ConvSeg/pseudo_update.json"
     model_path = "output/Labeller/Base-ConvSeg/model.pth"
-    output_dir_base = "output/Iterative"
+    date_str  = datetime.now().strftime("%Y-%m-%d")
+    output_dir_base = f"output/Iterative-{architecture}-{date_str}"
 
     plot_metrics = {"train_losses": [], "val_losses": [], "val_metrics": {'dice': [], 'class_dice': []}}
     for iter in range(iterations):

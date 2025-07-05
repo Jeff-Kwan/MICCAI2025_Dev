@@ -73,13 +73,13 @@ def main_worker(rank: int,
             soft=True)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/nifti/train_gt/images",
-                labels_dir="data/nifti/train_gt/softiterative",
-                extension='.nii.gz'), #* 4
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/nifti/train_pseudo/softquant",
-            #     extension='.nii.gz'),
+                images_dir="data/nifti/train_gt/images", # Fixed GT
+                labels_dir="data/nifti/train_gt/softquant", 
+                extension='.nii.gz'), * 4
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images", # Iterative Pseudo
+                labels_dir="data/nifti/train_pseudo/softiterative",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -138,7 +138,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by 1.0/dice",
+        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - no loss modifiers",
         f"{train_params['shape']} shape", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
