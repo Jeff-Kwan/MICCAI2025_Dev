@@ -152,6 +152,8 @@ if __name__ == "__main__":
                         help="Model architecture to use")
     parser.add_argument("--output_dir", type=str, required=True,
                         help="Directory to save model checkpoints and logs")
+    parser.add_argument("--model_path", type=str, default=None,
+                        help="Path to pre-trained model weights (if any)")
     parser.add_argument("--model_params", type=str, required=True,
                         help="Path to model parameters JSON file")
     parser.add_argument("--train_params", type=str, required=True,
@@ -178,7 +180,11 @@ if __name__ == "__main__":
         model = ConvSeg2(model_params)
     else:
         raise ValueError(f"Unknown architecture: {architecture}")
+    if args.model_path:
+        state_dict = torch.load(args.model_path, map_location='cpu', weights_only=True)
+        model.load_state_dict(state_dict)
     
+
     try:
         mp.spawn(
             main_worker,
