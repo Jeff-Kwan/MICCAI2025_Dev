@@ -61,7 +61,7 @@ class DDPTrainer:
 
         # Only rank 0 writes metrics
         self.num_classes = train_params['num_classes']
-        self.dice_metric = mm.DiceMetric(include_background=False, 
+        self.dice_metric = mm.DiceMetric(include_background=True, 
                                          ignore_empty=False,
                                          reduction='mean_batch')
         if self.local_rank == 0:
@@ -251,7 +251,7 @@ class DDPTrainer:
 
         # Plot class dice
         plt.figure(figsize=(12, 6))
-        class_dice = np.array(self.val_metrics["class_dice"]).transpose().tolist()
+        class_dice = np.array(self.val_metrics["class_dice"]).transpose()[1:].tolist()
         for name, dice in zip(self.class_names, class_dice):
             plt.plot(dice, label=name)
         plt.xlabel("Epoch")
