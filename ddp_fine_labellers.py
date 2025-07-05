@@ -147,7 +147,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by dice error * 10 + 1",
+        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by 1.0/dice",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
@@ -157,7 +157,7 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["AttnUNet3"]
+    architectures = ["ConvSeg2"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))

@@ -7,13 +7,12 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Sequential(
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c, h_c))
+        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
         self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
         self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
         self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
         self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*4, h_c*4),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
@@ -74,7 +73,7 @@ class Decoder(nn.Module):
                 nn.GroupNorm(channels[i]//8, channels[i]))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
-             nn.Conv3d(channels[i] * 2, channels[i], 1, 1, 0, bias=False)
+             nn.Conv3d(channels[i] * 2, channels[i], 3, 1, 1, bias=False)
              for i in reversed(range(self.stages - 1))])
 
     def forward(self, x, skips):
@@ -97,7 +96,7 @@ class ConvSeg2(nn.Module):
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
 
-        self.in_conv = nn.Conv3d(1, channels[0], 3, 1, 1, bias=False)
+        self.in_conv = nn.Conv3d(1, channels[0], (2, 2, 1), (2, 2, 1), 0, bias=False)
         
         self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
         self.bottleneck = ConvLayer(channels[-1], convs[-1], layers[-1],
@@ -105,7 +104,9 @@ class ConvSeg2(nn.Module):
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
         self.out_norm = nn.GroupNorm(1, channels[0], affine=False)
-        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
+        self.out_conv = nn.Sequential(
+            nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
 
         
     def forward(self, x):
@@ -129,11 +130,11 @@ class ConvSeg2(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda")
     
-    B, S1, S2, S3 = 1, 160, 160, 80
+    B, S1, S2, S3 = 1, 224, 224, 128
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
-        "convs":        [8, 16, 32, 64],
+        "convs":        [24, 48, 96, 128],
         "layers":       [4, 4, 4, 8],
         "dropout":      0.1,
         "stochastic_depth": 0.1
