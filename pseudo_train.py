@@ -75,7 +75,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images", # Fixed GT
                 labels_dir="data/nifti/train_gt/softquant", 
-                extension='.nii.gz'), * 4
+                extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images", # Iterative Pseudo
                 labels_dir="data/nifti/train_pseudo/softiterative",

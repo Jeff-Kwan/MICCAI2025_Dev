@@ -110,7 +110,7 @@ def run_and_save(
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=2,
+                        buffer_steps=4,
                     ).cpu().squeeze(0)
 
             except Exception as e:
