@@ -90,17 +90,17 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
-            mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["aladdin", "blackbean"],
-                pixdim=pixdim,
-                mode="nearest",
-                lazy=True),
-            mt.ThresholdIntensityd(
-                keys=["aladdin", "blackbean"],
-                above=False,
-                threshold=14,   # 14 classes
-                cval=0),
+            # mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
+            # mt.Spacingd(
+            #     keys=["aladdin", "blackbean"],
+            #     pixdim=pixdim,
+            #     mode="nearest",
+            #     lazy=True),
+            # mt.ThresholdIntensityd(
+            #     keys=["aladdin", "blackbean"],
+            #     above=False,
+            #     threshold=14,   # 14 classes
+            #     cval=0),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes
@@ -131,8 +131,10 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=46,
-        prefetch_factor=8,
+        num_workers=128,
+        persistent_workers=True,
+        # num_workers=46,
+        # prefetch_factor=8,
     )
 
     # iterate, transform, and save
@@ -204,7 +206,7 @@ if __name__ == "__main__":
         "data/nifti/train_gt/softquant",
         pixdim)
     process_dataset(
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+        "data/nifti/train_pseudo/aladdin5",
+        "data/nifti/train_pseudo/blackbean",
         "data/nifti/train_pseudo/softquant",
         pixdim)

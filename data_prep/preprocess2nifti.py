@@ -81,7 +81,8 @@ def process_dataset(in_dir, out_dir, split, pixdim):
                 output_ext=".nii.gz",
                 separate_folder=False,
                 output_dtype=torch.uint8,
-                print_log=False)
+                print_log=False),
+            mt.DeleteItemsd(keys=[split])
         ]
     )
 
@@ -91,6 +92,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
         dataset,
         batch_size=1,
         num_workers=128,
+        persistent_workers=True,
     )
 
     # iterate, transform, and save
