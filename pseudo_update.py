@@ -187,7 +187,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 36
+    cpus_per_gpu = 40
     max_prefetch = 10
 
     # Spawn one process per GPU
