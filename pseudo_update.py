@@ -38,7 +38,7 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
         # mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
-        mt.AsDiscreted(["pred"], argmax=True, to_onehot=True),  # Update with prediction
+        mt.AsDiscreted(["pred"], argmax=True, to_onehot=14),  # Update with prediction
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["label", "pred"], dtype=[torch.float32, torch.float32]),
         mt.NormalizeIntensityd(
