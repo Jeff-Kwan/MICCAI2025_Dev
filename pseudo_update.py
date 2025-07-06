@@ -92,7 +92,7 @@ def run_and_save(
     in_flight = set()
     autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
     overlap_range = [inference_config["sw_overlap"][0], inference_config["sw_overlap"][1] - inference_config["sw_overlap"][0]]
-    with ProcessPoolExecutor(max_workers=n_cpu_workers-4) as executor:
+    with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
         for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
                 # CPU → GPU prep
@@ -124,7 +124,7 @@ def run_and_save(
             in_flight.add(fut)
 
             # 4) if we've queued >= max_prefetch, wait for at least one to finish
-            if len(in_flight) >= (n_cpu_workers-4 + max_prefetch):
+            if len(in_flight) >= (n_cpu_workers + max_prefetch):
                 done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
                 for f in done:
                     f.result()
