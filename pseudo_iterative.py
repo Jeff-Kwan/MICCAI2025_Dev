@@ -50,7 +50,7 @@ def plot_results(metrics, output_dir):
 
 
 if __name__ == "__main__":
-    iterations = 10
+    iterations = 20
     architecture = "ConvSeg"
     model_params = "configs/labellers/ConvSeg/model.json"
     train_params = "configs/labellers/ConvSeg/pseudo_train.json"
