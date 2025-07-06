@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
     cpus_per_gpu = 36
-    max_prefetch = 10
+    max_prefetch = 8
 
     # Spawn one process per GPU
     try:
