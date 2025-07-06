@@ -84,8 +84,8 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=6,
-        pin_memory=True,
+        num_workers=8,
+        pin_memory=False,
         persistent_workers=True,
         use_thread_workers=True
     )
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 40
+    cpus_per_gpu = 36
     max_prefetch = 10
 
     # Spawn one process per GPU
