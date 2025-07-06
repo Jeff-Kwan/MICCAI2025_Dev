@@ -50,7 +50,7 @@ def plot_results(metrics, output_dir):
 
 
 if __name__ == "__main__":
-    iterations = 20
+    iterations = 30
     architecture = "ConvSeg"
     model_params = "configs/labellers/ConvSeg/model.json"
     train_params = "configs/labellers/ConvSeg/pseudo_train.json"
@@ -80,11 +80,12 @@ if __name__ == "__main__":
             "--train_params", train_params,
         ])
 
-        # After training
-        model_path = output_dir + "/model.pth"
+        # After training -> Use best model
+        model_path = output_dir + "/best_model.pth"
         # Update inference confidence with dice score
         metrics = json.load(open(output_dir + "/metrics.json", "r"))
-        class_dice = metrics["val_metrics"]["class_dice"][-1]
+        best_index = metrics["val_metrics"]["dice"].index(max(metrics["val_metrics"]["dice"]))
+        class_dice = metrics["val_metrics"]["class_dice"][best_index]
         infer_config = json.load(open(infer_params, "r"))
         infer_config["class_weights"] = class_dice
         with open(infer_params, "w") as f:

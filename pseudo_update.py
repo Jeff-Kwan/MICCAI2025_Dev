@@ -37,9 +37,10 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 # --- CPU-side post-processing function ---
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
-        mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
+        # mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
+        mt.AsDiscreted(["pred"], argmax=True, to_onehot=True),  # Update with prediction
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["label"], dtype=torch.float32),
+        mt.EnsureTyped(keys=["label", "pred"], dtype=[torch.float32, torch.float32]),
         mt.NormalizeIntensityd(
             keys=["label"],
             subtrahend=0.0,
@@ -82,9 +83,8 @@ def run_and_save(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
         num_workers=8,
-        pin_memory=True,
+        pin_memory=False,
         persistent_workers=True,
-        use_thread_workers=True
     )
     deleter = mt.DeleteItemsd(["img"])
 
