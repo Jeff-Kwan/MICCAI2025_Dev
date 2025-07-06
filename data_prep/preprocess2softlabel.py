@@ -131,7 +131,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=36,
+        num_workers=46,
         prefetch_factor=8,
     )
 
@@ -170,7 +170,7 @@ def process_gt(in_dir, out_dir, pixdim):
                 output_postfix="",
                 output_ext=".nii.gz",
                 separate_folder=False,
-                output_dtype=torch.float32,
+                output_dtype=torch.uint8,
                 print_log=False),
             mt.DeleteItemsd(keys=["label"])
         ]
