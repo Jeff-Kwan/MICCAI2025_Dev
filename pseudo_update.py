@@ -162,9 +162,9 @@ def worker(
 if __name__ == "__main__":
     # --- configuration ---
     parser = argparse.ArgumentParser(description="Update soft pseudo labels inference.")
-    parser.add_argument("--config", type=str, default="inference_config.json",
+    parser.add_argument("--config", type=str, default="configs/labellers/ConvSeg/pseudo_update.json",
                         help="Path to the inference configuration file.")
-    parser.add_argument("--model_path", type=str, default=None,
+    parser.add_argument("--model_path", type=str, default="output/Labeller/Base-ConvSeg/model.pth",
                         help="Path to the pre-trained model weights.")
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
