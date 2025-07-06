@@ -40,7 +40,7 @@ def cpu_post(data, inference_config):
         # mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
         mt.AsDiscreted(["pred"], argmax=True, to_onehot=14),  # Update with prediction
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["label", "pred"], dtype=[torch.float32, torch.float32]),
+        mt.EnsureTyped(keys=["label", "pred"], dtype=[np.float32, np.float32]),
         mt.NormalizeIntensityd(
             keys=["label"],
             subtrahend=0.0,
@@ -82,8 +82,8 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=8,
-        pin_memory=False,
+        num_workers=6,
+        pin_memory=True,
         persistent_workers=True,
     )
     deleter = mt.DeleteItemsd(["img"])
@@ -111,7 +111,7 @@ def run_and_save(
                         sw_device=device,
                         device=torch.device("cpu"),
                         buffer_steps=8,
-                    ).cpu().squeeze(0)
+                    ).cpu().squeeze(0).numpy()
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed: {e}")
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 40
+    cpus_per_gpu = 42
     max_prefetch = 8
 
     # Spawn one process per GPU
