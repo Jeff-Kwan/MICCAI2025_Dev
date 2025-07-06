@@ -6,6 +6,7 @@ import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import gc
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def plot_results(metrics, output_dir):
@@ -98,4 +99,8 @@ if __name__ == "__main__":
         plot_metrics["val_metrics"]["dice"] += metrics["val_metrics"]["dice"]
         plot_metrics["val_metrics"]["class_dice"] += (metrics["val_metrics"]["class_dice"])
         plot_results(plot_metrics, output_dir_base)
+
+        # Clean up
+        gc.collect()
+        torch.cuda.empty_cache()
             
