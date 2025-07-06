@@ -42,7 +42,7 @@ def plot_results(metrics, output_dir):
         plt.ylabel("Dice")
         plt.title("Dice Score for Each Organ over Training")
         plt.ylim(0.5, 1)
-        plt.legend(loc='lower right')
+        plt.legend(loc='lower left')
         plt.grid()
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, 'class_dice.png'))

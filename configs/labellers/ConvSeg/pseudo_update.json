@@ -4,7 +4,7 @@
 "output_dir": "data/nifti/train_pseudo/softiterative",
 "model_class": "ConvSeg",
 "model_config": "configs/labellers/ConvSeg/model.json",
-"ema_alpha": 0.5,  
+"ema_alpha": 0.8,  
 "class_weights": [
         0.99,
         0.9754638671875,
