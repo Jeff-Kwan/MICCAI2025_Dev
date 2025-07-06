@@ -2,7 +2,7 @@ nibabel
 tqdm
 scipy
 matplotlib
-monai==1.5.0 --no-deps
+monai
 huggingface-hub
 torch
 torchvision
