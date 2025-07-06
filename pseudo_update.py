@@ -81,7 +81,7 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=n_cpu_workers,
+        num_workers=4,
         pin_memory=True,
         persistent_workers=True,
         use_thread_workers=True
@@ -92,7 +92,7 @@ def run_and_save(
     in_flight = set()
     autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
     overlap_range = [inference_config["sw_overlap"][0], inference_config["sw_overlap"][1] - inference_config["sw_overlap"][0]]
-    with ProcessPoolExecutor(max_workers=max_prefetch) as executor:
+    with ProcessPoolExecutor(max_workers=n_cpu_workers-4) as executor:
         for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
                 # CPU → GPU prep
@@ -110,7 +110,7 @@ def run_and_save(
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=4,
+                        buffer_steps=8,
                     ).cpu().squeeze(0)
 
             except Exception as e:
@@ -124,7 +124,7 @@ def run_and_save(
             in_flight.add(fut)
 
             # 4) if we've queued >= max_prefetch, wait for at least one to finish
-            if len(in_flight) >= max_prefetch:
+            if len(in_flight) >= (n_cpu_workers-4 + max_prefetch):
                 done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
                 for f in done:
                     f.result()
@@ -184,8 +184,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 2   # Dataloading
-    max_prefetch = 46   # Postprocessing
+    cpus_per_gpu = 48
+    max_prefetch = 16
 
     # Spawn one process per GPU
     try:
@@ -203,7 +203,6 @@ if __name__ == "__main__":
             nprocs=ngpus,
             join=True,
             daemon=False,  # ensure workers are not daemonic
-            # No timeout argument is set, so workers can run indefinitely
         )
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")

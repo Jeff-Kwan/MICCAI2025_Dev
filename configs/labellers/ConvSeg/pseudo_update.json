@@ -22,7 +22,7 @@
         0.9243228435516357
             ],
 "shape": [224, 224, 128],
-"sw_batch_size": 2,
+"sw_batch_size": 4,
 "sw_overlap": [0.25, 0.75],
 "autocast": true
 }
