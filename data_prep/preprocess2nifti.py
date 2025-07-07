@@ -91,7 +91,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=128,
+        num_workers=256,
         persistent_workers=True,
     )
 
