@@ -43,7 +43,7 @@ def cpu_post(data, inference_config):
         mt.ThresholdIntensityd(keys=["pred"], above=True, threshold=1/14, cval=0), # Keep above random predictions
         # No renormalization for probability mass, downweight uncertain predictions naturally
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["label", "pred"], dtype=[torch.float32, torch.float32]),
+        mt.EnsureTyped(keys=["label"], dtype=[torch.float32]),
         mt.NormalizeIntensityd(
             keys=["label"],
             subtrahend=0.0,
@@ -85,7 +85,7 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=3,
+        num_workers=4,
         pin_memory=False,
         persistent_workers=True,
         use_thread_workers=True
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 28
+    cpus_per_gpu = 24
     max_prefetch = 8
 
     # Spawn one process per GPU
