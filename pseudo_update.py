@@ -123,19 +123,19 @@ def run_and_save(
             # Done with image
             data = deleter(data)
 
-        #     # 3) submit to CPU pool
-        #     fut = executor.submit(cpu_post, data, inference_config)
-        #     in_flight.add(fut)
+            # 3) submit to CPU pool
+            fut = executor.submit(cpu_post, data, inference_config)
+            in_flight.add(fut)
 
-        #     # 4) if we've queued >= max_prefetch, wait for at least one to finish
-        #     if len(in_flight) >= (n_cpu_workers + max_prefetch):
-        #         done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
-        #         for f in done:
-        #             f.result()
+            # 4) if we've queued >= max_prefetch, wait for at least one to finish
+            if len(in_flight) >= (n_cpu_workers + max_prefetch):
+                done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
+                for f in done:
+                    f.result()
 
-        # # drain remaining futures
-        # for f in as_completed(in_flight):
-        #     f.result()
+        # drain remaining futures
+        for f in as_completed(in_flight):
+            f.result()
 
 
 def worker(
