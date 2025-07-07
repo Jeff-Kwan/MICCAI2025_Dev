@@ -87,8 +87,6 @@ def run_and_save(
         batch_size=1,
         num_workers=4,
         pin_memory=False,
-        persistent_workers=True,
-        use_thread_workers=True
     )
     deleter = mt.DeleteItemsd(["img"])
 
@@ -188,8 +186,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 24
-    max_prefetch = 8
+    cpus_per_gpu = 30
+    max_prefetch = 1
 
     # Spawn one process per GPU
     try:
