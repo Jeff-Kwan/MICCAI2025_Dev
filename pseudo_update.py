@@ -35,6 +35,7 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 
 
 # --- CPU-side post-processing function ---
+@torch.no_grad()
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
         mt.NormalizeIntensityd(keys=["pred"], subtrahend=0.0, divisor=0.5),  # Sharpen confidence
@@ -42,7 +43,7 @@ def cpu_post(data, inference_config):
         mt.ThresholdIntensityd(keys=["pred"], above=True, threshold=1/14, cval=0), # Keep above random predictions
         # No renormalization for probability mass, downweight uncertain predictions naturally
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["label"], dtype=torch.float32),
+        mt.EnsureTyped(keys=["label"], dtype=[torch.float32]),
         mt.NormalizeIntensityd(
             keys=["label"],
             subtrahend=0.0,
@@ -75,7 +76,7 @@ def cpu_post(data, inference_config):
     data = post_tf(data)
     return 
 
-@torch.inference_mode()
+@torch.no_grad()
 def run_and_save(
     chunk, inference_config, model, device,
     gpu_id, n_cpu_workers, max_prefetch
@@ -84,10 +85,8 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=n_cpu_workers,
-        pin_memory=True,
-        persistent_workers=True,
-        use_thread_workers=True
+        num_workers=4,
+        pin_memory=False,
     )
     deleter = mt.DeleteItemsd(["img"])
 
@@ -95,7 +94,7 @@ def run_and_save(
     in_flight = set()
     autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
     overlap_range = [inference_config["sw_overlap"][0], inference_config["sw_overlap"][1] - inference_config["sw_overlap"][0]]
-    with ProcessPoolExecutor(max_workers=max_prefetch) as executor:
+    with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
         for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
                 # CPU → GPU prep
@@ -113,8 +112,8 @@ def run_and_save(
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=2,
-                    ).cpu().squeeze(0)
+                        buffer_steps=8,
+                    ).cpu().squeeze(0).numpy()
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed: {e}")
@@ -127,7 +126,7 @@ def run_and_save(
             in_flight.add(fut)
 
             # 4) if we've queued >= max_prefetch, wait for at least one to finish
-            if len(in_flight) >= max_prefetch:
+            if len(in_flight) >= (n_cpu_workers + max_prefetch):
                 done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
                 for f in done:
                     f.result()
@@ -165,9 +164,9 @@ def worker(
 if __name__ == "__main__":
     # --- configuration ---
     parser = argparse.ArgumentParser(description="Update soft pseudo labels inference.")
-    parser.add_argument("--config", type=str, default="inference_config.json",
+    parser.add_argument("--config", type=str, default="configs/labellers/ConvSeg/pseudo_update.json",
                         help="Path to the inference configuration file.")
-    parser.add_argument("--model_path", type=str, default=None,
+    parser.add_argument("--model_path", type=str, default="output/Labeller/Base-ConvSeg/model.pth",
                         help="Path to the pre-trained model weights.")
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
@@ -187,8 +186,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 2   # Dataloading
-    max_prefetch = 24   # Postprocessing
+    cpus_per_gpu = 8
+    max_prefetch = 2
 
     # Spawn one process per GPU
     try:
@@ -210,3 +209,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught in main process. Terminating children...")
         mp.get_context('spawn')._shutdown()
+
+    print("Soft pseudo labels updated successfully.")
