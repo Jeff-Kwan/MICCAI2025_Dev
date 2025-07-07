@@ -35,6 +35,7 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 
 
 # --- CPU-side post-processing function ---
+@torch.no_grad()
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
         mt.NormalizeIntensityd(keys=["pred"], subtrahend=0.0, divisor=0.5),  # Sharpen confidence
@@ -75,7 +76,7 @@ def cpu_post(data, inference_config):
     data = post_tf(data)
     return 
 
-@torch.inference_mode()
+@torch.no_grad()
 def run_and_save(
     chunk, inference_config, model, device,
     gpu_id, n_cpu_workers, max_prefetch
@@ -84,7 +85,7 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=5,
+        num_workers=2,
         pin_memory=True,
         persistent_workers=True,
         use_thread_workers=True
@@ -122,19 +123,19 @@ def run_and_save(
             # Done with image
             data = deleter(data)
 
-            # 3) submit to CPU pool
-            fut = executor.submit(cpu_post, data, inference_config)
-            in_flight.add(fut)
+        #     # 3) submit to CPU pool
+        #     fut = executor.submit(cpu_post, data, inference_config)
+        #     in_flight.add(fut)
 
-            # 4) if we've queued >= max_prefetch, wait for at least one to finish
-            if len(in_flight) >= (n_cpu_workers + max_prefetch):
-                done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
-                for f in done:
-                    f.result()
+        #     # 4) if we've queued >= max_prefetch, wait for at least one to finish
+        #     if len(in_flight) >= (n_cpu_workers + max_prefetch):
+        #         done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
+        #         for f in done:
+        #             f.result()
 
-        # drain remaining futures
-        for f in as_completed(in_flight):
-            f.result()
+        # # drain remaining futures
+        # for f in as_completed(in_flight):
+        #     f.result()
 
 
 def worker(
@@ -187,8 +188,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 26
-    max_prefetch = 4
+    cpus_per_gpu = 30
+    max_prefetch = 16
 
     # Spawn one process per GPU
     try:
