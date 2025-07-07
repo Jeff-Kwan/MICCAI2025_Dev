@@ -211,4 +211,4 @@ if __name__ == "__main__":
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
         "data/nifti/train_pseudo/softquant",
         pixdim)
-    shutil.copytree("data/nifti/train_pseudo/softquant", "data/nifti/train_pseudo/iterative", dirs_exist_ok=True)
+    shutil.copytree("data/nifti/train_pseudo/softquant", "data/nifti/train_pseudo/softiterative", dirs_exist_ok=True)
