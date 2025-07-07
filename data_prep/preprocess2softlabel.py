@@ -90,17 +90,11 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
-            # mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
-            # mt.Spacingd(
-            #     keys=["aladdin", "blackbean"],
-            #     pixdim=pixdim,
-            #     mode="nearest",
-            #     lazy=True),
-            # mt.ThresholdIntensityd(
-            #     keys=["aladdin", "blackbean"],
-            #     above=False,
-            #     threshold=14,   # 14 classes
-            #     cval=0),
+            mt.ThresholdIntensityd(
+                keys=["aladdin", "blackbean"],
+                above=False,
+                threshold=14,   # 14 classes
+                cval=0),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes
@@ -113,6 +107,12 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 output_key="label"),
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode="trilinear",
+                lazy=True),
             QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
@@ -131,10 +131,10 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = ThreadDataLoader(
         dataset,
         batch_size=1,
-        num_workers=128,
+        num_workers=40,
         persistent_workers=True,
         # num_workers=46,
-        # prefetch_factor=8,
+        prefetch_factor=8,
     )
 
     # iterate, transform, and save
@@ -201,12 +201,12 @@ def process_gt(in_dir, out_dir, pixdim):
 
 if __name__ == "__main__":
     pixdim = (0.8, 0.8, 2.5)
-    process_gt(
-        "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-        "data/nifti/train_gt/softquant",
-        pixdim)
+    # process_gt(
+    #     "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+    #     "data/nifti/train_gt/softquant",
+    #     pixdim)
     process_dataset(
-        "data/nifti/train_pseudo/aladdin5",
-        "data/nifti/train_pseudo/blackbean",
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+        "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
         "data/nifti/train_pseudo/softquant",
         pixdim)
