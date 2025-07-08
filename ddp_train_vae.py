@@ -80,16 +80,16 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=48,
             pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=3,
+            num_workers=2,
             pin_memory=False,
-            persistent_workers=False)
+            persistent_workers=True)
 
 
         # Model, optimizer, scheduler, loss
