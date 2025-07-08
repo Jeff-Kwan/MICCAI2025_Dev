@@ -18,24 +18,23 @@ class LayerNormTranspose(nn.Module):
         return x.transpose(self.dim, -1)
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_c: int, h_c: int, out_c: int,
+    def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.convs = nn.Sequential(
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c, h_c),
+        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
+        self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
+        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
+        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
+        self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*4, h_c*4),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
+            nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
         
-    def _inner(self, x):
-        return self.convs(x)
-
     def forward(self, x):
-        # if self.training and x.requires_grad:
-        #     return checkpoint.checkpoint(self._inner, x, use_reentrant=False)
-        # else:
-        return self._inner(x)
+        x = self.in_conv(x)
+        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
+        return self.out_conv(x)
 
 
 class ConvLayer(nn.Module):
@@ -221,7 +220,9 @@ class VAEPosterior(nn.Module):
              nn.Conv3d(channels[i] * 3, channels[i], 1, 1, 0, bias=False)
              for i in reversed(range(self.stages - 1))])
         self.out_norm = LayerNormTranspose(1, channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.ConvTranspose3d(channels[0], out_c, 2, 2, 0, bias=False)
+        self.out_conv = nn.Sequential(
+            nn.ConvTranspose3d(channels[0], 16, 2, 2, 0, bias=False),
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
 
         
     def img_encode(self, x):

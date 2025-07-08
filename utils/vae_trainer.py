@@ -11,6 +11,7 @@ import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 import gc
+import numpy as np
 
 class VAETrainer:
     def __init__(
@@ -76,16 +77,21 @@ class VAETrainer:
 
         # Only rank 0 writes metrics
         self.num_classes = train_params['num_classes']
-        self.dice_metric = mm.DiceMetric(include_background=False)
+        self.dice_metric = mm.DiceMetric(include_background=True, 
+                                         ignore_empty=False,
+                                         reduction='mean_batch')
         if self.local_rank == 0:
             os.makedirs(output_dir, exist_ok=True)
             self.vae_losses = []
             self.model_losses = []
             self.val_losses = []
-            self.val_metrics = {'dice': []}
+            self.val_metrics = {'dice': [], 'class_dice': []}
             self.best_results = {}
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
+            self.class_names = ["Liver", "Right kidney", "Spleen", "Pancreas", 
+                                "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", 
+                                "Gallbladder", "Esophagus", "Stomach", "Duodenum", "Left kidney"]
 
     def kl_normal(self, mu, logvar):
         # Sum over latent dim - channels (1); mean over batch and img dimensions
@@ -165,10 +171,12 @@ class VAETrainer:
             gc.collect()
             torch.cuda.empty_cache()
             if self.local_rank == 0 and val_loader is not None:
+                metrics["dice"] = float(sum(metrics["class_dice"]) / len(metrics["class_dice"]))
                 self.vae_losses.append(running_vae_loss / len(train_loader))
                 self.model_losses.append(running_model_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
+                self.val_metrics['class_dice'].append(metrics['class_dice'])
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"VAE Loss: {running_vae_loss / len(train_loader):.5f} | "
                       f"Model Loss: {running_model_loss / len(train_loader):.5f} | "
@@ -417,6 +425,21 @@ class VAETrainer:
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'training_curves.png'))
         plt.close(fig)
+
+        # Plot class dice
+        plt.figure(figsize=(12, 6))
+        class_dice = np.array(self.val_metrics["class_dice"]).transpose()[1:].tolist()
+        for name, dice in zip(self.class_names, class_dice):
+            plt.plot(dice, label=name)
+        plt.xlabel("Epoch")
+        plt.ylabel("Dice")
+        plt.title("Dice Score for Each Organ over Training")
+        plt.ylim(0, 1)
+        plt.legend(loc='lower right')
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'class_dice.png'))
+        plt.close()
 
     def plot_vae_results(self):
         epochs = range(1, len(self.vae_losses) + 1)

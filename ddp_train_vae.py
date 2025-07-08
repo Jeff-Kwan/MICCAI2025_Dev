@@ -128,14 +128,14 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': 200,    # Prior posterior together
+        'epochs': 120,    # Prior posterior together
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 3e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (432, 224, 112),
-        'alpha': (0.1, 1.0, 40), # JS Match of Prior and Likelihood
+        'alpha': (0.1, 1.0, 20), # JS Match of Prior and Likelihood
         'beta': (0.1, 1.0, 20), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
