@@ -128,26 +128,26 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': 300,    # Prior posterior together
+        'epochs': 200,    # Prior posterior together
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 5e-4,
-        'weight_decay': 2e-2,
+        'learning_rate': 3e-4,
+        'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (432, 224, 112),
-        'alpha': (0.1, 2.0, 60), # JS Match of Prior and Likelihood
-        'beta': (0.1, 2.0, 40), # Linear ramp up [min, max, epochs] VAE beta
+        'alpha': (0.1, 1.0, 40), # JS Match of Prior and Likelihood
+        'beta': (0.1, 1.0, 20), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
         'sw_overlap': 1/2,
         'data_augmentation': {
             # [I, Affine, Flip, Rotate90, Elastic]
-            'spatial': [2, 2, 1, 1, 1],  
+            'spatial': [3, 3, 1, 1, 1],  
             # [I, Smooth, Noise, Bias, Contrast, Sharpen, Histogram]
-            'intensity': [2, 2, 1, 0.5, 1, 1, 0.5],  
+            'intensity': [3, 2, 1, 1, 1, 1, 1],  
             # [I, Dropout, Shuffle]
-            'coarse': [1, 1, 1]  
+            'coarse': [3, 1, 1]
         }
     }
     output_dir = "VAEPosterior"
