@@ -56,10 +56,14 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.nii.gz') * 2 \
+                extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
-                labels_dir="data/small/train_pseudo/pseudo",
+                labels_dir="data/small/train_pseudo/aladdin",
+                extension='.nii.gz')
+            + + get_data_files(
+                images_dir="data/small/train_pseudo/images",
+                labels_dir="data/small/train_pseudo/blackbean",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
@@ -147,7 +151,7 @@ if __name__ == "__main__":
         }
     }
     output_dir = "VAEPosterior"
-    comments = ["VAE Posterior pixdim = (1.5, 1.5, 2.5) - GTx2 + Aladdin training",
+    comments = ["VAE Posterior pixdim = (1.5, 1.5, 2.5) - GTx4 + Aladdin + Blackbean training",
         "2 way prior decoding, No latent and z gradients",
         "No dropout stochastic depth in prior but yes posterior",
         f"beta-VAE only autoencodes labels, KL with normal and JS with each other",
