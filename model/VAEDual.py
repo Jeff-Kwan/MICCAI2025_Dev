@@ -285,12 +285,12 @@ if __name__ == "__main__":
     # print("DO NOT RUN ON LAPTOP!")
     # exit()
     
-    B, S1, S2, S3 = 1, 448, 224, 128
+    B, S1, S2, S3 = 1, 432, 224, 112
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
-        "convs":        [32, 48, 64, 32],
-        "layers":       [2, 2, 2, 2],
+        "convs":        [24, 48, 64, 32],
+        "layers":       [2, 2, 2, 4],
         "dropout":      0.1,
         "stochastic_depth": 0.1
     }
