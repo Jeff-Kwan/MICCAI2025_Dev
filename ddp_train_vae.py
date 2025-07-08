@@ -76,14 +76,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=42,
-            pin_memory=True,
+            num_workers=44,
+            pin_memory=False,
             persistent_workers=True)
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=4,
+            num_workers=3,
             pin_memory=False,
             persistent_workers=False)
 
