@@ -56,17 +56,17 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/labels",
-                extension='.npy') * 2 \
+                extension='.nii.gz') * 2 \
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/pseudo",
-                extension='.npy'),
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
                 images_dir="data/small/val/images",
                 labels_dir="data/small/val/labels",
-                extension='.npy'),
+                extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
