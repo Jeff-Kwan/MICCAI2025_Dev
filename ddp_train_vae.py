@@ -61,7 +61,7 @@ def main_worker(rank: int,
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/aladdin5",
                 extension='.nii.gz')
-            + + get_data_files(
+            + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/blackbean",
                 extension='.nii.gz'),
