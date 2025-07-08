@@ -131,7 +131,7 @@ if __name__ == "__main__":
         'epochs': 120,    # Prior posterior together
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
-        'learning_rate': 3e-4,
+        'learning_rate': 5e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (432, 224, 112),
