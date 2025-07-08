@@ -15,7 +15,7 @@ class LayerNormTranspose(nn.Module):
         # (..., C, ...) -> (..., ..., C) -> norm -> restore
         x = x.transpose(self.dim, -1)
         x = self.norm(x)
-        return x.transpose(self.dim, -1)
+        return x.transpose(self.dim, -1).contiguous()
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
@@ -154,7 +154,7 @@ class VAEPrior(nn.Module):
 
         x = self.bottleneck1(x)
 
-        x = self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)
+        x = self.muvar_norm(x.transpose(1, -1)).transpose(1, -1).contiguous()
         mu, log_var = self.mu_var(x).chunk(2, dim=1)
         return mu, log_var
     
@@ -245,7 +245,7 @@ class VAEPosterior(nn.Module):
 
         x = self.bottleneck1(x)
         skips.append(x)
-        mu, log_var = self.mu_var(self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)).chunk(2, dim=1)
+        mu, log_var = self.mu_var(self.muvar_norm(x.transpose(1, -1)).transpose(1, -1)).contiguous().chunk(2, dim=1)
         return mu, log_var, skips
     
     def decode(self, skips, latent_priors):
