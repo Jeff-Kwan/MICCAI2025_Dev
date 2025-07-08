@@ -363,8 +363,9 @@ class VAETrainer:
             dist.all_reduce(sample_count, op=dist.ReduceOp.SUM)
 
         total_loss = loss_sum.item() / max(sample_count.item(), 1)
-        total_dice = float(self.dice_metric.aggregate())
-        return total_loss, {'dice': total_dice}
+        total_dice = list(self.dice_metric.aggregate().cpu().numpy())
+        total_dice = [float(d) for d in total_dice]  # Convert to float for JSON serialization
+        return total_loss, {'class_dice': total_dice}
 
     def save_checkpoint(self, epoch: int, val_metrics: dict):
         # Save last
