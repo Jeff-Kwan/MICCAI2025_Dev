@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
+from torch.utils import checkpoint
 
 
 class ConvBlock(nn.Module):
@@ -16,11 +17,19 @@ class ConvBlock(nn.Module):
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
+
+    def inner_forward(self, x):
+        # Probably because GroupNorm
+        return self.out_conv(x)
         
     def forward(self, x):
         x = self.in_conv(x)
         x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
-        return self.out_conv(x)
+        if self.training and x.requires_grad:
+            x = checkpoint.checkpoint(self.inner_forward, x, use_reentrant=False)
+        else:
+            x = self.inner_forward(x)
+        return x
 
 
 class ConvLayer(nn.Module):

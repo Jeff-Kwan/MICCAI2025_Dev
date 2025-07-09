@@ -160,7 +160,7 @@ class DDPTrainer:
                     self.optimizer2.zero_grad()
 
                 if self.local_rank == 0:
-                    loop.set_postfix({'Norm': (grad_norm1.item(), grad_norm2.item()), 'Loss': (loss1.item(), loss2.item())})
+                    loop.set_postfix({'Norm': (f"{grad_norm1.item():.3f}", f"{grad_norm2.item():.3f}"), 'Loss': (f"{loss1.item():.3f}", f"{loss2.item():.3f}")})
 
             self.scheduler1.step()
             self.scheduler2.step()
