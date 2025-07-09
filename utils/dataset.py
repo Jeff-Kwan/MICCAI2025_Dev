@@ -336,7 +336,7 @@ def get_dual_transforms(shape, spatial, intensity, coarse):
                 transforms=[
                     mt.Identityd(keys=["image", "label1", "label2"]),
                     mt.RandAffined(     # Small affine perturbation
-                        keys=["image","label"],
+                        keys=["image", "label1", "label2"],
                         prob=1.0,
                         spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),

@@ -116,7 +116,8 @@ class DDPTrainer:
             loop = tqdm.tqdm(train_loader,
                              desc=f"[Rank {self.local_rank}] Epoch {epoch+1}/{epochs}",
                              disable=(self.local_rank!=0))
-            self.optimizer.zero_grad()
+            self.optimizer1.zero_grad()
+            self.optimizer2.zero_grad()
 
             for i, batch in enumerate(loop):
                 img = batch['image'].to(self.device, non_blocking=True)

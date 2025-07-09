@@ -132,7 +132,7 @@ def main_worker(rank: int,
         trainer = DDPTrainer(
             model1=model1,
             model2=model2,
-            optimizer=optimizer1,
+            optimizer1=optimizer1,
             optimizer2=optimizer2,
             criterion=criterion,
             scheduler1=scheduler1,
@@ -142,7 +142,7 @@ def main_worker(rank: int,
             local_rank=rank,
             world_size=world_size,
             comments=comments)
-        trainer.train(train_loader, val_loader, soft=True)
+        trainer.train(train_loader, val_loader)
 
     except Exception as e:
         print(f"Rank {rank} crashed:", traceback.format_exc())
