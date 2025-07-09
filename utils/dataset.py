@@ -367,6 +367,9 @@ def get_dual_transforms(shape, spatial, intensity, coarse):
                         mode=("trilinear", "nearest", "nearest")
                     )],
                 weights=spatial),
+            mt.CopyItemsd(
+                keys=["image"],
+                names=["clean_image"]),  # Copy image for EMA model
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),
@@ -395,8 +398,8 @@ def get_dual_transforms(shape, spatial, intensity, coarse):
                         max_spatial_size=(12, 12, 12))],
                 weights=coarse),
             mt.EnsureTyped(
-                keys=["image", "label1", "label2"], 
-                dtype=[torch.float32, torch.long, torch.long],
+                keys=["image", "clean_image", "label1", "label2"], 
+                dtype=[torch.float32, torch.float32, torch.long, torch.long],
                 track_meta=False),
         ]
     )

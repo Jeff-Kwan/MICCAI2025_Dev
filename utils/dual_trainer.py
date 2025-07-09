@@ -11,7 +11,7 @@ import numpy as np
 import monai.metrics as mm
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
-from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
+from torch.optim.swa_utils import AveragedModel, get_ema_avg_fn
 
 class DDPTrainer:
     def __init__(
@@ -48,9 +48,16 @@ class DDPTrainer:
                 output_device=self.local_rank, broadcast_buffers=False)
             self.model2 = DDP(model2, device_ids=[self.local_rank], 
                 output_device=self.local_rank, broadcast_buffers=False)
+
         else:
             self.model1 = model1
             self.model2 = model2
+        self.ema_model1 = AveragedModel(self.model1, self.device,
+                            get_ema_avg_fn(train_params["ema_decay"]), 
+                            use_buffers=False)
+        self.ema_model2 = AveragedModel(self.model2, self.device,
+                            get_ema_avg_fn(train_params["ema_decay"]), 
+                            use_buffers=False)
 
         # Pseudo label mix
         alpha = train_params["alpha"]
@@ -109,6 +116,7 @@ class DDPTrainer:
                 train_loader.sampler.set_epoch(epoch)
 
             self.model1.train(); self.model2.train()
+            self.ema_model1.update_parameters(self.model1.module)
             running_loss1 = 0.0; running_loss2 = 0.0
             grad_norm1 = torch.tensor(0.0, device=self.device)
             grad_norm2 = torch.tensor(0.0, device=self.device)
@@ -121,7 +129,7 @@ class DDPTrainer:
 
             for i, batch in enumerate(loop):
                 img = batch['image'].to(self.device, non_blocking=True)
-                # clean_img = batch['clean_image'].to(self.device, non_blocking=True)
+                clean_img = batch['clean_image'].to(self.device, non_blocking=True)
                 label1, label2 = ((batch['label1'], batch['label2']) 
                                   if torch.rand(1).item() < 0.5 # Flip between labels
                                   else (batch['label2'], batch['label1']))
@@ -133,7 +141,10 @@ class DDPTrainer:
                     logits2 = self.model2(img)
 
                     # No division ie. x2; T=0.5
-                    logits_total = logits1.detach().clone() + logits2.detach().clone()    
+                    with torch.no_grad():
+                        pred1 = self.ema_model1(clean_img)
+                        pred2 = self.ema_model2(clean_img)
+                    logits_total = pred1.detach().clone() + pred2.detach().clone()    
                     pred_total = torch.softmax(logits_total, dim=1)
                     pred_total = pred_total * (pred_total >= 0.25)  # At most 3 preds
 
@@ -158,9 +169,16 @@ class DDPTrainer:
                     self.optimizer1.zero_grad()
                     self.optimizer2.step()
                     self.optimizer2.zero_grad()
+                    self.ema_model1.update_parameters(self.model1.module)
+                    self.ema_model2.update_parameters(self.model2.module)
 
                 if self.local_rank == 0:
-                    loop.set_postfix({'Norm': (f"{grad_norm1.item():.3f}", f"{grad_norm2.item():.3f}"), 'Loss': (f"{loss1.item():.3f}", f"{loss2.item():.3f}")})
+                    loop.set_postfix({
+                        'Norm1': f'{grad_norm1.item():.3f}',
+                        'Norm2': f'{grad_norm2.item():.3f}',
+                        'Loss1': f'{loss1.item():.3f}',
+                        'Loss2': f'{loss2.item():.3f}'
+                    })
 
             self.scheduler1.step()
             self.scheduler2.step()
@@ -250,6 +268,8 @@ class DDPTrainer:
         state_dict2 = (self.model2.module.state_dict()
                 if isinstance(self.model2, DDP) else self.model.state_dict())
         torch.save(state_dict2, os.path.join(self.output_dir, 'model2.pth'))
+        torch.save(self.ema_model1.state_dict(), os.path.join(self.output_dir, 'ema_model1.pth'))
+        torch.save(self.ema_model2.state_dict(), os.path.join(self.output_dir, 'ema_model2.pth'))
         history = {
             'train_losses': self.train_losses,
             'val_losses': self.val_losses,
