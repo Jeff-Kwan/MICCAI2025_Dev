@@ -244,12 +244,12 @@ class DDPTrainer:
 
     def save_checkpoint(self, epoch: int):
         # Save last
-        state_dict = (self.model1.module.state_dict()
-                if isinstance(self.model, DDP) else self.model.state_dict())
-        torch.save(state_dict, os.path.join(self.output_dir, 'model1.pth'))
-        state_dict = (self.model2.module.state_dict()
-                if isinstance(self.model, DDP) else self.model.state_dict())
-        torch.save(state_dict, os.path.join(self.output_dir, 'model2.pth'))
+        state_dict1 = (self.model1.module.state_dict()
+                if isinstance(self.model1, DDP) else self.model.state_dict())
+        torch.save(state_dict1, os.path.join(self.output_dir, 'model1.pth'))
+        state_dict2 = (self.model2.module.state_dict()
+                if isinstance(self.model2, DDP) else self.model.state_dict())
+        torch.save(state_dict2, os.path.join(self.output_dir, 'model2.pth'))
         history = {
             'train_losses': self.train_losses,
             'val_losses': self.val_losses,
@@ -276,7 +276,7 @@ class DDPTrainer:
             f.write(f"\nTrain params: {json.dumps(self.train_params, indent=4)}\n")
 
     def plot_results(self):
-        epochs = range(1, len(self.train_losses) + 1)
+        epochs = range(1, len(self.train_losses["model1"]) + 1)
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
         # Loss curve
