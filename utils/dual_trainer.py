@@ -155,9 +155,9 @@ class DDPTrainer:
                             label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1_pseudo
                             label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2_pseudo
                         
-                        # Renormalize
-                        label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
-                        label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
+                            # Renormalize
+                            label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
+                            label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
 
                     loss1 = self.criterion(logits1, label1_pseudo)
                     loss2 = self.criterion(logits2, label2_pseudo)
