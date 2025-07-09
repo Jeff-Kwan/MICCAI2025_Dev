@@ -275,23 +275,15 @@ def get_data_files(
         for name in image_names
     ]
 
-
-def get_mim_data_files(
+def get_dual_data_files(
     images_dir: str,
+    labels1_dir: str,
+    labels2_dir: str,
     extension: str = ".nii.gz"
-    ) -> List[Dict[str, str]]:
-    """
-    Returns a list of dicts with file paths for images.
-    Each dict has the key "image".
-
-    Raises:
-        FileNotFoundError: if the directory does not exist.
-        RuntimeError: if no files with the given extension are found.
-    """
+) -> List[Dict[str, str]]:
     images_dir = Path(images_dir)
-
-    if not images_dir.is_dir():
-        raise FileNotFoundError(f"Image directory not found: {images_dir!r}")
+    labels1_dir = Path(labels1_dir)
+    labels2_dir = Path(labels2_dir)
 
     # Scan image directory
     image_names = sorted(
@@ -302,8 +294,132 @@ def get_mim_data_files(
     if not image_names:
         raise RuntimeError(f"No '{extension}' files found in {images_dir!r}")
 
+    # Scan label directory once, build a set of names
+    label1_names = {
+        entry.name
+        for entry in os.scandir(labels1_dir)
+        if entry.is_file() and entry.name.endswith(extension)
+    }
+    label2_names = {
+        entry.name
+        for entry in os.scandir(labels2_dir)
+        if entry.is_file() and entry.name.endswith(extension)
+    }
+
+    # Detect any missing labels in one go
+    missing = [name for name in image_names if name not in label1_names]
+    missing += [name for name in image_names if name not in label2_names]
+    if missing:
+        missing_list = ", ".join(repr(n) for n in missing)
+        raise ValueError(f"Missing labels for images: {missing_list}")
+
     # Build result list
-    return [{"image": str(images_dir / name)} for name in image_names]
+    return [
+        {"image": str(images_dir / name), "label1": str(labels1_dir / name), "label2": str(labels2_dir / name)}
+        for name in image_names
+    ]
+
+
+def get_dual_transforms(shape, spatial, intensity, coarse):
+    train_transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["image", "label1", "label2"], ensure_channel_first=True),
+            mt.RandSpatialCropd(
+                keys=["image", "label1", "label2"], 
+                roi_size=shape,
+                lazy=True),
+            mt.DivisiblePadd(
+                keys=["image", "label1", "label2"],
+                k=16,
+                lazy=True),
+            mt.OneOf(       # Random spatial augmentations
+                transforms=[
+                    mt.Identityd(keys=["image", "label1", "label2"]),
+                    mt.RandAffined(     # Small affine perturbation
+                        keys=["image","label"],
+                        prob=1.0,
+                        spatial_size=shape,
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),
+                        scale_range=(0.1, 0.1, 0.1),
+                        translate_range=(4, 4, 4),
+                        mode=("trilinear", "nearest", "nearest"),
+                        padding_mode="border",
+                        lazy=True),
+                    mt.RandFlipd(
+                        keys=["image", "label1", "label2"],
+                        prob=1.0,
+                        spatial_axis=(0, 1),
+                        lazy=True),  # Flip in XY plane
+                    mt.RandRotate90d(
+                        keys=["image", "label1", "label2"],
+                        prob=1.0,
+                        spatial_axes=(0, 1),
+                        lazy=True),  # Rotate in XY plane
+                    mt.Rand3DElasticd(
+                        keys=["image", "label1", "label2"],
+                        prob=1.0,
+                        sigma_range=(2.0, 5.0),
+                        magnitude_range=(1.0, 3.0),
+                        spatial_size=shape,
+                        translate_range=(4, 4, 4),
+                        rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
+                        scale_range=(0.1, 0.1, 0.1),                # ±10%
+                        mode=("trilinear", "nearest", "nearest")
+                    )],
+                weights=spatial),
+            mt.OneOf(     # Random intensity augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandGaussianSmoothd(keys='image', prob=1.0),
+                    mt.RandGaussianNoised(keys='image', prob=1.0),
+                    mt.RandBiasFieldd(keys='image', prob=1.0),
+                    mt.RandAdjustContrastd(keys='image', prob=1.0),
+                    mt.RandGaussianSharpend(keys='image', prob=1.0),
+                    mt.RandHistogramShiftd(keys='image', prob=1.0)],
+                weights=intensity),
+            mt.OneOf(   # Random coarse augmentations
+                transforms=[
+                    mt.Identityd(keys=["image"]),
+                    mt.RandCoarseDropoutd(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=1,
+                        max_holes=4,
+                        spatial_size=(16, 16, 16),
+                        max_spatial_size=(32, 32, 32)),
+                    mt.RandCoarseShuffled(
+                        keys=["image"],
+                        prob=1.0,
+                        holes=8, max_holes=16,
+                        spatial_size=(6, 6, 6),
+                        max_spatial_size=(12, 12, 12))],
+                weights=coarse),
+            mt.EnsureTyped(
+                keys=["image", "label1", "label2"], 
+                dtype=[torch.float32, torch.long, torch.long],
+                track_meta=False),
+        ]
+    )
+    val_transform = mt.Compose(
+        [
+            mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+            mt.CropForegroundd(
+                keys=["image", "label"],
+                source_key="label",
+                margin=48,
+                allow_smaller=True),
+            mt.DivisiblePadd(
+                keys=["image", "label"],
+                k=16,
+                lazy=True),
+            mt.EnsureTyped(
+                keys=["image", "label"], 
+                dtype=[torch.float32, torch.long],
+                track_meta=False),
+        ]
+    )
+    return train_transform, val_transform
+
 
 
 if __name__ == "__main__":
