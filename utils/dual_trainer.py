@@ -207,7 +207,7 @@ class DDPTrainer:
                 print(f"Epoch {epoch+1}/{epochs} | "
                       f"Train Loss: {running_loss1 / len(train_loader):.4f}, {running_loss2 / len(train_loader):.4f} | "
                       f"Val Loss: {val_loss1:.4f}, {val_loss2:.4f} | "
-                      f"Val Dice: {metrics1['dice']:.4f}, {metrics1['dice']:.4f}")
+                      f"Val Dice: {metrics1['dice']:.4f}, {metrics2['dice']:.4f}")
                 self.plot_results()
                 self.save_checkpoint(epoch)
 
