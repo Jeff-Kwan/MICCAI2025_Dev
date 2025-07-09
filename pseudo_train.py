@@ -75,7 +75,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images", # Fixed GT
                 labels_dir="data/nifti/train_gt/softquant", 
-                extension='.nii.gz') * 4
+                extension='.nii.gz') * 2
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images", # Iterative Pseudo
                 labels_dir="data/nifti/train_pseudo/softiterative",
@@ -95,7 +95,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=31,
+            num_workers=15,
             pin_memory=False,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
@@ -138,7 +138,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - no loss modifiers",
+        f"{output_dir} - GT*2 (spatial soft) + pseudo (pred soft) labels - no loss modifiers",
         f"{train_params['shape']} shape", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"

@@ -38,9 +38,9 @@ def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
 @torch.no_grad()
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
-        mt.NormalizeIntensityd(keys=["pred"], subtrahend=0.0, divisor=0.5),  # Sharpen confidence
+        mt.NormalizeIntensityd(keys=["pred"], subtrahend=0.0, divisor=1/torch.e),  # Sharpen confidence
         mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
-        mt.ThresholdIntensityd(keys=["pred"], above=True, threshold=1/14, cval=0), # Keep above random predictions
+        mt.ThresholdIntensityd(keys=["pred"], above=True, threshold=1/4, cval=0), # Max keep 3 preds
         # No renormalization for probability mass, downweight uncertain predictions naturally
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["label"], dtype=[torch.float32]),
@@ -186,8 +186,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 8
-    max_prefetch = 2
+    cpus_per_gpu = 15
+    max_prefetch = 8
 
     # Spawn one process per GPU
     try:
