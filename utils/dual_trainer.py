@@ -140,19 +140,24 @@ class DDPTrainer:
                     logits1 = self.model1(img)
                     logits2 = self.model2(img)
 
-                    # No division ie. x2; T=0.5
                     with torch.no_grad():
-                        pred1 = self.ema_model1(clean_img)
-                        pred2 = self.ema_model2(clean_img)
-                    logits_total = pred1.detach().clone() + pred2.detach().clone()    
-                    pred_total = torch.softmax(logits_total, dim=1)
-                    pred_total = pred_total * (pred_total >= 0.25)  # At most 3 preds
+                        label1_pseudo = one_hot(label1, self.num_classes)
+                        label2_pseudo = one_hot(label2, self.num_classes)
 
-                    label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * one_hot(label1, self.num_classes)
-                    label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
-
-                    label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * one_hot(label2, self.num_classes)
-                    label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
+                        if self.alpha[epoch] > 0:
+                            pred1 = self.ema_model1(clean_img)
+                            pred2 = self.ema_model2(clean_img)
+                            # No division ie. x2; T=0.5
+                            logits_total = pred1.detach().clone() + pred2.detach().clone()    
+                            pred_total = torch.softmax(logits_total, dim=1)
+                            pred_total = pred_total * (pred_total >= 0.25)  # At most 3 preds
+                            
+                            label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1_pseudo
+                            label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2_pseudo
+                        
+                        # Renormalize
+                        label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
+                        label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
 
                     loss1 = self.criterion(logits1, label1_pseudo)
                     loss2 = self.criterion(logits2, label2_pseudo)
