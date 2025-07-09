@@ -128,15 +128,15 @@ if __name__ == "__main__":
     # Load configs
     model_params = json.load(open("configs/model/vae.json"))
     train_params = {
-        'epochs': 120,    # Prior posterior together
+        'epochs': 100,    # Prior posterior together
         'batch_size': 1,    # effectively x4
         'aggregation': 1,
         'learning_rate': 5e-4,
         'weight_decay': 1e-2,
         'num_classes': 14,
         'shape': (432, 224, 112),
-        'alpha': (0.1, 1.0, 20), # JS Match of Prior and Likelihood
-        'beta': (0.1, 1.0, 20), # Linear ramp up [min, max, epochs] VAE beta
+        'alpha': (0.2, 2.0, 20), # JS Match of Prior and Likelihood
+        'beta': (0.2, 1.0, 10), # Linear ramp up [min, max, epochs] VAE beta
         'compile': False,
         'autocast': True,
         'sw_batch_size': 1,
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     }
     output_dir = "VAEPosterior"
     comments = ["VAE Posterior pixdim = (1.5, 1.5, 2.5) - GTx4 + Aladdin + Blackbean training",
-        "2 way prior decoding, No latent and z gradients",
+        "2 way prior decoding, Allow all gradients",
         "No dropout stochastic depth in prior but yes posterior",
         f"beta-VAE only autoencodes labels, KL with normal and JS with each other",
         f"{train_params["shape"]} shape", 

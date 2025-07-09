@@ -262,10 +262,10 @@ class VAEPosterior(nn.Module):
             # latent_priors = [lp.detach().clone().requires_grad_() for lp in latent_priors]
             # skips = [s.detach().clone().requires_grad_() for s in skips]
             # x = self.decode(prior_z.detach().clone().requires_grad_(), skips, latent_priors)
-            with torch.no_grad():
-                z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
-                _, latent_priors = self.vae_prior.decode(z_hat)
-            latent_priors = [lp.requires_grad_() for lp in latent_priors]
+            # with torch.no_grad():
+            z_hat = self.vae_prior.reparameterize(mu_hat, log_var_hat)
+            _, latent_priors = self.vae_prior.decode(z_hat)
+            # latent_priors = [lp.requires_grad_() for lp in latent_priors]
             x = self.decode(skips, latent_priors)
             return x, mu_hat, log_var_hat, prior_x, mu, log_var
         else:
