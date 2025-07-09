@@ -121,7 +121,7 @@ class DDPTrainer:
 
             for i, batch in enumerate(loop):
                 img = batch['image'].to(self.device, non_blocking=True)
-                clean_img = batch['clean_image'].to(self.device, non_blocking=True)
+                # clean_img = batch['clean_image'].to(self.device, non_blocking=True)
                 label1, label2 = ((batch['label1'], batch['label2']) 
                                   if torch.rand(1).item() < 0.5 # Flip between labels
                                   else (batch['label2'], batch['label1']))
@@ -130,7 +130,7 @@ class DDPTrainer:
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     logits1 = self.model1(img)
-                    logits2 = self.model2(clean_img)
+                    logits2 = self.model2(img)
 
                     # No division ie. x2; T=0.5
                     logits_total = logits1.detach().clone() + logits2.detach().clone()    
