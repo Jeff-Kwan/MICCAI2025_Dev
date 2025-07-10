@@ -320,13 +320,11 @@ def get_dual_data_files(
     ]
 
 
-class AddGTKey(mt.MapTransform):
-    def __init__(self, gt_value, allow_missing_keys=False):
-        super().__init__(keys=[], allow_missing_keys=allow_missing_keys)
+class AddGTKey(mt.Transform):
+    def __init__(self, gt_value):
         self.gt_value = gt_value
 
     def __call__(self, data):
-        data = dict(data)  # Ensure we're working with a mutable dictionary
         data["gt"] = self.gt_value
         return data
 
