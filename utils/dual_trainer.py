@@ -9,6 +9,7 @@ import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import monai.metrics as mm
+from monai.transforms import CenterSpatialCrop
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 from torch.optim.swa_utils import AveragedModel, get_ema_avg_fn
@@ -60,18 +61,16 @@ class DDPTrainer:
                             use_buffers=False)
 
         # Pseudo label mix
-        # alpha = train_params["alpha"]
-        # self.alpha = torch.cat([    # 0.999 to avoid all zero labels
-        #     torch.zeros(alpha[0], device=self.device),
-        #     torch.linspace(0, 0.999, alpha[1] - alpha[0], device=self.device),
-        #     torch.ones(train_params['epochs'] - alpha[1], device=self.device) * 0.999
-        # ])
-        self.alpha = torch.cat([    # 0.999 to avoid all zero labels
-            torch.zeros(train_params['epochs']//2, device=self.device),
-            torch.ones(train_params['epochs']//2, device=self.device) * 0.99
+        alpha = train_params["alpha"]
+        upper = 0.99 # 0.99 to avoid all zero labels
+        self.alpha = torch.cat([    
+            torch.zeros(alpha[0], device=self.device),
+            torch.linspace(0, upper, alpha[1] - alpha[0], device=self.device),
+            torch.ones(train_params['epochs'] - alpha[1], device=self.device) * upper
         ])
         self.pred_threshold = train_params.get("pred_threshold", 1/3)
         self.sharpen = train_params.get("sharpen", 2.0)
+        self.center_crop = CenterSpatialCrop(train_params['shape'])
 
         # Optimizations
         if train_params.get('autocast', False):
@@ -148,37 +147,45 @@ class DDPTrainer:
                     logits2 = self.model2(img)
 
                     with torch.no_grad():
-                        label1_pseudo = one_hot(label1, self.num_classes)
-                        label2_pseudo = one_hot(label2, self.num_classes)
+                        label1 = one_hot(label1, self.num_classes)
+                        label2 = one_hot(label2, self.num_classes)
 
                         if (self.alpha[epoch] > 0) and (batch['gt'] == False):
-                            pred1 = self.ema_model1(clean_img)
-                            pred2 = self.ema_model2(clean_img)
+                            pred1 = sliding_window_inference(
+                                        clean_img,
+                                        roi_size=self.train_params['shape'],
+                                        sw_batch_size=8,
+                                        predictor=lambda x: self.ema_model1(x),
+                                        overlap=0.5,
+                                        mode="gaussian")
+                            pred2 = sliding_window_inference(
+                                        clean_img,
+                                        roi_size=self.train_params['shape'],
+                                        sw_batch_size=8,
+                                        predictor=lambda x: self.ema_model2(x),
+                                        overlap=0.5,
+                                        mode="gaussian")
 
-                            # Stochastic Label Strategy
-                            # Sum Teachers
-                            if torch.rand(1).item() < 0.5:
-                                logits_total = (pred1 + pred2)/2 * self.sharpen 
-                                pred_total = torch.softmax(logits_total, dim=1)
-                                pred_total = pred_total * (pred_total >= self.pred_threshold)
-                                
-                                label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1_pseudo
-                                label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2_pseudo
-                            # Cross teaching
-                            else:
-                                pred1 = torch.softmax(pred1 * self.sharpen, dim=1)
-                                pred2 = torch.softmax(pred2 * self.sharpen, dim=1)
-                                pred1 = pred1 * (pred1 >= self.pred_threshold)
-                                pred2 = pred2 * (pred2 >= self.pred_threshold)
-                                label1_pseudo = self.alpha[epoch] * pred2 + (1-self.alpha[epoch]) * label1_pseudo
-                                label2_pseudo = self.alpha[epoch] * pred1 + (1-self.alpha[epoch]) * label2_pseudo
+                            # Sharpen and threshold predictions
+                            pred1 = torch.softmax(pred1 * self.sharpen, dim=1)
+                            pred2 = torch.softmax(pred2 * self.sharpen, dim=1)
+                            pred1 = pred1 * (pred1 > self.pred_threshold)
+                            pred2 = pred2 * (pred2 > self.pred_threshold)
+
+                            # Cross Teaching
+                            label1 = self.alpha[epoch] * pred2 + (1-self.alpha[epoch]) * label1
+                            label2 = self.alpha[epoch] * pred1 + (1-self.alpha[epoch]) * label2
 
                             # Renormalize
-                            label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
-                            label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
+                            label1 = F.normalize(label1, p=1, dim=1)
+                            label2 = F.normalize(label2, p=1, dim=1)
 
-                    loss1 = self.criterion(logits1, label1_pseudo)
-                    loss2 = self.criterion(logits2, label2_pseudo)
+                        # Center crop to original shape
+                        label1 = self.center_crop(label1)
+                        label2 = self.center_crop(label2)
+
+                    loss1 = self.criterion(logits1, label1)
+                    loss2 = self.criterion(logits2, label2)
 
                 loss1.backward()
                 loss2.backward()

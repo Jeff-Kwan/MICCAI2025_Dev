@@ -335,7 +335,7 @@ def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
             mt.LoadImaged(keys=["image", "label1", "label2"], ensure_channel_first=True),
             mt.RandSpatialCropd(
                 keys=["image", "label1", "label2"], 
-                roi_size=shape,
+                roi_size=(shape[0]+16, shape[1]+16, shape[2]+16),
                 lazy=True),
             mt.DivisiblePadd(
                 keys=["image", "label1", "label2"],
@@ -379,6 +379,10 @@ def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
             mt.CopyItemsd(
                 keys=["image"],
                 names=["clean_image"]),  # Copy image for EMA model
+            mt.CenterSpatialCropd(  # Train image is the center of larger crop
+                keys=["image"],
+                roi_size=shape,
+                lazy=True),
             mt.OneOf(     # Random intensity augmentations
                 transforms=[
                     mt.Identityd(keys=["image"]),

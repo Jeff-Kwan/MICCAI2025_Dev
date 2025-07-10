@@ -7,7 +7,7 @@ import torch.multiprocessing as mp
 import traceback
 from datetime import datetime
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import ConcatDataset
 from monai.data import ThreadDataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
@@ -130,9 +130,9 @@ def main_worker(rank: int,
         # Model, optimizer, scheduler, loss
         # Cosine Annealing Warm Restarts on Half
         optimizer1 = AdamW(model1.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
-        scheduler1 = CosineAnnealingWarmRestarts(optimizer1, T_0=train_params['epochs']//2, eta_min=train_params['min_lr'])
+        scheduler1 = CosineAnnealingLR(optimizer1, T_max=train_params['epochs'], eta_min=train_params['min_lr'])
         optimizer2 = AdamW(model2.parameters(), lr=train_params['learning_rate'], weight_decay=train_params['weight_decay'])
-        scheduler2 = CosineAnnealingWarmRestarts(optimizer2, T_0=train_params['epochs']//2, eta_min=train_params['min_lr'])
+        scheduler2 = CosineAnnealingLR(optimizer2, T_max=train_params['epochs'], eta_min=train_params['min_lr'])
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
