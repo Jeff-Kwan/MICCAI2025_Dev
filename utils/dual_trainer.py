@@ -199,8 +199,6 @@ class DDPTrainer:
                     self.optimizer1.zero_grad()
                     self.optimizer2.step()
                     self.optimizer2.zero_grad()
-                    self.scheduler1.step(epoch + i / iters)
-                    self.scheduler2.step(epoch + i / iters)
                     self.ema_model1.update_parameters(self.model1.module)
                     self.ema_model2.update_parameters(self.model2.module)
 
@@ -211,6 +209,10 @@ class DDPTrainer:
                         'Loss1': f'{loss1.item():.3f}',
                         'Loss2': f'{loss2.item():.3f}'
                     })
+
+            # Step schedulers
+            self.scheduler1.step()
+            self.scheduler2.step()
 
             val_loss1, metrics1 = self.evaluate(self.model1, val_loader)
             val_loss2, metrics2 = self.evaluate(self.model2, val_loader)
