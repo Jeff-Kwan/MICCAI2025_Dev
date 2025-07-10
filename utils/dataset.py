@@ -320,9 +320,10 @@ def get_dual_data_files(
     ]
 
 
-def get_dual_transforms(shape, spatial, intensity, coarse):
+def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
     train_transform = mt.Compose(
         [
+            mt.Lambdad(keys=[], func=lambda data: {**data, "gt": gt}),
             mt.LoadImaged(keys=["image", "label1", "label2"], ensure_channel_first=True),
             mt.RandSpatialCropd(
                 keys=["image", "label1", "label2"], 
@@ -400,7 +401,7 @@ def get_dual_transforms(shape, spatial, intensity, coarse):
             mt.EnsureTyped(
                 keys=["image", "clean_image", "label1", "label2"], 
                 dtype=[torch.float32, torch.float32, torch.long, torch.long],
-                track_meta=False),
+                track_meta=False)
         ]
     )
     val_transform = mt.Compose(

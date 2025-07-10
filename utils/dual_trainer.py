@@ -60,12 +60,18 @@ class DDPTrainer:
                             use_buffers=False)
 
         # Pseudo label mix
-        alpha = train_params["alpha"]
+        # alpha = train_params["alpha"]
+        # self.alpha = torch.cat([    # 0.999 to avoid all zero labels
+        #     torch.zeros(alpha[0], device=self.device),
+        #     torch.linspace(0, 0.999, alpha[1] - alpha[0], device=self.device),
+        #     torch.ones(train_params['epochs'] - alpha[1], device=self.device) * 0.999
+        # ])
         self.alpha = torch.cat([    # 0.999 to avoid all zero labels
-            torch.zeros(alpha[0], device=self.device),
-            torch.linspace(0, 0.999, alpha[1] - alpha[0], device=self.device),
-            torch.ones(train_params['epochs'] - alpha[1], device=self.device) * 0.999
+            torch.zeros(train_params['epochs']//2, device=self.device),
+            torch.ones(train_params['epochs']//2, device=self.device) * 0.99
         ])
+        self.pred_threshold = train_params.get("pred_threshold", 1/3)
+        self.sharpen = train_params.get("sharpen", 2.0)
 
         # Optimizations
         if train_params.get('autocast', False):
@@ -144,17 +150,28 @@ class DDPTrainer:
                         label1_pseudo = one_hot(label1, self.num_classes)
                         label2_pseudo = one_hot(label2, self.num_classes)
 
-                        if self.alpha[epoch] > 0:
+                        if (self.alpha[epoch] > 0) and (batch['gt'] == False):
                             pred1 = self.ema_model1(clean_img)
                             pred2 = self.ema_model2(clean_img)
-                            # No division ie. x2; T=0.5
-                            logits_total = pred1.detach().clone() + pred2.detach().clone()    
-                            pred_total = torch.softmax(logits_total, dim=1)
-                            pred_total = pred_total * (pred_total >= 0.25)  # At most 3 preds
-                            
-                            label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1_pseudo
-                            label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2_pseudo
-                        
+
+                            # Stochastic Label Strategy
+                            # Sum Teachers
+                            if torch.rand(1).item() < 0.5:
+                                logits_total = (pred1 + pred2)/2 * self.sharpen 
+                                pred_total = torch.softmax(logits_total, dim=1)
+                                pred_total = pred_total * (pred_total >= self.pred_threshold)
+                                
+                                label1_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1_pseudo
+                                label2_pseudo = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2_pseudo
+                            # Cross teaching
+                            else:
+                                pred1 = torch.softmax(pred1 * self.sharpen, dim=1)
+                                pred2 = torch.softmax(pred2 * self.sharpen, dim=1)
+                                pred1 = pred1 * (pred1 >= self.pred_threshold)
+                                pred2 = pred2 * (pred2 >= self.pred_threshold)
+                                label1_pseudo = self.alpha[epoch] * pred2 + (1-self.alpha[epoch]) * label1_pseudo
+                                label2_pseudo = self.alpha[epoch] * pred1 + (1-self.alpha[epoch]) * label2_pseudo
+
                             # Renormalize
                             label1_pseudo = F.normalize(label1_pseudo, p=1, dim=1)
                             label2_pseudo = F.normalize(label2_pseudo, p=1, dim=1)
