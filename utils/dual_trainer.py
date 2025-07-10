@@ -181,8 +181,8 @@ class DDPTrainer:
                             label2 = F.normalize(label2, p=1, dim=1)
 
                         # Center crop to original shape
-                        label1 = self.center_crop(label1)
-                        label2 = self.center_crop(label2)
+                        label1 = self.center_crop(label1.squeeze(0)).unsqueeze(0)
+                        label2 = self.center_crop(label2.squeeze(0)).unsqueeze(0)
 
                     loss1 = self.criterion(logits1, label1)
                     loss2 = self.criterion(logits2, label2)

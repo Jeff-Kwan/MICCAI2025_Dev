@@ -175,6 +175,7 @@ def get_comments(output_dir, train_params):
 
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
+    # Must train with batch size 1 because MONAI centercrop label
     gpu_count = torch.cuda.device_count()
     model1_params = json.load(open(f"configs/dual/attn_unet.json"))
     model2_params = json.load(open(f"configs/dual/convseg2.json"))
