@@ -320,10 +320,20 @@ def get_dual_data_files(
     ]
 
 
+class AddGTKey(mt.MapTransform):
+    def __init__(self, gt_value, allow_missing_keys=False):
+        super().__init__(keys=[], allow_missing_keys=allow_missing_keys)
+        self.gt_value = gt_value
+
+    def __call__(self, data):
+        data = dict(data)  # Ensure we're working with a mutable dictionary
+        data["gt"] = self.gt_value
+        return data
+
 def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
     train_transform = mt.Compose(
         [
-            mt.Lambdad(keys=[], func=lambda data: {**data, "gt": gt}),
+            AddGTKey(gt_value=gt),
             mt.LoadImaged(keys=["image", "label1", "label2"], ensure_channel_first=True),
             mt.RandSpatialCropd(
                 keys=["image", "label1", "label2"], 
