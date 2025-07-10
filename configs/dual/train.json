@@ -1,5 +1,5 @@
 {
-"epochs": 120,
+"epochs": 100,
 "batch_size": 1,
 "aggregation": 1,
 "learning_rate": 3e-4,
@@ -9,7 +9,7 @@
 "sharpen": 2.0,
 "pred_threshold": 0.3,
 "num_classes": 14,
-"shape": [224, 224, 128],
+"shape": [224, 224, 112],
 "weights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 "compile": false,
 "autocast": true,

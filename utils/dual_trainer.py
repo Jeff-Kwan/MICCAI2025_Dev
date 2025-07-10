@@ -116,6 +116,7 @@ class DDPTrainer:
 
         epochs = self.train_params['epochs']
         agg_steps = self.train_params['aggregation']
+        iters = len(train_loader)
 
         for epoch in range(epochs):
             if self.world_size > 1:
@@ -184,13 +185,15 @@ class DDPTrainer:
                 running_loss1 += loss1.item()
                 running_loss2 += loss2.item()
 
-                if ((i + 1) % agg_steps == 0) or (i + 1 == len(train_loader)):
+                if ((i + 1) % agg_steps == 0) or (i + 1 == iters):
                     grad_norm1 = torch.nn.utils.clip_grad_norm_(self.model1.parameters(), 1.0)
                     grad_norm2 = torch.nn.utils.clip_grad_norm_(self.model2.parameters(), 1.0)
                     self.optimizer1.step()
                     self.optimizer1.zero_grad()
                     self.optimizer2.step()
                     self.optimizer2.zero_grad()
+                    self.scheduler1.step(epoch + i / iters)
+                    self.scheduler2.step(epoch + i / iters)
                     self.ema_model1.update_parameters(self.model1.module)
                     self.ema_model2.update_parameters(self.model2.module)
 
@@ -202,9 +205,6 @@ class DDPTrainer:
                         'Loss2': f'{loss2.item():.3f}'
                     })
 
-            self.scheduler1.step()
-            self.scheduler2.step()
-
             val_loss1, metrics1 = self.evaluate(self.model1, val_loader)
             val_loss2, metrics2 = self.evaluate(self.model2, val_loader)
             if self.world_size > 1:
@@ -213,8 +213,8 @@ class DDPTrainer:
             if self.local_rank == 0 and val_loader is not None:
                 metrics1["dice"] = float(sum(metrics1["class_dice"]) / len(metrics1["class_dice"]))
                 metrics2["dice"] = float(sum(metrics2["class_dice"]) / len(metrics2["class_dice"]))
-                self.train_losses["model1"].append(running_loss1 / len(train_loader))
-                self.train_losses["model2"].append(running_loss2 / len(train_loader))
+                self.train_losses["model1"].append(running_loss1 / iters)
+                self.train_losses["model2"].append(running_loss2 / iters)
                 self.val_losses["model1"].append(val_loss1)
                 self.val_losses["model2"].append(val_loss2)
                 self.val_metrics["model1"]['dice'].append(metrics1['dice'])
@@ -222,7 +222,7 @@ class DDPTrainer:
                 self.val_metrics["model1"]['class_dice'].append(metrics1['class_dice'])
                 self.val_metrics["model2"]['class_dice'].append(metrics2['class_dice'])
                 print(f"Epoch {epoch+1}/{epochs} | "
-                      f"Train Loss: {running_loss1 / len(train_loader):.4f}, {running_loss2 / len(train_loader):.4f} | "
+                      f"Train Loss: {running_loss1 / iters:.4f}, {running_loss2 / iters:.4f} | "
                       f"Val Loss: {val_loss1:.4f}, {val_loss2:.4f} | "
                       f"Val Dice: {metrics1['dice']:.4f}, {metrics2['dice']:.4f}")
                 self.plot_results()
