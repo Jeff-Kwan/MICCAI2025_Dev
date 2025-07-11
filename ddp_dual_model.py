@@ -167,7 +167,7 @@ def main_worker(rank: int,
 def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*4 (hard) + pseudo (pred soft) labels",
-        "ConvSeg + ConvSeg2, dual model with stochastic cross or sum teacher",
+        "ConvSeg2 + ConvSeg2, dual model with stochastic cross or sum teacher",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Must train with batch size 1 because MONAI centercrop label
     gpu_count = torch.cuda.device_count()
-    model1_params = json.load(open(f"configs/dual/convseg.json"))
+    model1_params = json.load(open(f"configs/dual/convseg2.json"))
     model2_params = json.load(open(f"configs/dual/convseg2.json"))
     train_params = json.load(open(f"configs/dual/train.json"))
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     print(f"Starting training for Dual Models...")
     # model1 = AttnUNet(model1_params)
-    model1 = ConvSeg(model2_params)
+    model1 = ConvSeg2(model2_params)
     model2 = ConvSeg2(model2_params)
     
     try:

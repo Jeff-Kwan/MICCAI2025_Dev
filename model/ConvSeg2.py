@@ -20,11 +20,11 @@ class ConvBlock(nn.Module):
 
     def inner_forward(self, x):
         # Probably because GroupNorm
+        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
         return self.out_conv(x)
         
     def forward(self, x):
         x = self.in_conv(x)
-        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
         if self.training and x.requires_grad:
             x = checkpoint.checkpoint(self.inner_forward, x, use_reentrant=False)
         else:
