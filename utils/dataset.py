@@ -333,9 +333,17 @@ def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
         [
             AddGTKey(gt_value=gt),
             mt.LoadImaged(keys=["image", "label1", "label2"], ensure_channel_first=True),
-            mt.RandSpatialCropd(
-                keys=["image", "label1", "label2"], 
+            # mt.RandSpatialCropd(
+            #     keys=["image", "label1", "label2"], 
+            #     roi_size=(shape[0]+16, shape[1]+16, shape[2]+16),
+            #     lazy=True),
+            mt.RandCropByLabelClassesd(
+                keys=["image", "label1", "label2"],
+                label_key="label1",
+                num_classes=14,
                 roi_size=(shape[0]+16, shape[1]+16, shape[2]+16),
+                allow_smaller=True,
+                warn=False,
                 lazy=True),
             mt.DivisiblePadd(
                 keys=["image", "label1", "label2"],
