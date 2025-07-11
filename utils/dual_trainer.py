@@ -62,7 +62,7 @@ class DDPTrainer:
 
         # Pseudo label mix
         alpha = train_params["alpha"]
-        upper = 0.99 # 0.99 to avoid all zero labels
+        upper = train_params["alpha_max"] # Avoid all zero labels
         self.alpha = torch.cat([    
             torch.zeros(alpha[0], device=self.device),
             torch.linspace(0, upper, alpha[1] - alpha[0], device=self.device),
@@ -166,15 +166,24 @@ class DDPTrainer:
                                         overlap=0.5,
                                         mode="gaussian")
 
-                            # Sharpen and threshold predictions
-                            pred1 = torch.softmax(pred1 * self.sharpen, dim=1)
-                            pred2 = torch.softmax(pred2 * self.sharpen, dim=1)
-                            pred1 = pred1 * (pred1 > self.pred_threshold)
-                            pred2 = pred2 * (pred2 > self.pred_threshold)
+                            # Stochastic label mix
+                            if torch.rand(1).item() < 0.5:
+                                # Sharpen and threshold predictions
+                                pred1 = torch.softmax(pred1 * self.sharpen, dim=1)
+                                pred2 = torch.softmax(pred2 * self.sharpen, dim=1)
+                                pred1 = pred1 * (pred1 > self.pred_threshold)
+                                pred2 = pred2 * (pred2 > self.pred_threshold)
 
-                            # Cross Teaching
-                            label1 = self.alpha[epoch] * pred2 + (1-self.alpha[epoch]) * label1
-                            label2 = self.alpha[epoch] * pred1 + (1-self.alpha[epoch]) * label2
+                                # Cross Teaching
+                                label1 = self.alpha[epoch] * pred2 + (1-self.alpha[epoch]) * label1
+                                label2 = self.alpha[epoch] * pred1 + (1-self.alpha[epoch]) * label2
+                            else:
+                                # Sum teachers
+                                pred_total = torch.softmax((pred1 + pred2) * self.sharpen, dim=1)
+                                pred_total = pred_total * (pred_total > self.pred_threshold)
+
+                                label1 = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label1
+                                label2 = self.alpha[epoch] * pred_total + (1-self.alpha[epoch]) * label2
 
                             # Renormalize
                             label1 = F.normalize(label1, p=1, dim=1)

@@ -14,6 +14,7 @@ from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_dual_transforms, get_dual_data_files, get_data_files
 from model.AttnUNet import AttnUNet
+from model.ConvSeg import ConvSeg
 from model.ConvSeg2 import ConvSeg2
 from utils.dual_trainer import DDPTrainer
 
@@ -165,8 +166,8 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels",
-        "AttnUNet + ConvSeg2, dual model with cross teacher",
+        f"{output_dir} - GT*4 (hard) + pseudo (pred soft) labels",
+        "ConvSeg + ConvSeg2, dual model with stochastic cross or sum teacher",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
@@ -177,7 +178,7 @@ if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     # Must train with batch size 1 because MONAI centercrop label
     gpu_count = torch.cuda.device_count()
-    model1_params = json.load(open(f"configs/dual/attn_unet.json"))
+    model1_params = json.load(open(f"configs/dual/convseg.json"))
     model2_params = json.load(open(f"configs/dual/convseg2.json"))
     train_params = json.load(open(f"configs/dual/train.json"))
 
@@ -186,7 +187,8 @@ if __name__ == "__main__":
 
 
     print(f"Starting training for Dual Models...")
-    model1 = AttnUNet(model1_params)
+    # model1 = AttnUNet(model1_params)
+    model1 = ConvSeg(model2_params)
     model2 = ConvSeg2(model2_params)
     
     try:
