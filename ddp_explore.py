@@ -77,19 +77,17 @@ def main_worker(rank: int,
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'],
-            gt=True)
+            train_params['data_augmentation']['coarse'])
         train_tf_pseudo, _ = get_transforms(
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'],
-            gt=False)
+            train_params['data_augmentation']['coarse'])
         train_ds_gt = Dataset(
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 4,
+                extension='.nii.gz') * 8,
             transform=train_tf_gt)
         train_ds_pseudo = Dataset(
             data=get_data_files(
@@ -155,7 +153,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (hard) + pseudo (pred soft) labels",
+        f"{output_dir} - GT*8 (hard) + pseudo (pred soft) labels",
         "ConvSeg2, Epsilon exploration (RandElastic) with Swap in EMA Exploitation",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",

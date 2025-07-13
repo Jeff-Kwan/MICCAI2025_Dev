@@ -5,8 +5,7 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
-def get_transforms(shape, spatial, intensity, coarse, soft=False):
-    label_dtype = torch.uint8 if soft else torch.long
+def get_transforms(shape, spatial, intensity, coarse):
     train_transform = mt.Compose(
         [
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
@@ -90,7 +89,7 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                 weights=coarse),
             mt.EnsureTyped(
                 keys=["image", "clean_image", "label"], 
-                dtype=[torch.float32, torch.float32, label_dtype],
+                dtype=[torch.float32, torch.float32, torch.uint8],
                 track_meta=False),
         ]
     )
