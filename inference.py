@@ -51,7 +51,7 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms):
     return mt.Compose([
-        mt.GaussianSmoothd(keys="pred", sigma=0.5),
+        # mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
         mt.Invertd(
             keys="pred",
@@ -109,6 +109,7 @@ def run_and_score(
     # Inference + dispatch to CPU pool
     max_prefetch = 3
     in_flight = set()
+    precision = torch.bfloat16 if autocast else torch.float32
     with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
         for pair in tqdm(chunk, desc=f"GPU {gpu_id}", unit="img"):
             try:
@@ -118,17 +119,8 @@ def run_and_score(
 
                 # GPU inference
                 if autocast:
-                    with torch.autocast("cuda", torch.bfloat16):
+                    with torch.autocast("cuda", precision):
                         data["pred"] = sliding_window_inference(
-                            img,
-                            roi_size=inference_config["shape"],
-                            sw_batch_size=inference_config.get("sw_batch_size", 1),
-                            predictor=model,
-                            overlap=inference_config.get("sw_overlap", 0.25),
-                            mode="gaussian",
-                        ).cpu().squeeze(0)
-                else:
-                    data["pred"] = sliding_window_inference(
                         img,
                         roi_size=inference_config["shape"],
                         sw_batch_size=inference_config.get("sw_batch_size", 1),
@@ -137,8 +129,8 @@ def run_and_score(
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=2
-                    ).squeeze(0)
+                        buffer_steps=1
+                    ).cpu().squeeze(0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
@@ -208,7 +200,7 @@ if __name__ == "__main__":
         "pixdim": [0.8, 0.8, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [224, 224, 112],
-        "sw_batch_size": 8,
+        "sw_batch_size": 4,
         "sw_overlap": 0.5,
     }
 
