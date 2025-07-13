@@ -66,7 +66,6 @@ class DDPTrainer:
                 prob=1.0,
                 sigma_range=(1.0, 5.0),
                 magnitude_range=(0.5, 2.0),
-                spatial_size=train_params['shape'],
                 translate_range=(2, 2, 2),
                 rotate_range=(np.pi/18, np.pi/18, np.pi/18),
                 scale_range=(0.05, 0.05, 0.05),

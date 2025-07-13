@@ -42,7 +42,6 @@ def get_transforms(shape, spatial, intensity, coarse, gt=False):
                     mt.RandAffined(     # Small affine perturbation
                         keys=["image","label"],
                         prob=1.0,
-                        spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
                         translate_range=(4, 4, 4),
@@ -54,7 +53,6 @@ def get_transforms(shape, spatial, intensity, coarse, gt=False):
                         prob=1.0,
                         sigma_range=(2.0, 5.0),
                         magnitude_range=(1.0, 3.0),
-                        spatial_size=shape,
                         translate_range=(4, 4, 4),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
