@@ -69,7 +69,7 @@ class DDPTrainer:
                 sigma_range=(1.5, 2.0),
                 magnitude_range=(4, 12),
                 # No affine or large spatial mismatch!
-                mode="trilinear")
+                mode="nearest")
         self.center_crop = CenterSpatialCrop(train_params['shape'])
 
         # Optimizations
