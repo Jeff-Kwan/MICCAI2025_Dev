@@ -5,9 +5,18 @@ import torch
 import numpy as np
 import monai.transforms as mt
 
-def get_transforms(shape, spatial, intensity, coarse):
+class AddGTKey(mt.Transform):
+    def __init__(self, gt_value):
+        self.gt_value = gt_value
+
+    def __call__(self, data):
+        data["gt"] = self.gt_value
+        return data
+
+def get_transforms(shape, spatial, intensity, coarse, gt=False):
     train_transform = mt.Compose(
         [
+            AddGTKey(gt),
             mt.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
             mt.RandSpatialCropd(
                 keys=["image", "label"], 

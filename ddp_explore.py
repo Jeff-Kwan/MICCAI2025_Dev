@@ -77,12 +77,14 @@ def main_worker(rank: int,
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'])
+            train_params['data_augmentation']['coarse'],
+            gt=True)
         train_tf_pseudo, _ = get_transforms(
             train_params['shape'],
             train_params['data_augmentation']['spatial'],
             train_params['data_augmentation']['intensity'],
-            train_params['data_augmentation']['coarse'])
+            train_params['data_augmentation']['coarse'],
+            gt=False)
         train_ds_gt = Dataset(
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
