@@ -18,6 +18,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_CO
 from model.AttnUNet import AttnUNet
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
+from model.ConvSeg2 import ConvSeg2
 from model.AttnUNet2 import AttnUNet as AttnUNet2
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
@@ -185,17 +186,17 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = ViTSeg
-    model_config    = json.load(open("configs/labellers/ViTSeg/model.json", "r"))
-    model_path      = "output/Labeller/Base-ViTSeg/model.pth"
+    model_class     = ConvSeg2
+    model_config    = json.load(open("configs/dual/convseg2.json", "r"))
+    model_path      = "output/Dual/Dual-Conseg2/ema_model1.pth"
     autocast        = True
     num_classes     = 14
 
     inference_config = {
         "pixdim": [0.8, 0.8, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
-        "shape": [192, 192, 96],
-        "sw_batch_size": 2,
+        "shape": [224, 224, 112],
+        "sw_batch_size": 8,
         "sw_overlap": 0.5,
     }
 
