@@ -66,11 +66,9 @@ class DDPTrainer:
         self.sharpen = train_params.get("sharpen", 2.0)
         self.elastic = Rand3DElastic(
                 prob=1.0,
-                sigma_range=(2.0, 5.0),
-                magnitude_range=(0.1, 2.0),
-                translate_range=(4, 4, 2),
-                rotate_range=(np.pi/18, np.pi/18, np.pi/18),
-                scale_range=(0.05, 0.05, 0.05),
+                sigma_range=(1.5, 2.0),
+                magnitude_range=(6, 12),
+                # No affine or large spatial mismatch!
                 mode="trilinear")
         self.center_crop = CenterSpatialCrop(train_params['shape'])
 

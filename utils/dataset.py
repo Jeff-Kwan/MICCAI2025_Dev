@@ -38,12 +38,9 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                     mt.RandAffined(     # Small affine perturbation
                         keys=["image","label"],
                         prob=1.0,
-                        spatial_size=shape,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
-                        translate_range=(4, 4, 4),
                         mode=("trilinear", "nearest"),
-                        padding_mode="border",
                         lazy=True),
                     mt.RandFlipd(
                         keys=["image", "label"],
@@ -58,10 +55,8 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                     mt.Rand3DElasticd(
                         keys=["image", "label"],
                         prob=1.0,
-                        sigma_range=(2.0, 5.0),
-                        magnitude_range=(1.0, 3.0),
-                        spatial_size=shape,
-                        translate_range=(4, 4, 4),
+                        sigma_range=(1.5, 2.0),
+                        magnitude_range=(8, 16),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("trilinear", "nearest")
@@ -137,8 +132,6 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                             mt.RandAffined(     # Small affine perturbation
                                 keys=["image","label"],
                                 prob=1.0,
-                                spatial_size=shape,
-                                translate_range=(8, 8, 8),
                                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                                 scale_range=(0.1, 0.1, 0.1),
                                 mode=("trilinear", "nearest"),
@@ -157,10 +150,8 @@ def get_vae_transforms(shape, spatial, intensity, coarse):
                             mt.Rand3DElasticd(
                                 keys=["image", "label"],
                                 prob=1.0,
-                                sigma_range=(2.0, 5.0),
-                                magnitude_range=(1.0, 3.0),
-                                spatial_size=shape,
-                                translate_range=(8, 8, 8),
+                                sigma_range=(1.5, 2.0),
+                                magnitude_range=(8, 16),
                                 rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                                 scale_range=(0.1, 0.1, 0.1),                # ±10%
                                 mode=("trilinear", "nearest")
@@ -357,7 +348,6 @@ def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
                         prob=1.0,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
-                        translate_range=(4, 4, 4),
                         mode=("trilinear", "nearest", "nearest"),
                         padding_mode="border",
                         lazy=True),
@@ -374,9 +364,8 @@ def get_dual_transforms(shape, spatial, intensity, coarse, gt=False):
                     mt.Rand3DElasticd(
                         keys=["image", "label1", "label2"],
                         prob=1.0,
-                        sigma_range=(2.0, 5.0),
-                        magnitude_range=(1.0, 3.0),
-                        translate_range=(4, 4, 4),
+                        sigma_range=(1.5, 2.0),
+                        magnitude_range=(8, 16),
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),  # ±20°
                         scale_range=(0.1, 0.1, 0.1),                # ±10%
                         mode=("trilinear", "nearest", "nearest")
