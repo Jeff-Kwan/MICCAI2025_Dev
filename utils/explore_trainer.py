@@ -59,14 +59,16 @@ class DDPTrainer:
             torch.linspace(lower, upper, alpha[1] - alpha[0], device=self.device),
             torch.ones(train_params['epochs'] - alpha[1], device=self.device) * upper
         ])
-        self.epsilon = torch.linspace(1.0, 0.0, train_params['epochs'], device=self.device)
+        self.epsilon = torch.linspace(train_params["epsilon_range"][0],
+                                      train_params["epsilon_range"][1], 
+                                      train_params['epochs'], device=self.device)
         self.pred_threshold = train_params.get("pred_threshold", 1/3)
         self.sharpen = train_params.get("sharpen", 2.0)
         self.elastic = Rand3DElastic(
                 prob=1.0,
                 sigma_range=(1.0, 5.0),
                 magnitude_range=(0.5, 2.0),
-                translate_range=(2, 2, 2),
+                translate_range=(4, 4, 2),
                 rotate_range=(np.pi/18, np.pi/18, np.pi/18),
                 scale_range=(0.05, 0.05, 0.05),
                 shear_range=(0.01, 0.01, 0.01, 0.01, 0.01, 0.01),
