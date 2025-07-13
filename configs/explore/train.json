@@ -1,0 +1,25 @@
+{
+"epochs": 160,
+"batch_size": 1,
+"aggregation": 1,
+"learning_rate": 2e-4,
+"weight_decay": 1e-2,
+"min_lr": 1e-6,
+"ema_decay": 0.9995,
+"alpha": [80, 100],
+"alpha_range": [0.0, 0.9],
+"sharpen": 2.0,
+"pred_threshold": 0.34,
+"num_classes": 14,
+"shape": [224, 224, 128],
+"weights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+"compile": false,
+"autocast": true,
+"sw_batch_size": 4,
+"sw_overlap": 0.25,
+"data_augmentation": {
+    "spatial": [3, 2, 1],  
+    "intensity": [3, 2, 1, 1, 1, 1, 1],  
+    "coarse": [3, 1, 1]  
+    }
+}

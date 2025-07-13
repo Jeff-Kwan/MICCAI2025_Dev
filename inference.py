@@ -167,8 +167,11 @@ def worker(
     # EMA model state dict handling
     state_keys = list(state.keys())
     for k in state_keys:
-        if k.startswith("module.module."):
-            state[k[len("module.module."):]] = state.pop(k)
+        if "module." in k:
+            new_k = k
+            while new_k[len("module."):] == "module.":
+                new_k = new_k[len("module."):]
+            state[new_k] = state.pop(k)
     if "n_averaged" in state_keys:
         del state["n_averaged"]
 
