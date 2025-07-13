@@ -135,7 +135,10 @@ def run_and_score(
                         predictor=model,
                         overlap=inference_config.get("sw_overlap", 0.25),
                         mode="gaussian",
-                    ).cpu().squeeze(0)
+                        sw_device=device,
+                        device=torch.device("cpu"),
+                        buffer_steps=2
+                    ).squeeze(0)
 
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
@@ -168,6 +171,15 @@ def worker(
     # Build & load model
     model = model_class(model_config)
     state = torch.load(model_path, map_location=device, weights_only=True)
+
+    # EMA model state dict handling
+    state_keys = list(state.keys())
+    for k in state_keys:
+        if k.startswith("module.module."):
+            state[k[len("module.module."):]] = state.pop(k)
+    if "n_averaged" in state_keys:
+        del state["n_averaged"]
+
     model.load_state_dict(state)
     model.to(device).eval()
 
