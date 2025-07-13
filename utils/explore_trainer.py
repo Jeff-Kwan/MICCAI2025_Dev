@@ -9,7 +9,7 @@ import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import monai.metrics as mm
-from monai.transforms import CenterSpatialCrop, Rand3DElastic, Compose, EnsureType
+from monai.transforms import CenterSpatialCrop, Rand3DElastic
 from monai.networks.utils import one_hot
 from monai.inferers import sliding_window_inference
 from torch.optim.swa_utils import AveragedModel, get_ema_avg_fn
@@ -62,9 +62,7 @@ class DDPTrainer:
         self.epsilon = torch.linspace(1.0, 0.0, train_params['epochs'], device=self.device)
         self.pred_threshold = train_params.get("pred_threshold", 1/3)
         self.sharpen = train_params.get("sharpen", 2.0)
-        self.elastic = Compose([
-            EnsureType(dtype=torch.float32),
-            Rand3DElastic(
+        self.elastic = Rand3DElastic(
                 prob=1.0,
                 sigma_range=(1.0, 5.0),
                 magnitude_range=(0.5, 2.0),
@@ -73,7 +71,7 @@ class DDPTrainer:
                 rotate_range=(np.pi/18, np.pi/18, np.pi/18),
                 scale_range=(0.05, 0.05, 0.05),
                 shear_range=(0.01, 0.01, 0.01, 0.01, 0.01, 0.01),
-                mode="trilinear")])
+                mode="trilinear")
         self.center_crop = CenterSpatialCrop(train_params['shape'])
 
         # Optimizations
@@ -156,13 +154,14 @@ class DDPTrainer:
                                 label = self.alpha[epoch] * pred + (1-self.alpha[epoch]) * label
                                 label = F.normalize(label, p=1, dim=1)
 
-                            # Exploration ie. Label Distortion
-                            if torch.rand(1).item() < self.epsilon[epoch]:  
-                                label = self.elastic(label.squeeze(0)).unsqueeze(0)
-
                         # Center crop to original shape
                         label = self.center_crop(label.squeeze(0)).unsqueeze(0)
 
+                # Exploration ie. Label Distortion (no autocast)
+                if torch.rand(1).item() < self.epsilon[epoch]:  
+                    label = self.elastic(label.squeeze(0)).unsqueeze(0)
+
+                with torch.autocast(device_type='cuda', dtype=self.precision):
                     loss = self.criterion(logits, label)
 
                 loss.backward()
