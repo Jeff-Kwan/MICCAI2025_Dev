@@ -129,7 +129,7 @@ def run_and_score(
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=1
+                        buffer_steps=2
                     ).cpu().squeeze(0)
 
             except Exception as e:
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         "pixdim": [0.8, 0.8, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [224, 224, 112],
-        "sw_batch_size": 4,
+        "sw_batch_size": 8,
         "sw_overlap": 0.5,
     }
 
