@@ -62,7 +62,7 @@ class DDPTrainer:
         self.epsilon = torch.linspace(train_params["epsilon_range"][0],
                                       train_params["epsilon_range"][1], 
                                       train_params['epochs'], device=self.device)
-        # self.pred_threshold = train_params.get("pred_threshold", 1/3)
+        self.pred_threshold = train_params.get("pred_threshold", 1/3)
         self.sharpen = train_params.get("sharpen", 2.0)
         self.elastic = Rand3DElastic(
                 prob=1.0,
@@ -150,7 +150,7 @@ class DDPTrainer:
 
                                 # EMA teacher
                                 pred = torch.softmax(pred * self.sharpen, dim=1)
-                                # pred = pred * (pred > self.pred_threshold)
+                                pred = pred * (pred > self.pred_threshold) if self.pred_threshold > 0 else pred
                                 label = self.alpha[epoch] * pred + (1-self.alpha[epoch]) * label
                                 label = F.normalize(label, p=1, dim=1)
 
