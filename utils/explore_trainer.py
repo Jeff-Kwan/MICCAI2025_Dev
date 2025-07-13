@@ -62,16 +62,15 @@ class DDPTrainer:
         self.epsilon = torch.linspace(train_params["epsilon_range"][0],
                                       train_params["epsilon_range"][1], 
                                       train_params['epochs'], device=self.device)
-        self.pred_threshold = train_params.get("pred_threshold", 1/3)
+        # self.pred_threshold = train_params.get("pred_threshold", 1/3)
         self.sharpen = train_params.get("sharpen", 2.0)
         self.elastic = Rand3DElastic(
                 prob=1.0,
-                sigma_range=(1.0, 5.0),
-                magnitude_range=(0.5, 2.0),
+                sigma_range=(2.0, 5.0),
+                magnitude_range=(0.1, 2.0),
                 translate_range=(4, 4, 2),
                 rotate_range=(np.pi/18, np.pi/18, np.pi/18),
                 scale_range=(0.05, 0.05, 0.05),
-                shear_range=(0.01, 0.01, 0.01, 0.01, 0.01, 0.01),
                 mode="trilinear")
         self.center_crop = CenterSpatialCrop(train_params['shape'])
 
@@ -151,7 +150,7 @@ class DDPTrainer:
 
                                 # EMA teacher
                                 pred = torch.softmax(pred * self.sharpen, dim=1)
-                                pred = pred * (pred > self.pred_threshold)
+                                # pred = pred * (pred > self.pred_threshold)
                                 label = self.alpha[epoch] * pred + (1-self.alpha[epoch]) * label
                                 label = F.normalize(label, p=1, dim=1)
 
