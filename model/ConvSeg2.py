@@ -55,7 +55,7 @@ class Encoder(nn.Module):
         self.stages = len(channels)
         self.encoder_convs = nn.ModuleList(
             [nn.Sequential(
-                ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth, (i==0)),
+                ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth, False),
                 nn.GroupNorm(channels[i]//8, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
