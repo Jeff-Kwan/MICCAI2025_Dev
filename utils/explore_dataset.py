@@ -44,6 +44,7 @@ def get_transforms(shape, spatial, intensity, coarse, gt=False):
                         prob=1.0,
                         rotate_range=(np.pi/9, np.pi/9, np.pi/9),
                         scale_range=(0.1, 0.1, 0.1),
+                        shear_range=(0.01, 0.01, 0.01, 0.01, 0.01, 0.01),
                         mode=("trilinear", "nearest"),
                         lazy=True),
                     mt.Rand3DElasticd(

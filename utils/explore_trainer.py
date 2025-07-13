@@ -67,7 +67,7 @@ class DDPTrainer:
         self.elastic = Rand3DElastic(
                 prob=1.0,
                 sigma_range=(1.5, 2.0),
-                magnitude_range=(6, 12),
+                magnitude_range=(4, 12),
                 # No affine or large spatial mismatch!
                 mode="trilinear")
         self.center_crop = CenterSpatialCrop(train_params['shape'])
@@ -155,11 +155,11 @@ class DDPTrainer:
                         # Center crop to original shape
                         label = self.center_crop(label.squeeze(0)).unsqueeze(0)
 
-                # Exploration ie. Label Distortion (no autocast)
-                if torch.rand(1).item() < self.epsilon[epoch]:  
-                    label = self.elastic(label.squeeze(0)).unsqueeze(0)
+                        # Exploration ie. Label Distortion (cannot autocast elastic)
+                        with torch.autocast('cuda', enabled=False):
+                            if torch.rand(1).item() < self.epsilon[epoch]:  
+                                label = self.elastic(label.squeeze(0)).unsqueeze(0)
 
-                with torch.autocast(device_type='cuda', dtype=self.precision):
                     loss = self.criterion(logits, label)
 
                 loss.backward()
