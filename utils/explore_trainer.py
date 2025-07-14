@@ -59,6 +59,7 @@ class DDPTrainer:
             torch.linspace(lower, upper, alpha[1] - alpha[0], device=self.device),
             torch.ones(train_params['epochs'] - alpha[1], device=self.device) * upper
         ])
+        self.alpha_mix = train_params["alpha_mix"]
         self.epsilon = torch.linspace(train_params["epsilon_range"][0],
                                       train_params["epsilon_range"][1], 
                                       train_params['epochs'], device=self.device)
@@ -66,7 +67,7 @@ class DDPTrainer:
         self.sharpen = train_params.get("sharpen", 2.0)
         self.elastic = Rand3DElastic(
                 prob=1.0,
-                sigma_range=(1.5, 2.0),
+                sigma_range=(1.25, 2.0),
                 magnitude_range=(4, 12),
                 # No affine or large spatial mismatch!
                 mode="nearest")
@@ -137,7 +138,7 @@ class DDPTrainer:
 
                         if batch['gt'] == False:
                             # Swap in EMA
-                            if self.alpha[epoch] > 0:
+                            if torch.rand(1).item() < self.alpha[epoch]:
                                 pred = sliding_window_inference(
                                             clean_img,
                                             roi_size=self.train_params['shape'],
@@ -148,8 +149,8 @@ class DDPTrainer:
 
                                 # EMA teacher
                                 pred = torch.softmax(pred * self.sharpen, dim=1)
-                                pred = pred * (pred > self.pred_threshold) if self.pred_threshold > 0 else pred
-                                label = self.alpha[epoch] * pred + (1-self.alpha[epoch]) * label
+                                pred = pred * (pred > self.pred_threshold)
+                                label = self.alpha_mix * pred + (1-self.alpha_mix) * label
                                 label = F.normalize(label, p=1, dim=1)
 
                         # Center crop to original shape

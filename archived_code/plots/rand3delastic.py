@@ -13,8 +13,8 @@ grid = mt.utils.create_grid(spatial_size=sp_size, device=device, backend="torch"
 # Setup Rand3DElastic transform
 rand_3d_elastic = mt.Rand3DElastic(
     prob=1.0,
-    sigma_range=(1.75, 1.75),
-    magnitude_range=(12, 12),
+    sigma_range=(1.2, 1.2),
+    magnitude_range=(4, 4),
     mode="trilinear",
 )
 
