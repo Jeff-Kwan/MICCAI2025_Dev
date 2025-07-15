@@ -139,6 +139,7 @@ class DDPTrainer:
                         if batch['gt'] == False:
                             # Swap in EMA
                             if torch.rand(1).item() < self.alpha[epoch]:
+                                self.ema_model.eval()
                                 pred = sliding_window_inference(
                                             clean_img,
                                             roi_size=self.train_params['shape'],
