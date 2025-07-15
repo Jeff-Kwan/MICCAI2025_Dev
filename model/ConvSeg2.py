@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
-from torch.utils import checkpoint
+# from torch.utils import checkpoint
 
 
 class ConvBlock(nn.Module):
@@ -26,10 +26,10 @@ class ConvBlock(nn.Module):
         
     def forward(self, x):
         x = self.in_conv(x)
-        if self.training and x.requires_grad and self.checkpoint:
-            x = checkpoint.checkpoint(self.inner_forward, x, use_reentrant=False)
-        else:
-            x = self.inner_forward(x)
+        # if self.training and x.requires_grad and self.checkpoint:
+        #     x = checkpoint.checkpoint(self.inner_forward, x, use_reentrant=False)
+        # else:
+        x = self.inner_forward(x)
         return x
 
 
@@ -55,7 +55,7 @@ class Encoder(nn.Module):
         self.stages = len(channels)
         self.encoder_convs = nn.ModuleList(
             [nn.Sequential(
-                ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth/(self.stages-1)*i, False),
+                ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth/self.stages*(i+1), (i==0)),
                 nn.GroupNorm(channels[i]//8, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
@@ -76,7 +76,7 @@ class Decoder(nn.Module):
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
         self.stages = len(channels)
         self.decoder_convs = nn.ModuleList(
-            [ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth/(self.stages-1)*i, (i==0))
+            [ConvLayer(channels[i], convs[i], layers[i], False, dropout, sto_depth/self.stages*(i+1), (i==0))
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
