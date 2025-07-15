@@ -3,7 +3,7 @@
 "batch_size": 1,
 "aggregation": 1,
 "learning_rate": 1e-4,
-"weight_decay": 1e-3,
+"weight_decay": 1e-2,
 "min_lr": 1e-6,
 "ema_decay": 0.9998,
 "alpha": [80, 120],
