@@ -157,7 +157,7 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["ConvSeg2"]
+    architectures = ["AttnUNet3"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
