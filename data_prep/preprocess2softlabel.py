@@ -105,7 +105,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
             mt.FillHolesd(
                 keys=["aladdin", "blackbean"]),
             mt.KeepLargestConnectedComponentd(
-                keys='pred', 
+                keys=["aladdin", "blackbean"],
                 applied_labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
                 independent=True,
                 num_components=1),
