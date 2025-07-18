@@ -117,7 +117,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
             mt.Lambdad(
                 keys=["aladdin", "blackbean"],
                 func=lambda aladdin, blackbean: aladdin*128 + blackbean*127,
-                output_key="label"),
+                overwrite="label"),
             # mt.MeanEnsembled(
             #     keys=["aladdin", "blackbean"],
             #     output_key="label"),
