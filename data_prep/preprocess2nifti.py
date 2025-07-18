@@ -108,44 +108,44 @@ if __name__ == "__main__":
     data_list = [
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",
-            "data/nifti/train_gt/images",
+            "data/preprocess/train_gt/images",
             "image", pixdim
         ),
-        (
-            "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-            "data/nifti/train_gt/labels",
-            "label", pixdim
-        ),
+        # (
+        #     "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
+        #     "data/preprocess/train_gt/labels",
+        #     "label", pixdim
+        # ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images",
-            "data/nifti/val/images",
+            "data/preprocess/val/images",
             "image", pixdim
         ),
          (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Labels",
-            "data/nifti/val/labels",
+            "data/preprocess/val/labels",
             "label", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/validation/Validation-Hidden-Images",
-            "data/nifti/val/hidden",
+            "data/preprocess/val/hidden",
             "image", pixdim
         ),
         (
             "data/FLARE-Task2-LaptopSeg/train_pseudo_label/imagesTr",
-            "data/nifti/train_pseudo/images",
+            "data/preprocess/train_pseudo/images",
             "image", pixdim
         ),
-        (
-            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
-            "data/nifti/train_pseudo/aladdin5",
-            "label", pixdim
-        ),
-        (
-            "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-            "data/nifti/train_pseudo/blackbean",
-            "label", pixdim
-        )
+        # (
+        #     "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
+        #     "data/preprocess/train_pseudo/aladdin5",
+        #     "label", pixdim
+        # ),
+        # (
+        #     "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
+        #     "data/preprocess/train_pseudo/blackbean",
+        #     "label", pixdim
+        # )
     ]
 
     for data in data_list:

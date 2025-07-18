@@ -91,24 +91,24 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
+            mt.ThresholdIntensityd(
+                keys=["aladdin", "blackbean"],
+                above=False,
+                threshold=14,   # 14 classes
+                cval=0),
+            mt.KeepLargestConnectedComponentd(
+                keys=["aladdin", "blackbean"],
+                applied_labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                independent=True,
+                num_components=1),
+            mt.FillHolesd(
+                keys=["aladdin", "blackbean"]),
             mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
             mt.Spacingd(
                 keys=["aladdin", "blackbean"],
                 pixdim=pixdim,
                 mode="nearest",
                 lazy=True),
-            mt.ThresholdIntensityd(
-                keys=["aladdin", "blackbean"],
-                above=False,
-                threshold=14,   # 14 classes
-                cval=0),
-            mt.FillHolesd(
-                keys=["aladdin", "blackbean"]),
-            mt.KeepLargestConnectedComponentd(
-                keys=["aladdin", "blackbean"],
-                applied_labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                independent=True,
-                num_components=1),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes
@@ -118,7 +118,6 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 track_meta=True),
             mt.MeanEnsembled(
                 keys=["aladdin", "blackbean"],
-                weights=torch.tensor([0.5] + [1]*13).unsqueeze(0),  # Favor positive prediction?
                 output_key="label"),
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
@@ -208,14 +207,14 @@ def process_gt(in_dir, out_dir, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.75, 0.75, 2.0)
+    pixdim = (0.8, 0.8, 2.5)
     process_gt(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-        "data/highres/train_gt/softquantl",
+        "data/preprocess/train_gt/softquant",
         pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-        "data/highres/train_pseudo/softquant",
+        "data/preprocess/train_pseudo/softquant",
         pixdim)
-    # shutil.copytree("data/highres/train_pseudo/softquant", "data/highres/train_pseudo/softiterative", dirs_exist_ok=True)
+    # shutil.copytree("data/preprocess/train_pseudo/softquant", "data/preprocess/train_pseudo/softiterative", dirs_exist_ok=True)
