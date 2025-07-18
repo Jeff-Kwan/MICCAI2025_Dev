@@ -82,18 +82,18 @@ def main_worker(rank: int,
             soft=True)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/nifti/train_gt/images",
-                labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 4
+                images_dir="data/preprocess/train_gt/images",
+                labels_dir="data/preprocess/train_gt/softquant",
+                extension='.nii.gz') * 8
             + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/softquant",
+                images_dir="data/preprocess/train_pseudo/images",
+                labels_dir="data/preprocess/train_pseudo/softquant",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/nifti/val/images",
-                labels_dir="data/nifti/val/labels",
+                images_dir="data/preprocess/val/images",
+                labels_dir="data/preprocess/val/labels",
                 extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
@@ -121,7 +121,7 @@ def main_worker(rank: int,
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
-            weight=torch.tensor([0.01] + train_params["weights"], device=rank),
+            weight=torch.tensor([0.2] + train_params["weights"], device=rank),
             lambda_focal=1,
             lambda_dice=1)
 
@@ -147,7 +147,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 (spatial soft) + pseudo (pred soft) labels - Loss modifier by 1.0/dice",
+        f"{output_dir} - GT*8 (spatial soft) + pseudo (pred soft) labels - higher res, larger model; 0.2 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
