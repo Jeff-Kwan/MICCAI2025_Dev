@@ -104,7 +104,7 @@ def process_dataset(in_dir, out_dir, split, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.8, 0.8, 2.5)
+    pixdim = (0.75, 0.75, 2.25)
     data_list = [
         (
             "data/FLARE-Task2-LaptopSeg/train_gt_label/imagesTr",

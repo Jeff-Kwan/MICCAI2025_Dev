@@ -157,7 +157,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=24,
+        num_workers=20,
         persistent_workers=True,
         prefetch_factor=32,
     )
@@ -225,7 +225,7 @@ def process_gt(in_dir, out_dir, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.8, 0.8, 2.5)
+    pixdim = (0.75, 0.75, 2.25)
     process_gt(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
         "data/preprocess/train_gt/softquant",
