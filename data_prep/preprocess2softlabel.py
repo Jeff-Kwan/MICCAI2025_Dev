@@ -111,17 +111,21 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 lazy=True),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
-                to_onehot=14),  # 14 classes
+                to_onehot=14),  # 14 classes one-hot
             mt.EnsureTyped(
                 keys=["aladdin", "blackbean"],
-                dtype=torch.float32,
+                dtype=torch.uint8,
                 track_meta=True),
-            mt.MeanEnsembled(
+            mt.Lambdad(
                 keys=["aladdin", "blackbean"],
+                func=lambda aladdin, blackbean: aladdin*128 + blackbean*127,
                 output_key="label"),
+            # mt.MeanEnsembled(
+            #     keys=["aladdin", "blackbean"],
+            #     output_key="label"),
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
-            QuantizeNormalized(keys=["label"]),
+            # QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
                 output_dir=out_dir,
