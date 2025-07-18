@@ -115,9 +115,9 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 cval=0),
             mt.KeepLargestConnectedComponentd(
                 keys=["aladdin", "blackbean"],
-                applied_labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
                 independent=True,
                 num_components=1),
+            mt.FillHolesd(keys=["aladdin", "blackbean"]),
             mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
             mt.Spacingd(
                 keys=["aladdin", "blackbean"],
@@ -157,7 +157,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=32,
+        num_workers=24,
         persistent_workers=True,
         prefetch_factor=32,
     )
