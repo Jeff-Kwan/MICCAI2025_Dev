@@ -171,7 +171,7 @@ class VAETrainer:
             gc.collect()
             torch.cuda.empty_cache()
             if self.local_rank == 0 and val_loader is not None:
-                metrics["dice"] = float(sum(metrics["class_dice"]) / len(metrics["class_dice"]))
+                metrics["dice"] = float(sum(metrics["class_dice"][1:]) / len(metrics["class_dice"][1:]))
                 self.vae_losses.append(running_vae_loss / len(train_loader))
                 self.model_losses.append(running_model_loss / len(train_loader))
                 self.val_losses.append(val_loss)

@@ -184,7 +184,7 @@ class DDPTrainer:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
             if self.local_rank == 0 and val_loader is not None:
-                metrics["dice"] = float(sum(metrics["class_dice"]) / len(metrics["class_dice"]))
+                metrics["dice"] = float(sum(metrics["class_dice"][1:]) / len(metrics["class_dice"][1:]))
                 self.train_losses.append(running_loss / len(train_loader))
                 self.val_losses.append(val_loss)
                 self.val_metrics['dice'].append(metrics['dice'])
