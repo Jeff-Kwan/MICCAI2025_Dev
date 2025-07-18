@@ -65,6 +65,23 @@ class QuantizeNormalized(mt.MapTransform):
         # reshape mask to [C, ...] and form final result
         mask = mask_flat.view_as(x).to(torch.uint8)
         return (floors + mask).to(torch.uint8)
+    
+
+class SumToLabeld(mt.MapTransform):
+    def __init__(self, keys, output_key, weight1=128, weight2=127):
+        super().__init__(keys)
+        assert len(keys) == 2, "Must provide exactly 2 keys"
+        self.output_key = output_key
+        self.weight1 = weight1
+        self.weight2 = weight2
+
+    def __call__(self, data):
+        d = dict(data)
+        a1 = d[self.keys[0]]
+        a2 = d[self.keys[1]]
+        # Your sum logic
+        d[self.output_key] = a1 * self.weight1 + a2 * self.weight2
+        return d
 
 
 def get_pseudo_data(aladdin, blackbean, extension=".nii.gz"):
@@ -114,10 +131,9 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 keys=["aladdin", "blackbean"],
                 dtype=torch.uint8,
                 track_meta=True),
-            mt.Lambdad(
+            SumToLabeld(
                 keys=["aladdin", "blackbean"],
-                func=lambda aladdin, blackbean: aladdin*128 + blackbean*127,
-                overwrite="label"),
+                output_key="label"),
             # mt.MeanEnsembled(
             #     keys=["aladdin", "blackbean"],
             #     output_key="label"),
