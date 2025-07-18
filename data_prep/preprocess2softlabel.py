@@ -211,11 +211,11 @@ if __name__ == "__main__":
     pixdim = (0.75, 0.75, 2.0)
     process_gt(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-        "data/nifti/train_gt/softlabel",
+        "data/highres/train_gt/softquantl",
         pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-        "data/nifti/train_pseudo/softlabel",
+        "data/highres/train_pseudo/softquant",
         pixdim)
-    # shutil.copytree("data/nifti/train_pseudo/softlabel", "data/nifti/train_pseudo/softiterative", dirs_exist_ok=True)
+    # shutil.copytree("data/highres/train_pseudo/softquant", "data/highres/train_pseudo/softiterative", dirs_exist_ok=True)
