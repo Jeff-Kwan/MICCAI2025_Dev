@@ -4,7 +4,7 @@ from pathlib import Path
 from tqdm import tqdm
 import torch
 import monai.transforms as mt
-from monai.data import Dataset, ThreadDataLoader
+from monai.data import Dataset, DataLoader
 from monai.config import KeysCollection
 
 class QuantizeNormalized(mt.MapTransform):
@@ -91,11 +91,24 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
+            mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["aladdin", "blackbean"],
+                pixdim=pixdim,
+                mode="nearest",
+                lazy=True),
             mt.ThresholdIntensityd(
                 keys=["aladdin", "blackbean"],
                 above=False,
                 threshold=14,   # 14 classes
                 cval=0),
+            mt.FillHolesd(
+                keys=["aladdin", "blackbean"]),
+            mt.KeepLargestConnectedComponentd(
+                keys='pred', 
+                applied_labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                independent=True,
+                num_components=1),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes
@@ -105,15 +118,10 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 track_meta=True),
             mt.MeanEnsembled(
                 keys=["aladdin", "blackbean"],
+                weights=torch.tensor([0.5] + [1]*13).unsqueeze(0),  # Favor positive prediction?
                 output_key="label"),
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
-            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["label"],
-                pixdim=pixdim,
-                mode="trilinear",
-                lazy=True),
             QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
@@ -129,12 +137,11 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
 
     # build the MONAI dataset
     dataset = Dataset(data=get_pseudo_data(aladdin, blackbean), transform=transform)
-    dataloader = ThreadDataLoader(
+    dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=48,
+        num_workers=32,
         persistent_workers=True,
-        # num_workers=46,
         prefetch_factor=32,
     )
 
@@ -188,7 +195,7 @@ def process_gt(in_dir, out_dir, pixdim):
         for entry in os.scandir(dir)
         if entry.is_file() and entry.name.endswith(".nii.gz"))
     dataset = Dataset(data=[{"label": str(dir / name)} for name in names], transform=transform)
-    dataloader = ThreadDataLoader(
+    dataloader = DataLoader(
         dataset,
         batch_size=1,
         num_workers=50)
@@ -201,14 +208,14 @@ def process_gt(in_dir, out_dir, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.8, 0.8, 2.5)
+    pixdim = (0.75, 0.75, 2.0)
     process_gt(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-        "data/nifti/train_gt/softquant",
+        "data/nifti/train_gt/softlabel",
         pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-        "data/nifti/train_pseudo/softquant",
+        "data/nifti/train_pseudo/softlabel",
         pixdim)
-    shutil.copytree("data/nifti/train_pseudo/softquant", "data/nifti/train_pseudo/softiterative", dirs_exist_ok=True)
+    # shutil.copytree("data/nifti/train_pseudo/softlabel", "data/nifti/train_pseudo/softiterative", dirs_exist_ok=True)
