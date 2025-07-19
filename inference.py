@@ -20,6 +20,7 @@ from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 from model.ConvSeg2 import ConvSeg2
 from model.AttnUNet2 import AttnUNet as AttnUNet2
+from model.AttnUNet3 import AttnUNet3
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
@@ -53,6 +54,7 @@ def get_post_transforms(pre_transforms):
     return mt.Compose([
         # mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
+        mt.KeepLargestConnectedComponentd(keys="pred", is_onehot=False),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -193,14 +195,14 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = ConvSeg2
-    model_config    = json.load(open("configs/dual/convseg2.json", "r"))
-    model_path      = "output/Dual/Dual-Conseg2/ema_model1.pth"
+    model_class     = AttnUNet3
+    model_config    = json.load(open("configs/labellers/AttnUNet3/model.json", "r"))
+    model_path      = "output/2025-07-18/15-56-AttnUNet3/best_model.pth"
     autocast        = True
     num_classes     = 14
 
     inference_config = {
-        "pixdim": [0.8, 0.8, 2.5],
+        "pixdim": [0.75, 0.75, 2.25],
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [224, 224, 112],
         "sw_batch_size": 8,
