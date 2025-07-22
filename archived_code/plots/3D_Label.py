@@ -11,8 +11,8 @@ loader = mt.Compose([
     mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.5, 1.5, 1.5), mode=['nearest', 'nearest']),
 ])
 clean_small = True
-organ = np.array([6])
-num = '39'
+organ = np.array([2, 12])
+num = '14'
 data = loader({
     "vol1": rf"archived_code\plots\labels\attnunet3_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"

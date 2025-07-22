@@ -75,6 +75,7 @@ class SumToLabeld(mt.MapTransform):
         self.weight1 = weight1
         self.weight2 = weight2
 
+    @torch.no_grad()
     def __call__(self, data):
         d = dict(data)
         a1 = d[self.keys[0]]
