@@ -108,29 +108,23 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     transform = mt.Compose(
         [
             mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
+            mt.EnsureTyped(
+                keys=["aladdin", "blackbean"],
+                dtype=torch.uint8,
+                track_meta=True),
             mt.ThresholdIntensityd(
                 keys=["aladdin", "blackbean"],
                 above=False,
                 threshold=14,   # 14 classes
                 cval=0),
-            mt.KeepLargestConnectedComponentd(
-                keys=["aladdin", "blackbean"],
-                independent=True,
-                num_components=1),
-            mt.FillHolesd(keys=["aladdin", "blackbean"]),
-            mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["aladdin", "blackbean"],
-                pixdim=pixdim,
-                mode="nearest",
-                lazy=True),
+            # mt.KeepLargestConnectedComponentd(
+            #     keys=["aladdin", "blackbean"],
+            #     independent=True,
+            #     num_components=1),
+            # mt.FillHolesd(keys=["aladdin", "blackbean"]),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes one-hot
-            mt.EnsureTyped(
-                keys=["aladdin", "blackbean"],
-                dtype=torch.uint8,
-                track_meta=True),
             SumToLabeld(
                 keys=["aladdin", "blackbean"],
                 output_key="label"),
@@ -140,6 +134,12 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
             # QuantizeNormalized(keys=["label"]),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode="nearest",
+                lazy=True),
             mt.SaveImaged(
                 keys=["label"],
                 output_dir=out_dir,
@@ -157,7 +157,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=20,
+        num_workers=24,
         persistent_workers=True,
         prefetch_factor=32,
     )
