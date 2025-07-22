@@ -82,18 +82,18 @@ def main_worker(rank: int,
             soft=True)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="datanifti/train_gt/images",
-                labels_dir="datanifti/train_gt/softquant",
+                images_dir="data/nifti/train_gt/images",
+                labels_dir="data/nifti/train_gt/softquant",
                 extension='.nii.gz') * 20,
             # + get_data_files(
-            #     images_dir="datanifti/train_pseudo/images",
-            #     labels_dir="datanifti/train_pseudo/softquant",
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/softquant",
             #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="datanifti/val/images",
-                labels_dir="datanifti/val/labels",
+                images_dir="data/nifti/val/images",
+                labels_dir="data/nifti/val/labels",
                 extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
