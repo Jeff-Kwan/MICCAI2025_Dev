@@ -90,7 +90,7 @@ class VAETrainer:
             self.model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.start_time = None
             self.class_names = ["Liver", "Right kidney", "Spleen", "Pancreas", 
-                                "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", 
+                                "Aorta", "Inferior Vena Cava", "Right Adrenal Gland", "Left Adrenal Gland",
                                 "Gallbladder", "Esophagus", "Stomach", "Duodenum", "Left kidney"]
 
     def kl_normal(self, mu, logvar):

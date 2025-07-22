@@ -5,6 +5,7 @@ import glob
 import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
+import pandas as pd
 
 val_pred_dir = "archived_code/plots/labels/attnunet3_output"
 val_labels_dir = "archived_code/plots/labels/Validation-Public-Labels"
@@ -23,9 +24,10 @@ loader = mt.Compose([
     # mt.KeepLargestConnectedComponentd(keys=["vol1"]),
     mt.AsDiscreted(keys=["vol1", "vol2"], to_onehot=14),
 ])
+ignore_empty = False
 
 def compute_dice(name):
-    dice_metric = DiceMetric(include_background=False, ignore_empty=False)
+    dice_metric = DiceMetric(include_background=False, ignore_empty=ignore_empty, reduction='none')
     dice_metric.reset()
     data = loader({
         "vol1": pred_map[name],
@@ -39,10 +41,21 @@ def compute_dice(name):
 if __name__ == "__main__":
     with Pool(2) as pool:
         results = list(tqdm(pool.imap(compute_dice, common_names), total=len(common_names), desc="Calculating Dice"))
-
+    mean_dice = sum(np.nanmean(d[1]) for d in results) / len(results)
     results.sort(key=lambda x: x[1].mean())
+    results = [[x[0].replace(".nii.gz", "")] + np.round(x[1].squeeze(), 3).tolist() for x in results]
 
-    for name, dice in results:
-        print(f"{name}: {np.round(dice, 4)}")
+    df = pd.DataFrame(
+        results,
+        columns=["Name"] + ["Liver", "R-Kidney", "Spleen", "Pancreas", 
+                                "Aorta", "IVC", "RAG", "LAG",
+                                "Gallbladder", "Esophagus", "Stomach", "Duodenum", "L-Kidney"]
+    )
+    print(df.to_string(index=False, col_space=8, justify="center"))
+    if ignore_empty:
+        suffix = "_ignore_empty"
+    else:
+        suffix = ""
+    df.to_csv(f"archived_code/attnunet3{suffix}.csv", index=False)
 
-    print(f"\nMean Dice: {sum(d[1].mean() for d in results) / len(results):.4f}")
+    print(f"\nMean Dice: {mean_dice:.4f}")
