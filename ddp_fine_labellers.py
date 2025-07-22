@@ -84,11 +84,11 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 20,
-            # + get_data_files(
-            #     images_dir="data/nifti/train_pseudo/images",
-            #     labels_dir="data/nifti/train_pseudo/softquant",
-            #     extension='.nii.gz'),
+                extension='.nii.gz') * 20
+            + get_data_files(
+                images_dir="data/nifti/train_pseudo/images",
+                labels_dir="data/nifti/train_pseudo/softquant",
+                extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -104,14 +104,14 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=30,
+            num_workers=32,
             pin_memory=False,
             persistent_workers=True)
         val_loader = ThreadDataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
-            num_workers=2,
+            num_workers=1,
             pin_memory=False,
             persistent_workers=True)
 
@@ -147,7 +147,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*20; 0.1 background loss weight",
+        f"{output_dir} - GT*20 + Soft Pseudo; 0.1 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
