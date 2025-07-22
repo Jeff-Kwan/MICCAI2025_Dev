@@ -79,8 +79,10 @@ class SumToLabeld(mt.MapTransform):
         d = dict(data)
         a1 = d[self.keys[0]]
         a2 = d[self.keys[1]]
-        # Your sum logic
-        d[self.output_key] = a1 * self.weight1 + a2 * self.weight2
+        # In-place sum logic to save memory
+        a1.mul_(self.weight1)
+        a1.add_(a2.mul(self.weight2))
+        d[self.output_key] = a1
         return d
 
 
