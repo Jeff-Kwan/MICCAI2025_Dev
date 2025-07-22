@@ -12,7 +12,7 @@ loader = mt.Compose([
 ])
 clean_small = False
 organ = np.array([10, 11])
-num = '03'
+num = '34'
 data = loader({
     "vol1": rf"archived_code\plots\labels\attnunet3_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"

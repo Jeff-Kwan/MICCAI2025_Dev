@@ -122,6 +122,12 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
             #     independent=True,
             #     num_components=1),
             # mt.FillHolesd(keys=["aladdin", "blackbean"]),
+            mt.Orientationd(keys=["aladdin", "blackbean"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["aladdin", "blackbean"],
+                pixdim=pixdim,
+                mode="nearest",
+                lazy=True),
             mt.AsDiscreted(
                 keys=["aladdin", "blackbean"],
                 to_onehot=14),  # 14 classes one-hot
@@ -134,12 +140,6 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
             mt.DeleteItemsd(
                 keys=["aladdin", "blackbean"]),
             # QuantizeNormalized(keys=["label"]),
-            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
-            mt.Spacingd(
-                keys=["label"],
-                pixdim=pixdim,
-                mode="nearest",
-                lazy=True),
             mt.SaveImaged(
                 keys=["label"],
                 output_dir=out_dir,
