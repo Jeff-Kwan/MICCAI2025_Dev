@@ -225,14 +225,14 @@ def process_gt(in_dir, out_dir, pixdim):
 
 
 if __name__ == "__main__":
-    pixdim = (0.75, 0.75, 2.25)
+    pixdim = (0.8, 0.8, 2.5)
     process_gt(
         "data/FLARE-Task2-LaptopSeg/train_gt_label/labelsTr",
-        "data/preprocess/train_gt/softquant",
+        "data/nifti/train_gt/softquant",
         pixdim)
     process_dataset(
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/flare22_aladdin5_pseudo",
         "data/FLARE-Task2-LaptopSeg/train_pseudo_label/pseudo_label_blackbean_flare22",
-        "data/preprocess/train_pseudo/softquant",
+        "data/nifti/train_pseudo/softquant",
         pixdim)
-    # shutil.copytree("data/preprocess/train_pseudo/softquant", "data/preprocess/train_pseudo/softiterative", dirs_exist_ok=True)
+    # shutil.copytree("data/nifti/train_pseudo/softquant", "data/nifti/train_pseudo/softiterative", dirs_exist_ok=True)
