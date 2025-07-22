@@ -159,7 +159,7 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=24,
+        num_workers=64,
         persistent_workers=True,
         prefetch_factor=32,
     )
