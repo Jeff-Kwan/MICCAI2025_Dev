@@ -10,9 +10,9 @@ loader = mt.Compose([
     mt.Orientationd(keys=["vol1", "vol2"], axcodes="RAS"),
     mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.5, 1.5, 1.5), mode=['nearest', 'nearest']),
 ])
-clean_small = False
-organ = np.array([10, 11])
-num = '34'
+clean_small = True
+organ = np.array([6])
+num = '39'
 data = loader({
     "vol1": rf"archived_code\plots\labels\attnunet3_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"
@@ -20,14 +20,15 @@ data = loader({
 vol1 = data["vol1"].numpy().astype(int)
 vol2 = data["vol2"].numpy().astype(int)
 
-if organ is not None:
-    vol1 = vol1 * np.isin(vol1, organ)
-    vol2 = vol2 * np.isin(vol2, organ)
-
-
 fp = ((vol1 > vol2) & (vol2 == 0)).astype(int)
 fn = ((vol1 < vol2) & (vol1 == 0)).astype(int)
 wrong_class = ((vol1 != vol2) & (vol1 > 0) & (vol2 > 0)).astype(int)
+
+if organ is not None:
+    vol1 = vol1 * np.isin(vol1, organ)
+    vol2 = vol2 * np.isin(vol2, organ)
+    fp = fp * (vol1 > 0)
+    fn = fn * (vol2 > 0)
 
 if clean_small:
     remove_small = mt.RemoveSmallObjects(min_size=20)

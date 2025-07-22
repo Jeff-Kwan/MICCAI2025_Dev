@@ -82,18 +82,18 @@ def main_worker(rank: int,
             soft=True)  # Use soft labels
         train_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocess/train_gt/images",
-                labels_dir="data/preprocess/train_gt/softquant",
+                images_dir="datanifti/train_gt/images",
+                labels_dir="datanifti/train_gt/softquant",
                 extension='.nii.gz') * 20,
             # + get_data_files(
-            #     images_dir="data/preprocess/train_pseudo/images",
-            #     labels_dir="data/preprocess/train_pseudo/softquant",
+            #     images_dir="datanifti/train_pseudo/images",
+            #     labels_dir="datanifti/train_pseudo/softquant",
             #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
-                images_dir="data/preprocess/val/images",
-                labels_dir="data/preprocess/val/labels",
+                images_dir="datanifti/val/images",
+                labels_dir="datanifti/val/labels",
                 extension='.nii.gz'),
             transform=val_tf)
         train_sampler = torch.utils.data.DistributedSampler(
@@ -147,7 +147,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*8 (spatial soft) + pseudo (pred soft) labels - higher res, larger model; 0.2 background loss weight",
+        f"{output_dir} - GT*20; 0.1 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
