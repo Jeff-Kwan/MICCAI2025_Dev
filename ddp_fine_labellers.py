@@ -84,11 +84,11 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/preprocess/train_gt/images",
                 labels_dir="data/preprocess/train_gt/softquant",
-                extension='.nii.gz') * 8
-            + get_data_files(
-                images_dir="data/preprocess/train_pseudo/images",
-                labels_dir="data/preprocess/train_pseudo/softquant",
-                extension='.nii.gz'),
+                extension='.nii.gz') * 20,
+            # + get_data_files(
+            #     images_dir="data/preprocess/train_pseudo/images",
+            #     labels_dir="data/preprocess/train_pseudo/softquant",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -121,7 +121,7 @@ def main_worker(rank: int,
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
-            weight=torch.tensor([0.2] + train_params["weights"], device=rank),
+            weight=torch.tensor([0.1] + train_params["weights"], device=rank),
             lambda_focal=1,
             lambda_dice=1)
 
