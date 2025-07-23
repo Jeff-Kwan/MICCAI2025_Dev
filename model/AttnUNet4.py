@@ -2,25 +2,32 @@ import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
 
+class LayerNormTranspose(nn.Module):
+    def __init__(self, dim: int, features: int):
+        super().__init__()
+        self.dim = dim
+        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
+
+    def forward(self, x):
+        # (..., C, ...) -> (..., ..., C) -> norm -> restore
+        x = x.transpose(self.dim, -1)
+        x = self.norm(x)
+        return x.transpose(self.dim, -1)
+
 
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.in_conv = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
-        self.conv1 = nn.Conv3d(h_c, h_c*2, 1, 1, 0, bias=bias)
-        self.conv2 = nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c)
-        self.conv3 = nn.Conv3d(h_c, h_c, 3, 1, 2, dilation=2, bias=bias, groups=h_c)
-        self.out_conv = nn.Sequential(
-            nn.GroupNorm(h_c*4, h_c*4),
+        self.convs = nn.Sequential(
+            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
+            nn.GroupNorm(h_c, h_c),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c*4, out_c, 1, 1, 0, bias=bias))
+            nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
         
     def forward(self, x):
-        x = self.in_conv(x)
-        x = torch.cat([self.conv1(x), self.conv2(x), self.conv3(x)], dim=1)
-        return self.out_conv(x)
+        return self.convs(x)
 
 
 class ConvLayer(nn.Module):
@@ -94,7 +101,7 @@ class Encoder(nn.Module):
             [nn.Sequential(
                 ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, 
                           sto_depth=sto_depth * (i+1) / self.stages),
-                nn.GroupNorm(channels[i]//8, channels[i]))
+                LayerNormTranspose(1, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
@@ -119,7 +126,7 @@ class Decoder(nn.Module):
                        sto_depth=sto_depth * (i+1) / self.stages)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                nn.GroupNorm(channels[i+1]//8, channels[i+1]),
+                LayerNormTranspose(1, channels[i+1]),
                 nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
@@ -147,7 +154,7 @@ class AttnUNet4(nn.Module):
         sto_depth = p.get("stochastic_depth", 0.0)
         assert (len(channels) == len(convs) == len(layers)), "Channels, convs, and layers must have the same length"
 
-        self.in_conv = nn.Conv3d(1, channels[0], 1, 1, 0, bias=False)
+        self.in_conv = nn.Conv3d(1, channels[0], (2, 2, 1), (2, 2, 1), 0, bias=False)
         
         self.encoder = Encoder(channels, convs, layers, dropout, sto_depth)
         self.bottleneck = nn.Sequential(
@@ -159,8 +166,10 @@ class AttnUNet4(nn.Module):
                 for _ in range(layers[-1])])
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
-        self.out_conv = nn.Conv3d(channels[0], out_c, 1, 1, 0, bias=False)
+        self.out_conv = nn.Sequential(
+            nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
+            LayerNormTranspose(1, 16),
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
 
         
     def forward(self, x):
@@ -175,7 +184,6 @@ class AttnUNet4(nn.Module):
         # Decoder
         x = self.decoder(x, skips)
 
-        x = self.out_norm(x.permute(0, 2, 3, 4, 1)).permute(0, 4, 1, 2, 3)
         x = self.out_conv(x)
         return x
 
@@ -187,10 +195,10 @@ if __name__ == "__main__":
     B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
-        "channels":     [16, 32, 64, 128, 256],
-        "convs":        [4, 16, 32, 64, 128],
+        "channels":     [48, 96, 192, 384],
+        "convs":        [32, 64, 96, 128],
         "head_dim":     64,
-        "layers":       [2, 4, 4, 4, 6],
+        "layers":       [6, 6, 6, 6],
         "dropout":      0.0,
         "stochastic_depth": 0.0
     }

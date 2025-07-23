@@ -11,7 +11,7 @@ from monai.data import ThreadDataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet3 import AttnUNet3
+from model.AttnUNet4 import AttnUNet4
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 from model.ConvSeg2 import ConvSeg2
@@ -150,7 +150,7 @@ def main_worker(rank: int,
 def get_comments(output_dir, train_params):
     return [
         f"{output_dir} - GT*20 + Soft Pseudo; 0.1 background loss weight",
-        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge)", 
+        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
@@ -159,7 +159,7 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["AttnUNet3"]
+    architectures = ["AttnUNet4"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
@@ -168,8 +168,8 @@ if __name__ == "__main__":
         comments = get_comments(output_dir, train_params)
 
         print(f"Starting training for {architecture}...")
-        if architecture == "AttnUNet3":
-            model = AttnUNet3(model_params)
+        if architecture == "AttnUNet4":
+            model = AttnUNet4(model_params)
         elif architecture == "ConvSeg":
             model = ConvSeg(model_params)
         elif architecture == "ViTSeg":
