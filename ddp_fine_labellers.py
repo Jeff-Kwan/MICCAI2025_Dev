@@ -7,7 +7,7 @@ import torch.multiprocessing as mp
 import traceback
 from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
-from monai.data import ThreadDataLoader, Dataset
+from monai.data import DataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_transforms, get_data_files
@@ -101,7 +101,7 @@ def main_worker(rank: int,
             train_ds, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False)
         val_sampler = torch.utils.data.DistributedSampler(
             val_ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
-        train_loader = ThreadDataLoader(
+        train_loader = DataLoader(
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
@@ -109,7 +109,7 @@ def main_worker(rank: int,
             prefetch_factor=2,
             pin_memory=False,
             persistent_workers=True)
-        val_loader = ThreadDataLoader(
+        val_loader = DataLoader(
             val_ds,
             batch_size=1,
             sampler=val_sampler,
