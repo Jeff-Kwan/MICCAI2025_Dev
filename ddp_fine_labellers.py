@@ -61,7 +61,8 @@ def main_worker(rank: int,
             backend='nccl',
             init_method='tcp://127.0.0.1:29500',
             world_size=world_size,
-            rank=rank
+            rank=rank,
+            device_id=torch.device(f'cuda:{rank}')
         )
 
         # 3) Only rank 0 creates output folder
