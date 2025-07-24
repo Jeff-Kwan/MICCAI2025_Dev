@@ -195,12 +195,12 @@ if __name__ == "__main__":
     B, S1, S2, S3 = 1, 224, 224, 112
     params = {
         "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
-        "convs":        [48, 96, 192, 384],
+        "channels":     [48, 96, 192, 384],
+        "convs":        [32, 64, 128, 256],
         "head_dim":     64,
-        "layers":       [6, 6, 6, 6],
+        "layers":       [4, 4, 4, 4],
         "dropout":      0.0,
-        "stochastic_depth": 0.0
+        "stochastic_depth": 0.1
     }
 
     x = torch.randn(B, 1, S1, S2, S3).to(device)
