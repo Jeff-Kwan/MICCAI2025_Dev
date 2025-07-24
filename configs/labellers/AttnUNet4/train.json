@@ -1,8 +1,8 @@
 {
 "epochs": 100,
 "batch_size": 1,
-"aggregation": 2,
-"learning_rate": 3e-4,
+"aggregation": 1,
+"learning_rate": 2e-4,
 "weight_decay": 2e-3,
 "min_lr": 1e-6,
 "num_classes": 14,
