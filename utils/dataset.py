@@ -32,16 +32,16 @@ def get_transforms(shape, spatial, intensity, coarse, soft=False):
                 keys=["image", "label"],
                 k=16,
                 lazy=True),
-            mt.RandFlipd(
-                keys=["image", "label"],
-                prob=0.3,
-                spatial_axis=(0, 1),
-                lazy=True),  # Flip in XY plane
-            mt.RandRotate90d(
-                keys=["image", "label"],
-                prob=0.3,
-                spatial_axes=(0, 1),
-                lazy=True),  # Rotate in XY plane
+            # mt.RandFlipd(
+            #     keys=["image", "label"],
+            #     prob=0.3,
+            #     spatial_axis=(0, 1),
+            #     lazy=True),  # Flip in XY plane
+            # mt.RandRotate90d(
+            #     keys=["image", "label"],
+            #     prob=0.3,
+            #     spatial_axes=(0, 1),
+            #     lazy=True),  # Rotate in XY plane
             mt.OneOf(       # Random spatial augmentations
                 transforms=[
                     mt.Identityd(keys=["image", "label"]),

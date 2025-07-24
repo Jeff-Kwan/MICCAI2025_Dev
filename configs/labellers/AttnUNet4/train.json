@@ -15,6 +15,6 @@
 "data_augmentation": {
     "spatial": [3, 2, 1],  
     "intensity": [5, 2, 1, 0, 1, 1, 0],  
-    "coarse": [3, 1, 1]  
+    "coarse": [2, 1, 1]  
     }
 }
