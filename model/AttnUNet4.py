@@ -19,15 +19,19 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.convs = nn.Sequential(
-            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
-            nn.GroupNorm(h_c//8, h_c),
+        self.conv1 = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
+        self.conv2 = nn.Conv3d(h_c, h_c//2, 3, 1, 1, bias=bias)
+        self.conv3 = nn.Conv3d(h_c, h_c//2, 3, 1, 2, dilation=2, bias=bias)
+        self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*2, h_c*2),
             nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
-            nn.Conv3d(h_c, out_c, 3, 1, 1, bias=bias))
+            nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         
     def forward(self, x):
-        return self.convs(x)
+        x = self.conv1(x)
+        x = torch.cat([x, self.conv2(x), self.conv3(x)], dim=1)
+        return self.out_conv(x)
 
 
 class ConvLayer(nn.Module):
@@ -53,7 +57,7 @@ class SwiGLU(nn.Module):
         self.act = nn.SiLU()
         self.linear2 = nn.Sequential(
             nn.Dropout(dropout) if dropout else nn.Identity(),
-            nn.Linear(h_c, out_c, bias))
+            nn.Linear(h_c, out_c, bias=False))
         
     def forward(self, x):
         x1, x2 = self.linear1(x).chunk(2, dim=-1)
@@ -101,7 +105,7 @@ class Encoder(nn.Module):
             [nn.Sequential(
                 ConvLayer(channels[i], convs[i], layers[i], bias=False, dropout=dropout, 
                           sto_depth=sto_depth * (i+1) / self.stages),
-                LayerNormTranspose(1, channels[i]))
+                nn.GroupNorm(channels[i]//8, channels[i]))
              for i in range(self.stages - 1)])
         self.downs = nn.ModuleList([nn.Conv3d(channels[i], channels[i+1], 2, 2, 0, bias=False)
              for i in range(self.stages - 1)])
@@ -126,8 +130,8 @@ class Decoder(nn.Module):
                        sto_depth=sto_depth * (i+1) / self.stages)
              for i in reversed(range(self.stages - 1))])
         self.ups = nn.ModuleList([nn.Sequential(
-                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False),
-                LayerNormTranspose(1, channels[i]))
+                nn.GroupNorm(channels[i+1]//8, channels[i+1]),
+                nn.ConvTranspose3d(channels[i+1], channels[i], 2, 2, 0, bias=False))
              for i in reversed(range(self.stages - 1))])
         self.merges = nn.ModuleList([
              nn.Conv3d(channels[i] * 2, channels[i], 3, 1, 1, bias=False)
@@ -166,10 +170,11 @@ class AttnUNet4(nn.Module):
                 for _ in range(layers[-1])])
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
+        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.Sequential(
             nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
             LayerNormTranspose(1, 16),
-            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=True))
 
         
     def forward(self, x):
@@ -196,9 +201,9 @@ if __name__ == "__main__":
     params = {
         "out_channels": 14,
         "channels":     [48, 96, 192, 384],
-        "convs":        [32, 64, 128, 256],
+        "convs":        [32, 64, 96, 128],
         "head_dim":     64,
-        "layers":       [4, 4, 4, 4],
+        "layers":       [6, 6, 6, 6],
         "dropout":      0.0,
         "stochastic_depth": 0.1
     }
