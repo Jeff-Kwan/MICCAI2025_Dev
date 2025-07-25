@@ -170,11 +170,10 @@ class AttnUNet4(nn.Module):
                 for _ in range(layers[-1])])
         self.decoder = Decoder(channels, convs, layers, dropout, sto_depth)
 
-        self.out_norm = nn.LayerNorm(channels[0], elementwise_affine=False, bias=False)
         self.out_conv = nn.Sequential(
             nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
             LayerNormTranspose(1, 16),
-            nn.Conv3d(16, out_c, 3, 1, 1, bias=True))
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
 
         
     def forward(self, x):
