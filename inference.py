@@ -55,8 +55,8 @@ def get_post_transforms(pre_transforms):
     return mt.Compose([
         # mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
-        mt.KeepLargestConnectedComponentd(keys="pred", is_onehot=False),
-        mt.RemoveSmallObjectsd(keys="pred", min_size=64),
+        # mt.KeepLargestConnectedComponentd(keys="pred", is_onehot=False),
+        # mt.RemoveSmallObjectsd(keys="pred", min_size=64),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -65,8 +65,15 @@ def get_post_transforms(pre_transforms):
             orig_meta_keys="img_meta_dict",
             meta_key_postfix="meta_dict",
             nearest_interp=True,
-            to_tensor=True,
-        ),
+            to_tensor=True),
+        mt.SaveImaged(keys="pred",
+            output_dir="au4_output", 
+            output_postfix="", 
+            output_ext=".nii.gz", 
+            resample=False,     # Invert already resamples
+            separate_folder=False,
+            output_dtype=torch.uint8,
+            print_log=False)
     ])
 
 # --- CPU-side post-processing function (must be top-level for pickling) ---
@@ -111,7 +118,7 @@ def run_and_score(
     loader = mt.Compose([spatial_tf, intensity_tf])
 
     # Inference + dispatch to CPU pool
-    max_prefetch = 3
+    max_prefetch = 4
     in_flight = set()
     precision = torch.bfloat16 if autocast else torch.float32
     with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
@@ -199,7 +206,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet4
     model_config    = json.load(open("configs/labellers/AttnUNet4/model.json", "r"))
-    model_path      = "output/2025-07-24/17-17-AttnUNet4/model.pth"
+    model_path      = "output/2025-07-25/16-19-AttnUNet4/model.pth"
     autocast        = True
     num_classes     = 14
 
@@ -208,7 +215,7 @@ if __name__ == "__main__":
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [224, 224, 112],
         "sw_batch_size": 8,
-        "sw_overlap": 0.5,
+        "sw_overlap": 0.75,
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
@@ -226,7 +233,7 @@ if __name__ == "__main__":
     metrics = manager.list()
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 64
+    total_cpus = 32
     cpus_per_gpu = max(1, total_cpus // ngpus)
 
     # Spawn one process per GPU
