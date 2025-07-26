@@ -23,6 +23,7 @@ from model.ConvSeg2 import ConvSeg2
 from model.AttnUNet2 import AttnUNet as AttnUNet2
 from model.AttnUNet3 import AttnUNet3
 from model.AttnUNet4 import AttnUNet4
+from model.AttnUNet5 import AttnUNet5
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
@@ -66,7 +67,7 @@ def get_post_transforms(pre_transforms):
             nearest_interp=True,
             to_tensor=True),
         mt.SaveImaged(keys="pred",
-            output_dir="archived_code/plots/labels/au4_post_output", 
+            output_dir="archived_code/plots/labels/au5_post_output", 
             output_postfix="", 
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
@@ -196,9 +197,9 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = AttnUNet4
-    model_config    = json.load(open("configs/labellers/AttnUNet4/model.json", "r"))
-    model_path      = "output/2025-07-25/16-39-AttnUNet4/model.pth"
+    model_class     = AttnUNet5
+    model_config    = json.load(open("configs/labellers/AttnUNet5/model.json", "r"))
+    model_path      = "output/2025-07-27/16-39-AttnUNet5/model.pth"
     autocast        = True
     num_classes     = 14
 

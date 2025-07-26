@@ -147,7 +147,7 @@ class Decoder(nn.Module):
         return x
 
 
-class AttnUNet4(nn.Module):
+class AttnUNet5(nn.Module):
     def __init__(self, p: dict):
         super().__init__()
         self.model_params = p
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     }
 
     x = torch.randn(B, 1, S1, S2, S3).to(device)
-    model = AttnUNet4(params).to(device)
+    model = AttnUNet5(params).to(device)
 
     # Profile the forward and backward pass
     if device == torch.device("cuda"):

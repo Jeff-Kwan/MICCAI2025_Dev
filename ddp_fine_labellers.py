@@ -152,7 +152,8 @@ def get_comments(output_dir, train_params):
         f"{output_dir} - GT*20 + Soft Pseudo; 0.05 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
-        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
+        f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
+        "AU5 with depth-dropout, 8-batch size, more spatial aug, class loss weight [1,2] by log space"
     ]
 
 
