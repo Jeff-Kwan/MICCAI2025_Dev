@@ -175,7 +175,7 @@ class AttnUNet4(nn.Module):
         self.out_conv = nn.Sequential(
             nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
             LayerNormTranspose(1, 16),
-            nn.Conv3d(16, out_c, 3, 1, 1, bias=False))
+            nn.Conv3d(16, out_c, 3, 1, 1, bias=True))
 
         
     def forward(self, x):

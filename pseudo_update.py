@@ -54,11 +54,7 @@ def cpu_post(data, inference_config):
             separate_folder=False,
             output_dtype=torch.uint8,
             print_log=False),
-        RemoveSmallObjectsPerClassd(
-        keys=["pred"],
-        labels=list(range(1, 14)),
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
-        connectivity=1),
+        RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["aladdin", "blackbean"], dtype=torch.uint8),
         mt.AsDiscreted(keys=["pred", "aladdin", "blackbean"], to_onehot=14),

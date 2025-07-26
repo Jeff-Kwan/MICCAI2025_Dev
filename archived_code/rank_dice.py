@@ -8,6 +8,10 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import pandas as pd
 
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
+
 val_pred_dir = "archived_code/plots/labels/au4_output"
 val_labels_dir = "archived_code/plots/labels/Validation-Public-Labels"
 
@@ -49,12 +53,7 @@ loader = mt.Compose([
     # mt.CropForegroundd(keys=["vol1", "vol2"], source_key="vol2", margin=64, allow_smaller=True),
     # mt.KeepLargestConnectedComponentd(keys=["vol1"], independent=True, num_components=2),
     # mt.RemoveSmallObjectsd(keys=["vol1"], min_size=256),
-    RemoveSmallObjectsPerClassd(
-        keys=["vol1"],
-        labels=list(range(1, 14)),  # Assuming labels are from 1 to 13
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
-        connectivity=1
-    ),
+    # RemoveSmallObjectsPerClassd(keys=["vol1"]),
     mt.AsDiscreted(keys=["vol1", "vol2"], to_onehot=14),
 ])
 ignore_empty = False

@@ -6,6 +6,10 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import torch
 
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
+
 val_pred_dir = "archived_code/plots/labels/au4_output"
 val_labels_dir = "archived_code/plots/labels/Validation-Public-Labels"
 
@@ -47,12 +51,7 @@ loader = mt.Compose([
     # mt.CropForegroundd(keys=["vol1", "vol2"], source_key="vol2", margin=64, allow_smaller=True),
     # mt.RemoveSmallObjectsd(keys=["vol1"], min_size=200),
     # mt.KeepLargestConnectedComponentd(keys=["vol1"], independent=True, num_components=2),
-    RemoveSmallObjectsPerClassd(
-        keys=["vol1"],
-        labels=list(range(1, 14)),  # Assuming labels are from 1 to 13
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 200, 500, 1e3, 1e3, 1e4],
-        connectivity=1
-    ),
+    # RemoveSmallObjectsPerClassd(keys=["vol1"]),
     mt.EnsureTyped(keys=["vol1", "vol2"], dtype=np.int64, track_meta=True),
 ])
 ignore_empty = False

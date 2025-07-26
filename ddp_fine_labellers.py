@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet4 import AttnUNet4
+from model.AttnUNet5 import AttnUNet5
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 from model.ConvSeg2 import ConvSeg2
@@ -159,7 +159,7 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["AttnUNet4"]
+    architectures = ["AttnUNet5"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
@@ -168,8 +168,8 @@ if __name__ == "__main__":
         comments = get_comments(output_dir, train_params)
 
         print(f"Starting training for {architecture}...")
-        if architecture == "AttnUNet4":
-            model = AttnUNet4(model_params)
+        if architecture == "AttnUNet5":
+            model = AttnUNet5(model_params)
         elif architecture == "ConvSeg":
             model = ConvSeg(model_params)
         elif architecture == "ViTSeg":

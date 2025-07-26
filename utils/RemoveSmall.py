@@ -4,7 +4,10 @@ from skimage.morphology import remove_small_objects
 from torch import Tensor, tensor
 
 class RemoveSmallObjectsPerClassd(Transform):
-    def __init__(self, keys, labels, min_sizes, connectivity=1):
+    def __init__(self, keys, 
+            labels=list(range(1, 14)),
+            min_sizes=[1e5, 1e4, 1e4, 1e4, 1e3, 200, 200, 200, 500, 500, 1e3, 1e3, 1e4],
+            connectivity=1):
         self.keys = keys
         self.labels = labels
         self.min_sizes = min_sizes
