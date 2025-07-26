@@ -103,6 +103,9 @@ def cpu_post(pair, data, inference_config, num_classes):
     #     class_thresholds=[1]*(num_classes-1)
     # ).numpy()
 
+    data = mt.DeleteItemsd(keys=["img", "pred"])(data)
+    lbl_data = mt.DeleteItemsd(keys=["label"])(lbl_data)
+
     return dice_vals, None#, surf_vals
 
 @torch.inference_mode()
@@ -117,7 +120,6 @@ def run_and_score(
     loader = mt.Compose([spatial_tf, intensity_tf])
 
     # Inference + dispatch to CPU pool
-    max_prefetch = 10
     in_flight = set()
     precision = torch.bfloat16 if autocast else torch.float32
     with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
@@ -145,18 +147,9 @@ def run_and_score(
             except Exception as e:
                 print(f"[ERROR] GPU {gpu_id} failed on {pair['img']}: {e}")
 
-        # 3) submit to CPU pool
             fut = executor.submit(cpu_post, pair, data, inference_config, num_classes)
             in_flight.add(fut)
 
-            # 4) if we've queued >= max_prefetch, wait for at least one to finish
-            if len(in_flight) >= max_prefetch:
-                done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
-                for f in done:
-                    dice_vals, surf_vals = f.result()
-                    shared_metrics.append((dice_vals, surf_vals))
-
-        # drain remaining futures
         for f in as_completed(in_flight):
             dice_vals, surf_vals = f.result()
             shared_metrics.append((dice_vals, surf_vals))
@@ -232,7 +225,7 @@ if __name__ == "__main__":
     metrics = manager.list()
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 64
+    total_cpus = 120
     cpus_per_gpu = max(1, total_cpus // ngpus)
 
     # Spawn one process per GPU
