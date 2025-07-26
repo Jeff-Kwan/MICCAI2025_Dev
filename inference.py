@@ -66,7 +66,7 @@ def get_post_transforms(pre_transforms):
             nearest_interp=True,
             to_tensor=True),
         mt.SaveImaged(keys="pred",
-            output_dir="au4_post_output", 
+            output_dir="archived_code/plots/labels/au4_post_output", 
             output_postfix="", 
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
