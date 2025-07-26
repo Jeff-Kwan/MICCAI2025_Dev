@@ -5,7 +5,7 @@ import json
 import torch
 import monai.transforms as mt
 from monai.inferers import sliding_window_inference
-from monai.data import ThreadDataLoader, Dataset
+from monai.data import DataLoader, Dataset
 from pathlib import Path
 import torch.multiprocessing as mp
 import numpy as np
@@ -57,7 +57,7 @@ def cpu_post(data, inference_config):
         RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["aladdin", "blackbean"], dtype=torch.uint8),
-        mt.AsDiscreted(keys=["pred", "aladdin", "blackbean"], to_onehot=14),
+        mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     post_tf = mt.Compose([
         mt.DeleteItemsd(keys=["aladdin", "blackbean"]),
@@ -76,11 +76,28 @@ def cpu_post(data, inference_config):
     data = prep_tf(data)
     
     # Quantize and sum
-    data["pred"].mul_(127)
-    data["aladdin"].mul_(64)
-    data["blackbean"].mul_(64)
-    data["pred"].add_(data["aladdin"])
-    data["pred"].add_(data["blackbean"])
+    aladdin_valid = data["aladdin"].any()
+    blackbean_valid = data["blackbean"].any()
+    if aladdin_valid and blackbean_valid:
+        data = mt.AsDiscreted(keys=["aladdin", "blackbean"], to_onehot=14)
+        data["aladdin"].mul_(64)
+        data["blackbean"].mul_(64)
+        data["pred"].mul_(127)
+        data["pred"].add_(data["aladdin"])
+        data["pred"].add_(data["blackbean"])
+    elif aladdin_valid and (not blackbean_valid):
+        data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)
+        data["aladdin"].mul_(85)
+        data["pred"].mul_(170)
+        data["pred"].add_(data["aladdin"])
+    elif (not aladdin_valid) and blackbean_valid:
+        data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)
+        data["blackbean"].mul_(85)
+        data["pred"].mul_(170)
+        data["pred"].add_(data["blackbean"])
+    else:
+        data["pred"].mul_(255)
+
 
     # Quantize and save
     data = post_tf(data)
@@ -92,10 +109,10 @@ def run_and_save(
     gpu_id, n_cpu_workers, max_prefetch
 ):
     # Pre-build loader
-    dataloader = ThreadDataLoader(
+    dataloader = DataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=4,
+        num_workers=6,
         pin_memory=False,
     )
     deleter = mt.DeleteItemsd(["img"])
@@ -187,14 +204,14 @@ if __name__ == "__main__":
     # Prepare data & split
     all_pairs = get_pseudo_data(
         images="data/nifti/train_pseudo/images",
-        aladdin="data/nifti/train_pseudo/aladdin",
+        aladdin="data/nifti/train_pseudo/aladdin5",
         blackbean="data/nifti/train_pseudo/blackbean")
     ngpus     = torch.cuda.device_count()
     np.random.shuffle(all_pairs)
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 26
+    cpus_per_gpu = 24
     max_prefetch = 8
 
     # Spawn one process per GPU

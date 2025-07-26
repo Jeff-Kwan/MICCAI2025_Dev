@@ -3,41 +3,15 @@ import napari
 import numpy as np
 import torch
 
-from monai.data import MetaTensor
-from skimage.morphology import remove_small_objects
-class RemoveSmallObjectsPerClassd(mt.Transform):
-    def __init__(self, keys, labels, min_sizes, connectivity=1):
-        self.keys = keys
-        self.labels = labels
-        self.min_sizes = min_sizes
-        self.conn = connectivity
-
-    def __call__(self, data):
-        for key in self.keys:
-            img = data[key].cpu().numpy()
-            for lbl, ms in zip(self.labels, self.min_sizes):
-                mask = (img == lbl)
-                if mask.any():
-                    cleaned_mask = remove_small_objects(mask, min_size=ms, connectivity=self.conn)
-                    img[mask & (~cleaned_mask)] = 0
-            if isinstance(data[key], MetaTensor):
-                data[key] = MetaTensor(img, affine=data[key].affine, meta=data[key].meta)
-            elif isinstance(data[key], torch.Tensor):
-                data[key] = torch.tensor(img, dtype=data[key].dtype, device=data[key].device)
-            else:
-                data[key] = img
-        return data
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
 
 
 # Load your two label volumes
 loader = mt.Compose([
     mt.LoadImaged(keys=["vol1", "vol2"], ensure_channel_first=True),
     # mt.CropForegroundd(keys=["vol1", "vol2"], source_key="vol2"),
-    RemoveSmallObjectsPerClassd(
-        keys=["vol1"],
-        labels=list(range(1, 14)),  # Assuming labels are from 1 to 13
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 200, 500, 1e3, 1e3, 1e4],
-        connectivity=1),
     mt.Orientationd(keys=["vol1", "vol2"], axcodes="RAS"),
     mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.5, 1.5, 1.5), mode=['nearest', 'nearest']),
 ])
@@ -45,7 +19,7 @@ clean_small = False
 organ = None#np.array([10, 11])
 num = '32'
 data = loader({
-    "vol1": rf"archived_code\plots\labels\au4_output\FLARETs_00{num}.nii.gz",
+    "vol1": rf"archived_code\plots\labels\au4_post_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"
 })
 vol1 = data["vol1"].numpy().astype(int)
