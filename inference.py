@@ -58,7 +58,7 @@ def get_post_transforms(pre_transforms):
         RemoveSmallObjectsPerClassd(
         keys=["pred"],
         labels=list(range(1, 14)),
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 200, 500, 1e3, 1e3, 1e4],
+        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
         connectivity=1),
         mt.Invertd(
             keys="pred",
