@@ -58,7 +58,7 @@ def get_post_transforms(pre_transforms):
         RemoveSmallObjectsPerClassd(
         keys=["pred"],
         labels=list(range(1, 14)),
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
+        min_sizes=[1e5, 1e4, 1e4, 1e4, 1e3, 200, 200, 200, 500, 500, 1e3, 1e3, 1e4],
         connectivity=1),
         mt.Invertd(
             keys="pred",
@@ -121,7 +121,7 @@ def run_and_score(
     loader = mt.Compose([spatial_tf, intensity_tf])
 
     # Inference + dispatch to CPU pool
-    max_prefetch = 4
+    max_prefetch = 10
     in_flight = set()
     precision = torch.bfloat16 if autocast else torch.float32
     with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     metrics = manager.list()
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 32
+    total_cpus = 64
     cpus_per_gpu = max(1, total_cpus // ngpus)
 
     # Spawn one process per GPU

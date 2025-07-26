@@ -15,7 +15,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_CO
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 # --- your model imports ---
-from utils.quantize import QuantizeNormalized
 from utils.RemoveSmall import RemoveSmallObjectsPerClassd
 from model.AttnUNet4 import AttnUNet4
 from model.ConvSeg import ConvSeg
@@ -60,35 +59,32 @@ def cpu_post(data, inference_config):
         labels=list(range(1, 14)),
         min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
         connectivity=1),
-        mt.LoadImaged(keys=["label"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["label"], dtype=[torch.float32]),
-        mt.NormalizeIntensityd(
-            keys=["label"],
-            subtrahend=0.0,
-            divisor=255.0)
+        mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
+        mt.EnsureTyped(keys=["aladdin", "blackbean"], dtype=torch.uint8),
+        mt.AsDiscreted(keys=["pred", "aladdin", "blackbean"], to_onehot=14),
     ])
     post_tf = mt.Compose([
-        mt.DeleteItemsd(keys=["pred"]),
-        QuantizeNormalized(keys="label"),
+        mt.DeleteItemsd(keys=["aladdin", "blackbean"]),
         mt.SaveImaged(
-            keys=["label"],
+            keys=["pred"],
             output_dir=inference_config["output_dir"],
             output_postfix="",
             output_ext=".nii.gz",
             separate_folder=False,
             output_dtype=torch.uint8,
             print_log=False),
-        mt.DeleteItemsd(keys=["label"])
+        mt.DeleteItemsd(keys=["pred"])
     ])
 
     # Prepare
     data = prep_tf(data)
-    alpha = inference_config["ema_alpha"]
-    class_weights = torch.tensor(inference_config["class_weights"]).view(-1, 1, 1, 1)
-    alpha = 1 - (1-alpha) * class_weights
-
-    # EMA
-    data["label"] = alpha * data["label"] + (1-alpha) * data["pred"]
+    
+    # Quantize and sum
+    data["pred"].mul_(127)
+    data["aladdin"].mul_(64)
+    data["blackbean"].mul_(64)
+    data["pred"].add_(data["aladdin"])
+    data["pred"].add_(data["blackbean"])
 
     # Quantize and save
     data = post_tf(data)
@@ -180,10 +176,8 @@ def worker(
 if __name__ == "__main__":
     # --- configuration ---
     parser = argparse.ArgumentParser(description="Update soft pseudo labels inference.")
-    parser.add_argument("--config", type=str, default="configs/labellers/ConvSeg/pseudo_update.json",
-                        help="Path to the inference configuration file.")
-    parser.add_argument("--model_path", type=str, default="output/Labeller/Base-ConvSeg/model.pth",
-                        help="Path to the pre-trained model weights.")
+    parser.add_argument("--config", type=str, help="Path to the inference configuration file.")
+    parser.add_argument("--model_path", type=str, help="Path to the pre-trained model weights.")
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
 
