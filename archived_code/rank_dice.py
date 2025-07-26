@@ -8,7 +8,7 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import pandas as pd
 
-val_pred_dir = "archived_code/plots/labels/au3_001_output"
+val_pred_dir = "archived_code/plots/labels/au4_output"
 val_labels_dir = "archived_code/plots/labels/Validation-Public-Labels"
 
 pred_files = glob.glob(os.path.join(val_pred_dir, "*.nii.gz"))
@@ -37,7 +37,7 @@ class RemoveSmallObjectsPerClassd(mt.Transform):
                     cleaned_mask = remove_small_objects(mask, min_size=ms, connectivity=self.conn)
                     img[mask & (~cleaned_mask)] = 0
             if isinstance(data[key], MetaTensor):
-                data[key] = MetaTensor(img, affine=data[key].affine, meta=data[key].meta)
+                data[key] = MetaTensor(img, meta=data[key].meta)
             elif isinstance(data[key], torch.Tensor):
                 data[key] = torch.tensor(img, dtype=data[key].dtype, device=data[key].device)
             else:
@@ -52,7 +52,7 @@ loader = mt.Compose([
     RemoveSmallObjectsPerClassd(
         keys=["vol1"],
         labels=list(range(1, 14)),  # Assuming labels are from 1 to 13
-        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 200, 500, 1e3, 1e3, 1e4],
+        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
         connectivity=1
     ),
     mt.AsDiscreted(keys=["vol1", "vol2"], to_onehot=14),

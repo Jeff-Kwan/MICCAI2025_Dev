@@ -20,7 +20,7 @@ class RemoveSmallObjectsPerClassd(Transform):
                     img[mask & (~cleaned_mask)] = 0
         
             if isinstance(data[key], MetaTensor):
-                data[key] = MetaTensor(img, affine=data[key].affine, meta=data[key].meta)
+                data[key] = MetaTensor(img, meta=data[key].meta)
             elif isinstance(data[key], Tensor):
                 data[key] = tensor(img, dtype=data[key].dtype, device=data[key].device)
             else:

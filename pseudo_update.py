@@ -21,28 +21,45 @@ from model.AttnUNet4 import AttnUNet4
 from model.ConvSeg import ConvSeg
 
 
-def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
-    images_dir = Path(images_dir)
-    labels_dir = Path(labels_dir)
-    pairs = []
-    for img_path in images_dir.glob(f"*{extension}"):
-        lbl_path = labels_dir / img_path.name
-        if lbl_path.is_file():
-            pairs.append({"img": str(img_path), "label": str(lbl_path)})
-        else:
-            print(f"[WARN] no label found for {img_path.name}")
-    print(f"[INFO] found {len(pairs)} image/label pairs")
-    return pairs
+def get_pseudo_data(images, aladdin, blackbean, extension=".nii.gz"):
+    images = Path(images)
+    aladdin = Path(aladdin)
+    blackbean = Path(blackbean)
+    data = []
+    for img_name in images.glob(f"*{extension}"):
+        img_name = img_name.name
+        image_path = images / img_name
+        aladdin_path = aladdin / img_name
+        blackbean_path = blackbean / img_name
+        assert blackbean_path.exists(), f"Match for {img_name} not found in {blackbean}"
+        data.append({
+            "img": str(image_path),
+            "aladdin": str(aladdin_path),
+            "blackbean": str(blackbean_path)
+        })
+    print(f"[INFO] found {len(data)} image/label data")
+    return data
 
 
 # --- CPU-side post-processing function ---
 @torch.no_grad()
 def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
-        mt.NormalizeIntensityd(keys=["pred"], subtrahend=0.0, divisor=1/torch.e),  # Sharpen confidence
-        mt.Activationsd(keys=["pred"], softmax=True),   # Logits to probabilities
-        mt.ThresholdIntensityd(keys=["pred"], above=True, threshold=1/4, cval=0), # Max keep 3 preds
-        # No renormalization for probability mass, downweight uncertain predictions naturally
+        mt.AsDiscreted(keys=["pred"], argmax=True),
+        mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
+        mt.SaveImaged(
+            keys=["pred"],
+            output_dir=inference_config["pred_dir"],
+            output_postfix="",
+            output_ext=".nii.gz",
+            separate_folder=False,
+            output_dtype=torch.uint8,
+            print_log=False),
+        RemoveSmallObjectsPerClassd(
+        keys=["pred"],
+        labels=list(range(1, 14)),
+        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 300, 500, 1e3, 1e3, 1e4],
+        connectivity=1),
         mt.LoadImaged(keys=["label"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["label"], dtype=[torch.float32]),
         mt.NormalizeIntensityd(
@@ -86,7 +103,7 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=6,
+        num_workers=4,
         pin_memory=False,
     )
     deleter = mt.DeleteItemsd(["img"])
@@ -94,7 +111,6 @@ def run_and_save(
     # Inference + dispatch to CPU pool
     in_flight = set()
     autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
-    overlap_range = [inference_config["sw_overlap"][0], inference_config["sw_overlap"][1] - inference_config["sw_overlap"][0]]
     with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
         for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
             try:
@@ -102,18 +118,17 @@ def run_and_save(
                 img = data["img"].to(device, non_blocking=True)
 
                 # GPU inference
-                overlap = overlap_range[0] + torch.rand(1).item() * overlap_range[1]
                 with torch.autocast("cuda", autocast):
                     data["pred"] = sliding_window_inference(
                         img,
                         roi_size=inference_config["shape"],
                         sw_batch_size=inference_config.get("sw_batch_size", 1),
                         predictor=model,
-                        overlap=overlap,
+                        overlap=inference_config["sw_overlap"],
                         mode="gaussian",
                         sw_device=device,
                         device=torch.device("cpu"),
-                        buffer_steps=8,
+                        buffer_steps=4,
                     ).cpu().squeeze(0).numpy()
 
             except Exception as e:
@@ -180,14 +195,16 @@ if __name__ == "__main__":
     model_path      = args.model_path
 
     # Prepare data & split
-    all_pairs = get_image_label_pairs(inference_config["images_dir"],
-                                      inference_config["labels_dir"])
+    all_pairs = get_pseudo_data(
+        images="data/nifti/train_pseudo/images",
+        aladdin="data/nifti/train_pseudo/aladdin",
+        blackbean="data/nifti/train_pseudo/blackbean")
     ngpus     = torch.cuda.device_count()
     np.random.shuffle(all_pairs)
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 24
+    cpus_per_gpu = 26
     max_prefetch = 8
 
     # Spawn one process per GPU

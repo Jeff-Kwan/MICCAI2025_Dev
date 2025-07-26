@@ -15,6 +15,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
 
 # --- your model imports ---
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
 from model.AttnUNet import AttnUNet
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
@@ -53,10 +54,12 @@ def get_pre_transforms(pixdim, intensities):
 
 def get_post_transforms(pre_transforms):
     return mt.Compose([
-        # mt.GaussianSmoothd(keys="pred", sigma=0.5),
         mt.AsDiscreted(keys="pred", argmax=True),
-        # mt.KeepLargestConnectedComponentd(keys="pred", is_onehot=False),
-        # mt.RemoveSmallObjectsd(keys="pred", min_size=64),
+        RemoveSmallObjectsPerClassd(
+        keys=["pred"],
+        labels=list(range(1, 14)),
+        min_sizes=[1e5, 1e4, 1e4, 500, 1e3, 200, 200, 200, 200, 500, 1e3, 1e3, 1e4],
+        connectivity=1),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -67,7 +70,7 @@ def get_post_transforms(pre_transforms):
             nearest_interp=True,
             to_tensor=True),
         mt.SaveImaged(keys="pred",
-            output_dir="au4_output", 
+            output_dir="au4_post_output", 
             output_postfix="", 
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
@@ -206,7 +209,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet4
     model_config    = json.load(open("configs/labellers/AttnUNet4/model.json", "r"))
-    model_path      = "output/2025-07-25/16-19-AttnUNet4/model.pth"
+    model_path      = "output/2025-07-25/16-39-AttnUNet4/model.pth"
     autocast        = True
     num_classes     = 14
 

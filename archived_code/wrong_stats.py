@@ -35,7 +35,7 @@ class RemoveSmallObjectsPerClassd(mt.Transform):
                     cleaned_mask = remove_small_objects(mask, min_size=ms, connectivity=self.conn)
                     img[mask & (~cleaned_mask)] = 0
             if isinstance(data[key], MetaTensor):
-                data[key] = MetaTensor(img, affine=data[key].affine, meta=data[key].meta)
+                data[key] = MetaTensor(img, meta=data[key].meta)
             elif isinstance(data[key], torch.Tensor):
                 data[key] = torch.tensor(img, dtype=data[key].dtype, device=data[key].device)
             else:
