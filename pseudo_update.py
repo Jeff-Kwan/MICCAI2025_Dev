@@ -79,19 +79,19 @@ def cpu_post(data, inference_config):
     aladdin_valid = data["aladdin"].any()
     blackbean_valid = data["blackbean"].any()
     if aladdin_valid and blackbean_valid:
-        data = mt.AsDiscreted(keys=["aladdin", "blackbean"], to_onehot=14)
+        data = mt.AsDiscreted(keys=["aladdin", "blackbean"], to_onehot=14)(data)
         data["aladdin"].mul_(64)
         data["blackbean"].mul_(64)
         data["pred"].mul_(127)
         data["pred"].add_(data["aladdin"])
         data["pred"].add_(data["blackbean"])
     elif aladdin_valid and (not blackbean_valid):
-        data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)
+        data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)(data)
         data["aladdin"].mul_(85)
         data["pred"].mul_(170)
         data["pred"].add_(data["aladdin"])
     elif (not aladdin_valid) and blackbean_valid:
-        data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)
+        data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)(data)
         data["blackbean"].mul_(85)
         data["pred"].mul_(170)
         data["pred"].add_(data["blackbean"])
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
     cpus_per_gpu = 24
-    max_prefetch = 8
+    max_prefetch = 12
 
     # Spawn one process per GPU
     try:
