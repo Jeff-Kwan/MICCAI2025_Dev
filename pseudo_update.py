@@ -16,7 +16,8 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 # --- your model imports ---
 from utils.quantize import QuantizeNormalized
-from model.AttnUNet3 import AttnUNet3
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
+from model.AttnUNet4 import AttnUNet4
 from model.ConvSeg import ConvSeg
 
 
@@ -85,7 +86,7 @@ def run_and_save(
     dataloader = ThreadDataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=4,
+        num_workers=6,
         pin_memory=False,
     )
     deleter = mt.DeleteItemsd(["img"])
@@ -171,8 +172,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
 
-    if inference_config["model_class"] == "AttnUNet3":
-        model_class = AttnUNet3
+    if inference_config["model_class"] == "AttnUNet4":
+        model_class = AttnUNet4
     elif inference_config["model_class"] == "ConvSeg":
         model_class = ConvSeg
     model_config    = json.load(open(inference_config["model_config"], "r"))
@@ -186,7 +187,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 15
+    cpus_per_gpu = 24
     max_prefetch = 8
 
     # Spawn one process per GPU

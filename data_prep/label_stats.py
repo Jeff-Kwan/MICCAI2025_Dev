@@ -112,6 +112,15 @@ if __name__ == "__main__":
     label_frequencies = label_counts / label_counts.sum()*100
     print("Label frequencies (%):", [f"{f:.4f}" for f in label_frequencies.tolist()])
 
+    label_weights = torch.log(label_counts[1:])
+    label_weights = (label_weights.max() - label_weights) / (label_weights.max() - label_weights.min()) + 1.0
+    print(list(np.round(label_weights.numpy(), 2)))
+
+
+'''
+Label weights by log space difference and 1-2 limit (2 d.p.):
+[1.0, 1.35, 1.33, 1.48, 1.48, 1.5, 2.0, 1.97, 1.66, 1.78, 1.27, 1.52, 1.35]
+'''
 
 '''
 Analysis on Ground Truth Preprocessed data:
