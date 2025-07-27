@@ -47,21 +47,12 @@ def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
         mt.AsDiscreted(keys=["pred"], argmax=True),
         mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
-        mt.SaveImaged(
-            keys=["pred"],
-            output_dir=inference_config["pred_dir"],
-            output_postfix="",
-            output_ext=".nii.gz",
-            separate_folder=False,
-            output_dtype=torch.uint8,
-            print_log=False),
         RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
         mt.EnsureTyped(keys=["aladdin", "blackbean"], dtype=torch.uint8),
         mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     post_tf = mt.Compose([
-        mt.DeleteItemsd(keys=["aladdin", "blackbean"]),
         mt.SaveImaged(
             keys=["pred"],
             output_dir=inference_config["output_dir"],
@@ -70,7 +61,7 @@ def cpu_post(data, inference_config):
             separate_folder=False,
             output_dtype=torch.uint8,
             print_log=False),
-        mt.DeleteItemsd(keys=["pred"])
+        mt.DeleteItemsd(keys=["pred", "aladdin", "blackbean", "fg"])
     ])
     crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
                               source_key="fg",
