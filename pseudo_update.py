@@ -72,11 +72,22 @@ def cpu_post(data, inference_config):
             print_log=False),
         mt.DeleteItemsd(keys=["pred"])
     ])
+    crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
+                              source_key="fg",
+                              margin=(50, 50, 16)) # 4cm margin
 
     # Prepare
     data = prep_tf(data)
-    
-    # Quantize and sum
+    pred = torch.zeros_like(data["pred"], dtype=torch.uint8)
+
+    data["fg"] = data["aladdin"] + data["blackbean"]
+    if data["fg"].any():
+        data = crop(data)
+
+    offset = data.get("foreground_start_coord", (0, 0, 0))  # this gives ROI origin indices
+    slices = tuple(slice(start, start + size) for start, size in zip(offset, data["pred"].shape[-len(offset):]))
+
+    # Aladdin Blackbean adding
     aladdin_valid = data["aladdin"].any()
     blackbean_valid = data["blackbean"].any()
     if aladdin_valid and blackbean_valid:
@@ -84,24 +95,27 @@ def cpu_post(data, inference_config):
         data["aladdin"].mul_(64)
         data["blackbean"].mul_(64)
         data["pred"].mul_(127)
-        data["pred"].add_(data["aladdin"])
-        data["pred"].add_(data["blackbean"])
+        pred[(...,) + slices].add_(data["aladdin"])
+        pred[(...,) + slices].add_(data["blackbean"])
     elif aladdin_valid and (not blackbean_valid):
         data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)(data)
         data["aladdin"].mul_(127)
         data["pred"].mul_(128)
-        data["pred"].add_(data["aladdin"])
+        pred[(...,) + slices].add_(data["aladdin"])
     elif (not aladdin_valid) and blackbean_valid:
         data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)(data)
         data["blackbean"].mul_(127)
         data["pred"].mul_(128)
-        data["pred"].add_(data["blackbean"])
+        pred[(...,) + slices].add_(data["blackbean"])
     else:
         data["pred"].mul_(255)
 
+    # Add prediction
+    pred[(...,) + slices].add_(data["pred"])
+
 
     # Save
-    data["pred"] = MetaTensor(data["pred"], meta=data["blackbean_meta_dict"])
+    data["pred"] = MetaTensor(pred, meta=data["blackbean_meta_dict"])
     data = post_tf(data)
     return 
 
