@@ -104,6 +104,7 @@ def cpu_post(data, inference_config):
         data["pred"].mul_(128)
         pred[(...,) + slices].add_(data["blackbean"])
     else:
+        data = to_uint8(data)
         data["pred"].mul_(255)
 
     # Add prediction
