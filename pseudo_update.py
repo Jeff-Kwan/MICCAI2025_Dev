@@ -74,7 +74,8 @@ def cpu_post(data, inference_config):
     ])
     crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
                               source_key="fg",
-                              margin=(50, 50, 16)) # 4cm margin
+                              margin=(50, 50, 16), # 4cm margin
+                              allow_smaller=True)
 
     # Prepare
     data = prep_tf(data)
