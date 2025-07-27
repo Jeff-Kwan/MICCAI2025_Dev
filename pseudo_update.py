@@ -202,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, help="Path to the pre-trained model weights.")
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
+    os.makedirs(inference_config["output_dir"], exist_ok=True)
 
     if inference_config["model_class"] == "AttnUNet5":
         model_class = AttnUNet5
