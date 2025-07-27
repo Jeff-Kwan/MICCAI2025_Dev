@@ -16,7 +16,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
 
 # --- your model imports ---
-from model.AttnUNet import AttnUNet
+from model.archive.AttnUNet import AttnUNet
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 

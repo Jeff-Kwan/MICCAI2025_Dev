@@ -16,12 +16,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_CO
 
 # --- your model imports ---
 from utils.RemoveSmall import RemoveSmallObjectsPerClassd
-from model.AttnUNet import AttnUNet
-from model.ViTSeg import ViTSeg
-from model.ConvSeg import ConvSeg
-from model.ConvSeg2 import ConvSeg2
-from model.AttnUNet2 import AttnUNet as AttnUNet2
-from model.AttnUNet3 import AttnUNet3
+from model.archive.AttnUNet import AttnUNet
+# from model.ViTSeg import ViTSeg
+# from model.ConvSeg import ConvSeg
+# from model.ConvSeg2 import ConvSeg2
+# from model.AttnUNet2 import AttnUNet as AttnUNet2
+# from model.AttnUNet3 import AttnUNet3
 from model.AttnUNet4 import AttnUNet4
 from model.AttnUNet5 import AttnUNet5
 
@@ -53,7 +53,7 @@ def get_pre_transforms(pixdim, intensities):
     ])
     return spatial, intensity
 
-def get_post_transforms(pre_transforms):
+def get_post_transforms(pre_transforms, out_dir):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),
         # RemoveSmallObjectsPerClassd(keys=["pred"]),
@@ -67,7 +67,7 @@ def get_post_transforms(pre_transforms):
             nearest_interp=True,
             to_tensor=True),
         mt.SaveImaged(keys="pred",
-            output_dir="archived_code/plots/labels/au5_output", 
+            output_dir=out_dir, 
             output_postfix="", 
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
@@ -82,7 +82,7 @@ def cpu_post(pair, data, inference_config, num_classes):
     spatial_tf, _ = get_pre_transforms(
         inference_config["pixdim"], inference_config["intensities"]
     )
-    inverter = get_post_transforms(spatial_tf)
+    inverter = get_post_transforms(spatial_tf, inference_config["out_dir"])
 
     # Prepare data for inversion
     pred_inv = inverter(data)["pred"].unsqueeze(0)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet5
     model_config    = json.load(open("configs/labellers/AttnUNet5/model.json", "r"))
-    model_path      = "output/Labeller/AttnUNet5-Pass1/model.pth"
+    model_path      = "output/Labeller/AttnUNet5-Pass2/model.pth"
     autocast        = True
     num_classes     = 14
 
@@ -209,6 +209,7 @@ if __name__ == "__main__":
         "shape": [224, 224, 112],
         "sw_batch_size": 8,
         "sw_overlap": 0.75,
+        "out_dir": "archived_code/plots/labels/au5_post_output2",
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
@@ -268,5 +269,5 @@ if __name__ == "__main__":
     print("Mean Dice:", mean_dice)
     # print("Mean Surface Dice:", mean_surf)
 
-    weights = list((1.01 - class_dices) / (1.01 - class_dices).mean())
-    print("Class weights:", [round(w, 3) for w in weights])
+    # weights = list((1.01 - class_dices) / (1.01 - class_dices).mean())
+    # print("Class weights:", [round(w, 3) for w in weights])

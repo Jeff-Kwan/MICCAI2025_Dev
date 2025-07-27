@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet import AttnUNet
+from model.archive.AttnUNet import AttnUNet
 from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')

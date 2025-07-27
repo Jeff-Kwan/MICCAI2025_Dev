@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceFocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet import AttnUNet
+from model.archive.AttnUNet import AttnUNet
 from model.ViTSeg import ViTSeg
 from model.ConvSeg import ConvSeg
 from utils.ddp_trainer import DDPTrainer
@@ -58,15 +58,15 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/labels",
-                extension='.nii.gz') * 2
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/aladdin5",
-                extension='.nii.gz') 
-            + get_data_files(
-                images_dir="data/nifti/train_pseudo/images",
-                labels_dir="data/nifti/train_pseudo/blackbean",
-                extension='.nii.gz'),
+                extension='.nii.gz') * 10,
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/aladdin5",
+            #     extension='.nii.gz') 
+            # + get_data_files(
+            #     images_dir="data/nifti/train_pseudo/images",
+            #     labels_dir="data/nifti/train_pseudo/blackbean",
+            #     extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
             data=get_data_files(
@@ -100,7 +100,7 @@ def main_worker(rank: int,
             include_background=True, 
             to_onehot_y=True, 
             softmax=True, 
-            weight=torch.tensor([0.01] + [1.0] * 13, device=rank),
+            weight=torch.tensor([0.01] + train_params["weights"], device=rank),
             lambda_focal=1,
             lambda_dice=1,)
 
@@ -126,9 +126,9 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*2 + Aladdin + Blackbean Initial training",
+        f"{output_dir} - GT*10 Fine Tuning",
         f"{train_params['shape']} shape", 
-        f"DiceFocal, 1-sample rand crop + augmentations",
+        f"DiceFocal, 1-sample rand crop + augmentations -> no coarse",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}"
     ]
 
@@ -136,12 +136,16 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    # architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
-    architectures = ["ViTSeg"]
+    architectures = ["AttnUNet", "ConvSeg", "ViTSeg"]
+    model_paths = [
+        "output/Labeller/Base-AttnUNet/model.pth",
+        "output/Labeller/Base-ConvSeg/model.pth",
+        "output/Labeller/Base-ViTSeg/model.pth"
+    ]
 
-    for architecture in architectures:
+    for architecture, model_path in zip(architectures, model_paths):
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
-        train_params = json.load(open(f"configs/labellers/{architecture}/train.json"))
+        train_params = json.load(open(f"configs/labellers/{architecture}/finetune.json"))
         output_dir = f"{architecture}"
         comments = get_comments(output_dir, train_params)
 
@@ -154,6 +158,7 @@ if __name__ == "__main__":
             model = ViTSeg(model_params)
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
+        model.load_state_dict(torch.load(model_path, map_location='cpu', weights_only=True))
         
         try:
             mp.spawn(
