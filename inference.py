@@ -56,7 +56,7 @@ def get_pre_transforms(pixdim, intensities):
 def get_post_transforms(pre_transforms):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),
-        RemoveSmallObjectsPerClassd(keys=["pred"]),
+        # RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -67,7 +67,7 @@ def get_post_transforms(pre_transforms):
             nearest_interp=True,
             to_tensor=True),
         mt.SaveImaged(keys="pred",
-            output_dir="archived_code/plots/labels/au5_post_output", 
+            output_dir="archived_code/plots/labels/au5_output", 
             output_postfix="", 
             output_ext=".nii.gz", 
             resample=False,     # Invert already resamples
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet5
     model_config    = json.load(open("configs/labellers/AttnUNet5/model.json", "r"))
-    model_path      = "output/2025-07-26/16-22-AttnUNet5/model.pth"
+    model_path      = "output/Labeller/AttnUNet5-Pass1/model.pth"
     autocast        = True
     num_classes     = 14
 

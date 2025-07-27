@@ -16,10 +16,10 @@ loader = mt.Compose([
     mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.5, 1.5, 1.5), mode=['nearest', 'nearest']),
 ])
 clean_small = False
-organ = None#np.array([10, 11])
-num = '32'
+organ = np.array([10, 11])
+num = '34'
 data = loader({
-    "vol1": rf"archived_code\plots\labels\au4_post_output\FLARETs_00{num}.nii.gz",
+    "vol1": rf"archived_code\plots\labels\au5_post_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"
 })
 vol1 = data["vol1"].numpy().astype(int)

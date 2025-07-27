@@ -10,6 +10,7 @@ from pathlib import Path
 import torch.multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
+from monai.data import MetaTensor
 
 from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -87,19 +88,20 @@ def cpu_post(data, inference_config):
         data["pred"].add_(data["blackbean"])
     elif aladdin_valid and (not blackbean_valid):
         data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)(data)
-        data["aladdin"].mul_(85)
-        data["pred"].mul_(170)
+        data["aladdin"].mul_(127)
+        data["pred"].mul_(128)
         data["pred"].add_(data["aladdin"])
     elif (not aladdin_valid) and blackbean_valid:
         data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)(data)
-        data["blackbean"].mul_(85)
-        data["pred"].mul_(170)
+        data["blackbean"].mul_(127)
+        data["pred"].mul_(128)
         data["pred"].add_(data["blackbean"])
     else:
         data["pred"].mul_(255)
 
 
-    # Quantize and save
+    # Save
+    data["pred"] = MetaTensor(data["pred"], meta=data["blackbean_meta_dict"])
     data = post_tf(data)
     return 
 
@@ -211,8 +213,8 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 24
-    max_prefetch = 12
+    cpus_per_gpu = 26
+    max_prefetch = 8
 
     # Spawn one process per GPU
     try:
