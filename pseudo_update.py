@@ -18,7 +18,6 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 # --- your model imports ---
 from utils.RemoveSmall import RemoveSmallObjectsPerClassd
 from model.AttnUNet5 import AttnUNet5
-from model.ConvSeg import ConvSeg
 
 
 def get_pseudo_data(images, aladdin, blackbean, extension=".nii.gz"):
