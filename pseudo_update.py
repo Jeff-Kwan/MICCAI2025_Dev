@@ -16,7 +16,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 # --- your model imports ---
 from utils.RemoveSmall import RemoveSmallObjectsPerClassd
-from model.AttnUNet4 import AttnUNet4
+from model.AttnUNet5 import AttnUNet5
 from model.ConvSeg import ConvSeg
 
 
@@ -194,8 +194,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     inference_config = json.load(open(args.config, "r"))
 
-    if inference_config["model_class"] == "AttnUNet4":
-        model_class = AttnUNet4
+    if inference_config["model_class"] == "AttnUNet5":
+        model_class = AttnUNet5
     elif inference_config["model_class"] == "ConvSeg":
         model_class = ConvSeg
     model_config    = json.load(open(inference_config["model_config"], "r"))
