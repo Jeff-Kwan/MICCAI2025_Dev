@@ -209,8 +209,6 @@ if __name__ == "__main__":
 
     if inference_config["model_class"] == "AttnUNet5":
         model_class = AttnUNet5
-    elif inference_config["model_class"] == "ConvSeg":
-        model_class = ConvSeg
     model_config    = json.load(open(inference_config["model_config"], "r"))
     model_path      = args.model_path
 
