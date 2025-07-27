@@ -49,7 +49,6 @@ def cpu_post(data, inference_config):
         mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
         RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
-        mt.EnsureTyped(keys=["aladdin", "blackbean"], dtype=torch.uint8),
         mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     post_tf = mt.Compose([
@@ -64,6 +63,7 @@ def cpu_post(data, inference_config):
             print_log=False),
         mt.DeleteItemsd(keys=["pred"])
     ])
+    to_uint8 = mt.EnsureTyped(keys=["pred", "aladdin", "blackbean"], dtype=torch.uint8)
     crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
                               source_key="fg",
                               margin=(50, 50, 16), # 4cm margin
@@ -73,7 +73,7 @@ def cpu_post(data, inference_config):
     data = prep_tf(data)
     pred = torch.zeros_like(data["pred"], dtype=torch.uint8)
 
-    data["fg"] = data["aladdin"] + data["blackbean"]
+    data["fg"] = (data["aladdin"] > 0) | (data["blackbean"] > 0)
     if data["fg"].any():
         data = crop(data)
 
@@ -85,6 +85,7 @@ def cpu_post(data, inference_config):
     blackbean_valid = data["blackbean"].any()
     if aladdin_valid and blackbean_valid:
         data = mt.AsDiscreted(keys=["aladdin", "blackbean"], to_onehot=14)(data)
+        data = to_uint8(data)
         data["aladdin"].mul_(64)
         data["blackbean"].mul_(64)
         data["pred"].mul_(127)
@@ -92,11 +93,13 @@ def cpu_post(data, inference_config):
         pred[(...,) + slices].add_(data["blackbean"])
     elif aladdin_valid and (not blackbean_valid):
         data = mt.AsDiscreted(keys=["aladdin"], to_onehot=14)(data)
+        data = to_uint8(data)
         data["aladdin"].mul_(127)
         data["pred"].mul_(128)
         pred[(...,) + slices].add_(data["aladdin"])
     elif (not aladdin_valid) and blackbean_valid:
         data = mt.AsDiscreted(keys=["blackbean"], to_onehot=14)(data)
+        data = to_uint8(data)
         data["blackbean"].mul_(127)
         data["pred"].mul_(128)
         pred[(...,) + slices].add_(data["blackbean"])
@@ -108,7 +111,7 @@ def cpu_post(data, inference_config):
 
 
     # Save
-    data["pred"] = MetaTensor(pred, meta=data["blackbean_meta_dict"])
+    data["pred"] = MetaTensor(pred, meta=data["blackbean"].meta)
     data = post_tf(data)
     return 
 
@@ -121,7 +124,7 @@ def run_and_save(
     dataloader = DataLoader(
         Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
         batch_size=1,
-        num_workers=6,
+        num_workers=10,
         pin_memory=False,
     )
     deleter = mt.DeleteItemsd(["img"])
@@ -221,7 +224,7 @@ if __name__ == "__main__":
     chunks    = np.array_split(all_pairs, ngpus)
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    cpus_per_gpu = 26
+    cpus_per_gpu = 30
     max_prefetch = 8
 
     # Spawn one process per GPU
