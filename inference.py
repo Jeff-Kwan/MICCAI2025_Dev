@@ -56,7 +56,7 @@ def get_pre_transforms(pixdim, intensities):
 def get_post_transforms(pre_transforms, out_dir):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),
-        # RemoveSmallObjectsPerClassd(keys=["pred"]),
+        RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
