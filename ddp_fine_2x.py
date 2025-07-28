@@ -119,7 +119,7 @@ def main_worker(rank: int,
             include_background=True, 
             softmax=True, 
             weight=torch.tensor([0.05] + train_params["weights"], device=rank),
-            lambda_focal=1,
+            lambda_focal=2,
             lambda_dice=1)
 
 
