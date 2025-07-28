@@ -1,5 +1,5 @@
 import os
-import shutil
+from monai.data import MetaTensor
 from pathlib import Path
 from tqdm import tqdm
 import torch
@@ -74,16 +74,34 @@ class SumToLabeld(mt.MapTransform):
         self.output_key = output_key
         self.weight1 = weight1
         self.weight2 = weight2
+        self.one_hot = mt.Compose([mt.AsDiscrete(to_onehot=14), mt.EnsureType(dtype=torch.uint8)])
+        self.delete_keys = mt.DeleteItemsd(keys=keys)
 
     @torch.no_grad()
     def __call__(self, data):
         d = dict(data)
         a1 = d[self.keys[0]]
         a2 = d[self.keys[1]]
-        # In-place sum logic to save memory
-        a1.mul_(self.weight1)
-        a1.add_(a2.mul(self.weight2))
-        d[self.output_key] = a1
+
+        a1_valid = a1.any(); a2_valid = a2.any()
+        a1 = self.one_hot(a1)
+        a2 = self.one_hot(a2)
+        label = torch.zeros_like(a1)
+        if a1_valid and a2_valid:
+            a1.mul_(self.weight1)
+            a2.mul_(self.weight2)
+            label.add_(a1).add_(a2)
+        elif a1_valid and not a2_valid:
+            a1.mul_(self.weight1 + self.weight2)
+            label.add_(a1)
+        elif a2_valid and not a1_valid:
+            a2.mul_(self.weight1 + self.weight2)
+            label.add_(a2)
+        else:
+            raise ValueError("Both inputs are empty, cannot create label.")
+
+        d[self.output_key] = MetaTensor(label, meta=a1.meta)
+        d = self.delete_keys(d)
         return d
 
 
@@ -131,17 +149,12 @@ def process_dataset(aladdin, blackbean, out_dir, pixdim):
                 pixdim=pixdim,
                 mode="nearest",
                 lazy=True),
-            mt.AsDiscreted(
-                keys=["aladdin", "blackbean"],
-                to_onehot=14),  # 14 classes one-hot
             SumToLabeld(
                 keys=["aladdin", "blackbean"],
                 output_key="label"),
             # mt.MeanEnsembled(
             #     keys=["aladdin", "blackbean"],
             #     output_key="label"),
-            mt.DeleteItemsd(
-                keys=["aladdin", "blackbean"]),
             # QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
