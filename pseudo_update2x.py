@@ -1,0 +1,222 @@
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"   # Fragmentation
+import argparse
+import json
+import torch
+import monai.transforms as mt
+from monai.inferers import sliding_window_inference
+from monai.data import DataLoader, Dataset
+from pathlib import Path
+import torch.multiprocessing as mp
+import numpy as np
+from tqdm import tqdm
+from monai.data import MetaTensor
+
+from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
+torch.multiprocessing.set_sharing_strategy('file_system')
+
+# --- your model imports ---
+from utils.RemoveSmall import RemoveSmallObjectsPerClassd
+from model.AttnUNet5 import AttnUNet5
+
+
+def get_pseudo_data(images, label, extension=".nii.gz"):
+    images = Path(images)
+    label = Path(label)
+    data = []
+    for img_name in images.glob(f"*{extension}"):
+        img_name = img_name.name
+        image_path = images / img_name
+        label_path = label / img_name
+        data.append({
+            "img": str(image_path),
+            "label": str(label_path)
+        })
+    print(f"[INFO] found {len(data)} image/label data")
+    return data#[:4]
+
+
+# --- CPU-side post-processing function ---
+@torch.no_grad()
+def cpu_post(data, inference_config):
+    prep_tf = mt.Compose([
+        mt.AsDiscreted(keys=["pred"], argmax=True),
+        mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
+        RemoveSmallObjectsPerClassd(keys=["pred"]),
+        mt.LoadImaged(keys=["label"], ensure_channel_first=True),
+        mt.AsDiscreted(keys=["pred"], to_onehot=14)
+    ])
+    post_tf = mt.Compose([
+        mt.DeleteItemsd(keys=["label", "fg"]),
+        mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
+        mt.SaveImaged(
+            keys=["pred"],
+            output_dir=inference_config["output_dir"],
+            output_postfix="",
+            output_ext=".nii.gz",
+            separate_folder=False,
+            output_dtype=torch.uint8,
+            print_log=False),
+        mt.DeleteItemsd(keys=["pred"])
+    ])
+    to_int16 = mt.EnsureTyped(keys=["pred", "label"], dtype=torch.int16)
+    crop = mt.CropForegroundd(keys=["pred", "label"],
+                              source_key="fg",
+                              margin=(25, 25, 8), # 2cm margin
+                              allow_smaller=True)
+
+    # Prepare
+    data = prep_tf(data)
+    pred = torch.zeros_like(data["pred"], dtype=torch.uint8)
+
+    data["fg"] = torch.sum(data["label"][1:], dim=0, keepdim=True) > 0
+    data = crop(data)
+
+    offset = data.get("foreground_start_coord", (0, 0, 0))  # this gives ROI origin indices
+    slices = tuple(slice(start, start + size) for start, size in zip(offset, data["pred"].shape[-len(offset):]))
+
+    # Combine label and new predictions
+    data = to_int16(data)
+    data["label"].add_(1).div_(2, rounding_mode="floor")   # Sum to 128?
+    data["pred"].mul_(127)
+    pred[(...,) + slices].add_(data["label"]).add_(data["pred"])
+
+    # Assert
+    #assert torch.all(pred.sum(dim=0) == 255), "Predictions do not sum to 255 across classes."
+
+    # Save
+    data["pred"] = MetaTensor(pred, meta=data["label"].meta)
+    data = post_tf(data)
+    return 
+
+@torch.no_grad()
+def run_and_save(
+    chunk, inference_config, model, device,
+    gpu_id, n_cpu_workers, max_prefetch
+):
+    # Pre-build loader
+    dataloader = DataLoader(
+        Dataset(data=chunk, transform=mt.LoadImaged(["img"], ensure_channel_first=True)),
+        batch_size=1,
+        num_workers=10,
+        pin_memory=False,
+    )
+    deleter = mt.DeleteItemsd(["img"])
+
+    # Inference + dispatch to CPU pool
+    in_flight = set()
+    autocast = torch.bfloat16 if inference_config["autocast"] else torch.float32
+    with ProcessPoolExecutor(max_workers=n_cpu_workers) as executor:
+        for data in tqdm(dataloader, desc=f"GPU {gpu_id}"):
+            try:
+                # CPU → GPU prep
+                img = data["img"].to(device, non_blocking=True)
+
+                # GPU inference
+                with torch.autocast("cuda", autocast):
+                    data["pred"] = sliding_window_inference(
+                        img,
+                        roi_size=inference_config["shape"],
+                        sw_batch_size=inference_config.get("sw_batch_size", 1),
+                        predictor=model,
+                        overlap=inference_config["sw_overlap"],
+                        mode="gaussian",
+                        sw_device=device,
+                        device=torch.device("cpu"),
+                        buffer_steps=4,
+                    ).cpu().squeeze(0).numpy()
+
+            except Exception as e:
+                print(f"[ERROR] GPU {gpu_id} failed: {e}")
+
+            # Done with image
+            data = deleter(data)
+
+            # 3) submit to CPU pool
+            fut = executor.submit(cpu_post, data, inference_config)
+            in_flight.add(fut)
+
+            # 4) if we've queued >= max_prefetch, wait for at least one to finish
+            if len(in_flight) >= (n_cpu_workers + max_prefetch):
+                done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
+                for f in done:
+                    f.result()
+
+        # drain remaining futures
+        for f in as_completed(in_flight):
+            f.result()
+
+
+def worker(
+    gpu_id, chunks, inference_config,
+    model_class, model_config, model_path,
+    n_cpu_workers, max_prefetch
+):
+    torch.cuda.set_device(gpu_id)
+    device = torch.device(f"cuda:{gpu_id}")
+
+    # Build & load model
+    model = model_class(model_config)
+    state = torch.load(model_path, map_location=device, weights_only=True)
+    model.load_state_dict(state)
+    model.to(device).eval()
+
+    # Run inference + CPU post
+    run_and_save(
+        chunk=chunks[gpu_id],
+        inference_config=inference_config,
+        model=model,
+        device=device,
+        gpu_id=gpu_id,
+        n_cpu_workers=n_cpu_workers,
+        max_prefetch=max_prefetch
+        )
+
+if __name__ == "__main__":
+    # --- configuration ---
+    parser = argparse.ArgumentParser(description="Update soft pseudo labels inference.")
+    parser.add_argument("--config", type=str, help="Path to the inference configuration file.")
+    parser.add_argument("--model_path", type=str, help="Path to the pre-trained model weights.")
+    args = parser.parse_args()
+    inference_config = json.load(open(args.config, "r"))
+    os.makedirs(inference_config["output_dir"], exist_ok=True)
+
+    if inference_config["model_class"] == "AttnUNet5":
+        model_class = AttnUNet5
+    model_config    = json.load(open(inference_config["model_config"], "r"))
+    model_path      = args.model_path
+
+    # Prepare data & split
+    all_pairs = get_pseudo_data(
+        images="data/nifti/train_pseudo/images",
+        label="data/nifti/train_pseudo/pseudo1x")
+    ngpus     = torch.cuda.device_count()
+    np.random.shuffle(all_pairs)
+    chunks    = np.array_split(all_pairs, ngpus)
+
+    # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
+    cpus_per_gpu = 30
+    max_prefetch = 8
+
+    # Spawn one process per GPU
+    try:
+        mp.spawn(
+            fn=worker,
+            args=(
+                chunks,
+                inference_config,
+                model_class,
+                model_config,
+                model_path,
+                cpus_per_gpu,
+                max_prefetch
+            ),
+            nprocs=ngpus,
+            join=True,
+            daemon=False,  # ensure workers are not daemonic
+        )
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt caught in main process. Terminating children...")
+        mp.get_context('spawn')._shutdown()
+
+    print("Soft pseudo labels updated successfully.")
