@@ -88,6 +88,6 @@ if __name__ == "__main__":
         suffix = "_ignore_empty"
     else:
         suffix = ""
-    df.to_csv(f"archived_code/attnunet5_nopost.csv", index=False)
+    df.to_csv(f"archived_code/attnunet5_post.csv", index=False)
 
     print(f"\nMean Dice: {mean_dice:.4f}")
