@@ -80,7 +80,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/softquant",
-                extension='.nii.gz') * 16
+                extension='.nii.gz') * 12
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/softquant",
