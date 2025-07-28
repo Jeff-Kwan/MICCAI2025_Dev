@@ -64,9 +64,7 @@ def main_worker(rank: int,
 
         # 3) Only rank 0 creates output folder
         if rank == 0:
-            timestamp = datetime.now().strftime("%H-%M")
-            date_str  = datetime.now().strftime("%Y-%m-%d")
-            full_output = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
+            full_output = output_dir
             os.makedirs(full_output, exist_ok=True)
         else:
             full_output = None
@@ -162,8 +160,8 @@ if __name__ == "__main__":
     for architecture in architectures:
         model_params = json.load(open(f"configs/small/model.json"))
         train_params = json.load(open(f"configs/small/train.json"))
-        output_dir = f"{architecture}"
-        comments = get_comments(output_dir, train_params)
+        output_dir = "output/Small/AttnUNet5-Trial"
+        comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")
         if architecture == "AttnUNet5":
