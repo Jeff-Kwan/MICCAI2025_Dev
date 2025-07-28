@@ -161,9 +161,9 @@ if __name__ == "__main__":
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/labellers/{architecture}/model.json"))
-        train_params = json.load(open(f"configs/labellers/{architecture}/train.json"))
-        output_dir = f"{architecture}"
-        comments = get_comments(output_dir, train_params)
+        train_params = json.load(open(f"configs/labellers/{architecture}/train1.json"))
+        output_dir = f"output/Labeller/{architecture}-Pass1"
+        comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")
         if architecture == "AttnUNet5":

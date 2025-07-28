@@ -199,7 +199,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet5
     model_config    = json.load(open("configs/labellers/AttnUNet5/model.json", "r"))
-    model_path      = "output/Labeller/AttnUNet5-Pass2/model.pth"
+    model_path      = "output/Labeller/AttnUNet5-Pass1/model.pth"
     autocast        = True
     num_classes     = 14
 
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         "shape": [224, 224, 112],
         "sw_batch_size": 8,
         "sw_overlap": 0.75,
-        "out_dir": "archived_code/plots/labels/au5_post_output2",
+        "out_dir": "archived_code/plots/labels/au5_pass1",
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"
