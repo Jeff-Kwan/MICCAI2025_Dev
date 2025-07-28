@@ -68,7 +68,7 @@ class QuantizeNormalized(mt.MapTransform):
     
 
 class SumToLabeld(mt.MapTransform):
-    def __init__(self, keys, output_key, weight1=128, weight2=127):
+    def __init__(self, keys, output_key, weight1=127, weight2=128):
         super().__init__(keys)
         assert len(keys) == 2, "Must provide exactly 2 keys"
         self.output_key = output_key
