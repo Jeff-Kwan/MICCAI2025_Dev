@@ -19,9 +19,9 @@ def compute_num_patches(image_size, roi_size, overlap):
     step = [int(r * (1 - overlap)) for r in roi_size]
     return [math.ceil((i - r) / s) + 1 for i, r, s in zip(image_size, roi_size, step)]
 
-image_size = [256, 256, 200]
-roi_size = [160, 160, 128]
-overlap = 0.5
+image_size = [400, 400, 160]
+roi_size = [160, 160, 80]
+overlap = 0.25
 
 num_patches = compute_num_patches(image_size, roi_size, overlap)
 total_patches = math.prod(num_patches)

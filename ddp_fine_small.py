@@ -11,7 +11,7 @@ from monai.data import DataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
 
 from utils.dataset import get_transforms, get_data_files
-from model.AttnUNet5 import AttnUNet5
+from model.AttnUNet6 import AttnUNet6
 from utils.ddp_trainer import DDPTrainer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -154,17 +154,17 @@ def get_comments(output_dir, train_params):
 if __name__ == "__main__":
     # If needed:    pkill -f -- '--multiprocessing-fork'
     gpu_count = torch.cuda.device_count()
-    architectures = ["AttnUNet5"]
+    architectures = ["AttnUNet6"]
 
     for architecture in architectures:
         model_params = json.load(open(f"configs/small/model.json"))
         train_params = json.load(open(f"configs/small/train.json"))
-        output_dir = "output/Small/AttnUNet5-Trial"
+        output_dir = "output/Small/AttnUNet6-Trial"
         comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")
-        if architecture == "AttnUNet5":
-            model = AttnUNet5(model_params)
+        if architecture == "AttnUNet6":
+            model = AttnUNet6(model_params)
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
         
