@@ -5,7 +5,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import traceback
-from datetime import datetime
 from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
@@ -64,9 +63,7 @@ def main_worker(rank: int,
 
         # 3) Only rank 0 creates output folder
         if rank == 0:
-            timestamp = datetime.now().strftime("%H-%M")
-            date_str  = datetime.now().strftime("%Y-%m-%d")
-            full_output = os.path.join('output', date_str, f'{timestamp}-{output_dir}')
+            full_output = output_dir
             os.makedirs(full_output, exist_ok=True)
         else:
             full_output = None

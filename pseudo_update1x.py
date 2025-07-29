@@ -65,7 +65,7 @@ def cpu_post(data, inference_config):
     to_uint8 = mt.EnsureTyped(keys=["pred", "aladdin", "blackbean"], dtype=torch.uint8)
     crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
                               source_key="fg",
-                              margin=(50, 50, 16), # 4cm margin
+                              margin=(25, 25, 8), # 2cm margin
                               allow_smaller=True)
 
     # Prepare
