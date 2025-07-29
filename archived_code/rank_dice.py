@@ -12,7 +12,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.RemoveSmall import RemoveSmallObjectsPerClassd
 
-val_pred_dir = "archived_code/plots/labels/au5_pass1"
+val_pred_dir = "archived_code/plots/labels/au5_pass2"
 val_labels_dir = "archived_code/plots/labels/Validation-Public-Labels"
 
 pred_files = glob.glob(os.path.join(val_pred_dir, "*.nii.gz"))
