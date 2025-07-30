@@ -7,9 +7,13 @@ from monai.inferers import sliding_window_inference
 from pathlib import Path
 import os
 from tqdm import tqdm
+from monai.transforms import Transform
+from monai.data import MetaTensor
+from skimage.morphology import remove_small_objects
+
 
 # My Model
-from model.AttnUNet2 import AttnUNet
+from model.AttnUNet6 import AttnUNet6
 
 
 def get_image_files(images_dir, extension=".nii.gz"):
@@ -20,6 +24,34 @@ def get_image_files(images_dir, extension=".nii.gz"):
         if entry.is_file() and entry.name.endswith(extension)
     ]
     return image_dicts
+
+
+class RemoveSmallObjectsPerClassd(Transform):
+    def __init__(self, keys, 
+            labels=list(range(1, 14)),
+            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 100, 200, 500, 200, 1e3, 1e3, 1e3],
+            connectivity=3):
+        self.keys = keys
+        self.labels = labels
+        self.min_sizes = min_sizes
+        self.conn = connectivity
+
+    def __call__(self, data):
+        for key in self.keys:
+            img = data[key].cpu().numpy()
+            for lbl, ms in zip(self.labels, self.min_sizes):
+                mask = (img == lbl)
+                if mask.any():
+                    cleaned_mask = remove_small_objects(mask, min_size=ms, connectivity=self.conn)
+                    img[mask & (~cleaned_mask)] = 0
+        
+            if isinstance(data[key], MetaTensor):
+                data[key] = MetaTensor(img, meta=data[key].meta)
+            elif isinstance(data[key], torch.Tensor):
+                data[key] = torch.tensor(img, dtype=data[key].dtype, device=data[key].device)
+            else:
+                data[key] = img
+        return data
 
 
 def get_pre_transforms(pixdim, intensities):
@@ -40,6 +72,7 @@ def get_pre_transforms(pixdim, intensities):
 def get_post_transforms(pre_transforms, output_dir):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),   # No need softmax as argmax directly
+        RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -56,14 +89,14 @@ def get_post_transforms(pre_transforms, output_dir):
             resample=False,     # Invert already resamples
             separate_folder=False,
             output_dtype=torch.uint8,
-            print_log=False)
+            print_log=False),
         ])
 
 
 @torch.inference_mode()
 def run_inference(args, inference_config):
     # Load the model
-    model = AttnUNet(json.load(open('./model/attn_unet.json', 'r')))
+    model = AttnUNet6(json.load(open('./model/model.json', 'r')))
     model.load_state_dict(torch.load('./model/model.pth', map_location='cpu', weights_only=True))
     model.eval().to(args.device)
 
@@ -84,8 +117,7 @@ def run_inference(args, inference_config):
                     sw_batch_size=inference_config.get('sw_batch_size', 1),
                     predictor=lambda x: model(x),
                     overlap=inference_config.get('sw_overlap', 0.25),
-                    mode="gaussian",
-                    buffer_steps=1).cpu().squeeze(0)
+                    mode="gaussian").cpu().squeeze(0)
 
         # Post-processing and saving results
         post_tf(data)

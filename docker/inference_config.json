@@ -1,7 +1,7 @@
 {
 "pixdim": [1.5, 1.5, 2.5],
 "intensities": [295.0, -974.0, 95.958, 139.964],
-"shape": [192, 192, 128],
+"shape": [160, 160, 80],
 "sw_batch_size": 1,
 "sw_overlap": 0.25,
 "workers": 1
