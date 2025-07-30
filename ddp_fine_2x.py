@@ -79,7 +79,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 20
+                extension='.nii.gz') * 16
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/pseudo1x",
@@ -147,7 +147,7 @@ def get_comments(output_dir, train_params):
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal 1:2 Dice:Focal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
-        "AU5 with depth-dropout, 8-batch size, more spatial aug, class loss weight [1,2] by log space"
+        "AU5 with depth-dropout, more spatial aug, class loss weight [1,2] by log space"
     ]
 
 
