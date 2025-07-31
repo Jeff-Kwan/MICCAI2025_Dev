@@ -23,7 +23,7 @@ from model.archive.AttnUNet import AttnUNet
 # from model.AttnUNet2 import AttnUNet as AttnUNet2
 # from model.AttnUNet3 import AttnUNet3
 from model.AttnUNet4 import AttnUNet4
-from model.AttnUNet5 import AttnUNet5
+from model.AttnUNet6 import AttnUNet6
 
 def get_image_label_pairs(images_dir, labels_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
@@ -196,19 +196,19 @@ def worker(
 
 if __name__ == "__main__":
     # --- configuration ---
-    model_class     = AttnUNet5
-    model_config    = json.load(open("configs/labellers/AttnUNet5/model.json", "r"))
-    model_path      = "output/Labeller/AttnUNet5-Pass2/model.pth"
+    model_class     = AttnUNet6
+    model_config    = json.load(open("configs/small/model.json", "r"))
+    model_path      = "output/Small/AttnUNet6-Trial300/model.pth"
     autocast        = True
     num_classes     = 14
 
     inference_config = {
-        "pixdim": [0.8, 0.8, 2.5],
+        "pixdim": [1.5, 1.5, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
         "shape": [224, 224, 112],
         "sw_batch_size": 8,
-        "sw_overlap": 0.75,
-        "out_dir": "archived_code/plots/labels/au5_pass2",
+        "sw_overlap": 0.25,
+        "out_dir": "archived_code/plots/labels/au6_output",
     }
 
     images_dir      = "data/FLARE-Task2-LaptopSeg/validation/Validation-Public-Images"

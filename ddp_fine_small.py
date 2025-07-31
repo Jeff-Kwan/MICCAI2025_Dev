@@ -80,7 +80,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/softquant",
-                extension='.nii.gz') * 12
+                extension='.nii.gz') * 8
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/softquant",
@@ -118,7 +118,7 @@ def main_worker(rank: int,
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
-            weight=torch.tensor([0.1] + train_params["weights"], device=rank),
+            weight=torch.tensor([0.05] + train_params["weights"], device=rank),
             lambda_focal=2,
             lambda_dice=1)
 
@@ -144,7 +144,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*12 + Soft Pseudo; 0.1 background loss weight, class loss weight [1,2] by log space",
+        f"{output_dir} - GT*8 + Soft Pseudo; 0.05 background loss weight, class loss weight [1,2] by log space",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     for architecture in architectures:
         model_params = json.load(open(f"configs/small/model.json"))
         train_params = json.load(open(f"configs/small/train.json"))
-        output_dir = "output/Small/AttnUNet6-Trial"
+        output_dir = "output/Small/AttnUNet6-Trial300"
         comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")
