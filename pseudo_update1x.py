@@ -46,9 +46,7 @@ def cpu_post(data, inference_config):
     prep_tf = mt.Compose([
         mt.AsDiscreted(keys=["pred"], argmax=True),
         mt.EnsureTyped(keys=["pred"], dtype=torch.uint8),
-        RemoveSmallObjectsPerClassd(keys=["pred"]),
         mt.LoadImaged(keys=["aladdin", "blackbean"], ensure_channel_first=True),
-        mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     post_tf = mt.Compose([
         mt.DeleteItemsd(keys=["aladdin", "blackbean", "fg"]),
@@ -61,6 +59,10 @@ def cpu_post(data, inference_config):
             output_dtype=torch.uint8,
             print_log=False),
         mt.DeleteItemsd(keys=["pred"])
+    ])
+    remove_small = mt.Compose([
+        RemoveSmallObjectsPerClassd(keys=["pred"]),
+        mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     to_uint8 = mt.EnsureTyped(keys=["pred", "aladdin", "blackbean"], dtype=torch.uint8)
     crop = mt.CropForegroundd(keys=["pred", "aladdin", "blackbean"], 
@@ -78,6 +80,9 @@ def cpu_post(data, inference_config):
 
     offset = data.get("foreground_start_coord", (0, 0, 0))  # this gives ROI origin indices
     slices = tuple(slice(start, start + size) for start, size in zip(offset, data["pred"].shape[-len(offset):]))
+
+    # Remove small objects
+    data = remove_small(data)
 
     # Aladdin Blackbean adding
     aladdin_valid = data["aladdin"].any()
