@@ -9,3 +9,5 @@ if __name__ == "__main__":
         "--model_path", "output/Labeller/AttnUNet5-Pass1/model.pth"
     ])
     subprocess.run(["python3", "ddp_fine_small.py"])
+    subprocess.run(["python3", "inference.py"])
+    subprocess.run(["python3", "archived_code/rank_dice.py"])
