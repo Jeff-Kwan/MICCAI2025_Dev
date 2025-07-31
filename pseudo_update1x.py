@@ -72,7 +72,7 @@ def cpu_post(data, inference_config):
 
     # Prepare
     data = prep_tf(data)
-    pred = torch.zeros_like(data["pred"], dtype=torch.uint8)
+    pred = torch.zeros_like(14, data["pred"].shape[1:], dtype=torch.uint8)
 
     data["fg"] = (data["aladdin"] > 0) | (data["blackbean"] > 0)
     if data["fg"].any():

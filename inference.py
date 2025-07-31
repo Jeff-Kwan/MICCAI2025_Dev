@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet6
     model_config    = json.load(open("configs/small/model.json", "r"))
-    model_path      = "output/Small/AttnUNet6-Trial300/model.pth"
+    model_path      = "output/Small/AttnUNet6-300-pseudo1x/model.pth"
     autocast        = True
     num_classes     = 14
 

@@ -7,15 +7,13 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.conv1 =  nn.Sequential(
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.GroupNorm(h_c, h_c),
-            nn.GELU())
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
         self.conv2 = nn.Sequential(
             nn.Conv3d(h_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.GroupNorm(h_c, h_c),
-            nn.GELU())
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
         self.out_conv = nn.Sequential(
+            nn.GroupNorm(h_c*2, h_c*2),
+            nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         
@@ -188,7 +186,7 @@ if __name__ == "__main__":
         "channels":     [32, 64, 128, 256],
         "convs":        [24, 48, 96, 192],
         "head_dim":     64,
-        "e_layers":     [6, 6, 6, 6],
+        "e_layers":     [8, 8, 8, 8],
         "d_layers":     [4, 4, 4],
         "dropout":      0.0
     }
