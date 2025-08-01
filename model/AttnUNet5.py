@@ -19,12 +19,19 @@ class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
         super().__init__()
-        self.conv1 = nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias)
-        self.conv2 = nn.Conv3d(h_c, h_c//2, 3, 1, 1, bias=bias)
-        self.conv3 = nn.Conv3d(h_c, h_c//2, 3, 1, 2, dilation=2, bias=bias)
+        self.conv1 = nn.Sequential(
+            nn.Conv3d(in_c, h_c, 3, 1, 1, bias=bias),
+            nn.GroupNorm(h_c, h_c),
+            nn.GELU())
+        self.conv2 = nn.Sequential(
+            nn.Conv3d(h_c, h_c//2, 3, 1, 1, bias=bias),
+            nn.GroupNorm(h_c//2, h_c//2),
+            nn.GELU())
+        self.conv3 = nn.Sequential(
+            nn.Conv3d(h_c, h_c//2, 3, 1, 2, dilation=2, bias=bias),
+            nn.GroupNorm(h_c//2, h_c//2),
+            nn.GELU())
         self.out_conv = nn.Sequential(
-            nn.GroupNorm(h_c*2, h_c*2),
-            nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         

@@ -7,13 +7,15 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.conv1 =  nn.Sequential(
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
+            nn.GroupNorm(h_c, h_c),
+            nn.GELU())
         self.conv2 = nn.Sequential(
             nn.Conv3d(h_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
+            nn.GroupNorm(h_c, h_c),
+            nn.GELU())
         self.out_conv = nn.Sequential(
-            nn.GroupNorm(h_c*2, h_c*2),
-            nn.GELU(),
             nn.Dropout3d(dropout) if dropout else nn.Identity(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         
