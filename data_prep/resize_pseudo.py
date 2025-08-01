@@ -85,7 +85,7 @@ def process_pseudo(datafiles, output_dir):
             mt.LoadImaged(keys=["label"], image_only=False, ensure_channel_first=True),
             mt.EnsureTyped(keys=["label"], dtype=np.float32, track_meta=True),
             mt.Orientationd(keys=["label"], axcodes="RAS"),
-            mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="bilinear"),
+            mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="trilinear"),
             QuantizeTensorDim0d(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
