@@ -57,7 +57,7 @@ def get_post_transforms(pre_transforms, out_dir):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),
         RemoveSmallObjectsPerClassd(keys=["pred"],
-            min_sizes=[1e5, 1e4, 1e3, 1e3, 1e3, 1e3, 100, 100, 200, 200, 1e3, 1e3, 1e4]),
+            min_sizes=[1e5, 1e4, 1e3, 1e3, 1e3, 1e3, 100, 100, 300, 200, 1e3, 1e3, 1e4]),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,
@@ -199,14 +199,14 @@ if __name__ == "__main__":
     # --- configuration ---
     model_class     = AttnUNet6
     model_config    = json.load(open("configs/small/model.json", "r"))
-    model_path      = "output/Small/AttnUNet6-400/model.pth"
+    model_path      = "output/Small/AttnUNet6-Official/model.pth"
     autocast        = True
     num_classes     = 14
 
     inference_config = {
-        "pixdim": [1.5, 1.5, 2.5],
+        "pixdim": [1.6, 1.6, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
-        "shape": [224, 224, 112],
+        "shape": [160, 160, 80],
         "sw_batch_size": 8,
         "sw_overlap": 0.25,
         "out_dir": "archived_code/plots/labels/au6_output",

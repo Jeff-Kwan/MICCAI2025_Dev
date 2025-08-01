@@ -85,7 +85,7 @@ def process_pseudo(datafiles, output_dir):
             mt.LoadImaged(keys=["label"], image_only=False, ensure_channel_first=True),
             mt.EnsureTyped(keys=["label"], dtype=np.float32, track_meta=True),
             mt.Orientationd(keys=["label"], axcodes="RAS"),
-            mt.Spacingd(keys=["label"], pixdim=(1.5, 1.5, 2.5), mode="bilinear"),
+            mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="bilinear"),
             QuantizeTensorDim0d(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
@@ -101,7 +101,7 @@ def process_pseudo(datafiles, output_dir):
     dataloader = ThreadDataLoader(
         Dataset(data=datafiles, transform=transform),
         batch_size=1,
-        num_workers=32,
+        num_workers=36,
         pin_memory=False,
         persistent_workers=True)
     
@@ -109,8 +109,7 @@ def process_pseudo(datafiles, output_dir):
         pass
 
 if __name__ == "__main__":
-    datafiles = get_data_files(
-        "data/nifti/train_pseudo/pseudo1x")
+    datafiles = get_data_files("data/nifti/train_pseudo/pseudo1x")
     output_dir = "data/small/train_pseudo/pseudo1x"
 
     process_pseudo(datafiles, output_dir)

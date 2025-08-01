@@ -82,7 +82,7 @@ def main_worker(rank: int,
                 extension='.nii.gz') * 6
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
-                labels_dir="data/small/train_pseudo/softquant",
+                labels_dir="data/small/train_pseudo/pseudo1x",
                 extension='.nii.gz'),
             transform=train_tf)
         val_ds = Dataset(
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     for architecture in architectures:
         model_params = json.load(open(f"configs/small/model.json"))
         train_params = json.load(open(f"configs/small/train.json"))
-        output_dir = "output/Small/AttnUNet6-400"
+        output_dir = "output/Small/AttnUNet6-Official"
         comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")

@@ -7,16 +7,13 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.conv1 =  nn.Sequential(
             nn.Conv3d(in_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.GroupNorm(h_c, h_c),
-            nn.GELU())
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
         self.conv2 = nn.Sequential(
             nn.Conv3d(h_c, h_c, 1, 1, 0, bias=bias),
-            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
-            nn.GroupNorm(h_c, h_c),
-            nn.GELU())
+            nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c))
         self.out_conv = nn.Sequential(
-            nn.Dropout3d(dropout) if dropout else nn.Identity(),
+            nn.GroupNorm(h_c*2, h_c*2),
+            nn.GELU(),
             nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         
     def forward(self, x):
@@ -176,56 +173,3 @@ class AttnUNet6(nn.Module):
 
         x = self.out_conv(x)
         return x
-
-# ---------- demo ----------------------------------------------
-
-if __name__ == "__main__":
-    device = torch.device("cpu")
-    
-    B, S1, S2, S3 = 1, 160, 160, 80
-    params = {
-        "out_channels": 14,
-        "channels":     [32, 64, 128, 256],
-        "convs":        [24, 48, 96, 192],
-        "head_dim":     64,
-        "e_layers":     [6, 6, 6, 6],
-        "d_layers":     [2, 2, 2],
-        "dropout":      0.0
-    }
-
-    x = torch.randn(B, 1, S1, S2, S3).to(device)
-    model = AttnUNet6(params).to(device)
-
-    # Profile the forward and backward pass
-    if device == torch.device("cuda"):
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats(device)
-
-    with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
-        profile_memory=True,
-        record_shapes=True
-    ) as prof:
-        with torch.inference_mode():
-            model.eval()
-            # with torch.autocast('cuda', torch.bfloat16):
-            y = model(x)
-        # with torch.autocast('cuda', torch.bfloat16):
-        #     y = model(x)
-        #     loss = y.sum()
-        # loss.backward()
-
-    assert y.shape == (B, params["out_channels"], S1, S2, S3), "Output shape mismatch"
-        
-    print(prof.key_averages().table(sort_by=f"{device}_time_total", row_limit=12))
-    if device == torch.device("cuda"):
-        print(f"Max VRAM usage: {torch.cuda.max_memory_allocated(device) / 1024**2:.2f} MB")
-        
-    total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("Total trainable parameters:", round(total_params / 1e6, 2), 'M')
-    
-    # Calculate I/O sizes for input and output
-    input_size_mb = x.element_size() * x.nelement() / 1024 / 1024
-    output_size_mb = y.element_size() * y.nelement() / 1024 / 1024
-    print("Input is size:", input_size_mb, 'MB')
-    print("Output is size:", output_size_mb, 'MB')
