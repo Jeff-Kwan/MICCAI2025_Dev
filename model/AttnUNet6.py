@@ -186,8 +186,8 @@ if __name__ == "__main__":
         "channels":     [32, 64, 128, 256],
         "convs":        [24, 48, 96, 192],
         "head_dim":     64,
-        "e_layers":     [6, 6, 6, 6],
-        "d_layers":     [6, 6, 6],
+        "e_layers":     [4, 6, 6, 6],
+        "d_layers":     [4, 6, 6],
         "dropout":      0.0
     }
 
