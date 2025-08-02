@@ -101,8 +101,8 @@ def process_pseudo(datafiles, output_dir):
     dataloader = ThreadDataLoader(
         Dataset(data=datafiles, transform=transform),
         batch_size=1,
-        num_workers=42,
-        prefetch_factor=16,
+        num_workers=38,
+        prefetch_factor=32,
         pin_memory=False,
         persistent_workers=True)
     
