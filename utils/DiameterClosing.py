@@ -1,9 +1,8 @@
 from typing import Hashable, Any, Mapping, Sequence, Union
-
+import itertools
 import numpy as np
 import torch
 from skimage.morphology import diameter_closing
-
 from monai.config import KeysCollection
 from monai.transforms import MapTransform, KeepLargestConnectedComponent
 from skimage.morphology import binary_dilation, ball
@@ -143,7 +142,6 @@ class DiameterClosingd(MapTransform):
 
 
 class DilatedForegroundd(MapTransform):
-    """Efficient: crop to ROI, cache structuring element, custom largest-component."""
     def __init__(
         self,
         keys,
@@ -155,37 +153,50 @@ class DilatedForegroundd(MapTransform):
         self.dilation = dilation
         self.connectivity = connectivity
         self._selem = ball(dilation)
-        self.keep_largest = KeepLargestConnectedComponent(
-            connectivity=connectivity)
-        
+        self.keep_largest = KeepLargestConnectedComponent(connectivity=connectivity)
+
     def _bounding_box(self, mask: np.ndarray):
         coords = np.argwhere(mask)
         if coords.size == 0:
             return None
         mins = coords.min(axis=0)
         maxs = coords.max(axis=0)
-        # slices are inclusive of min, exclusive of max+1
         return tuple(slice(int(mn), int(mx) + 1) for mn, mx in zip(mins, maxs))
+
+    @staticmethod
+    def _zero_outside_expanded(arr: np.ndarray, expanded_slices: tuple):
+        """
+        Zero out all voxels outside expanded_slices in-place, without constructing a full mask.
+        """
+        ranges = []
+        for sl in expanded_slices:
+            ranges.append([
+                ('before', slice(None, sl.start)),
+                ('inside', slice(sl.start, sl.stop)),
+                ('after', slice(sl.stop, None)),
+            ])
+        for combo in itertools.product(*ranges):
+            if all(part[0] == 'inside' for part in combo):
+                continue
+            sel = tuple(part[1] for part in combo)
+            arr[sel] = 0
 
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         d = dict(data)
         for key in self.key_iterator(d):
             arr = d[key]
             is_torch = isinstance(arr, torch.Tensor)
+
             if is_torch:
                 device = arr.device
                 arr_np = arr.cpu().numpy()
             else:
                 arr_np = arr  # assume numpy array
 
-            fg = arr_np > 0
-            if not fg.any():
-                # nothing to do
-                continue
-
-            bbox = self._bounding_box(fg)
+            # get bounding box of positive foreground (arr_np > 0)
+            bbox = self._bounding_box(arr_np > 0)
             if bbox is None:
-                continue
+                continue  # nothing to keep
 
             # expand bbox by dilation, clipped to volume
             expanded_slices = []
@@ -195,27 +206,31 @@ class DilatedForegroundd(MapTransform):
                 expanded_slices.append(slice(start, stop))
             expanded_slices = tuple(expanded_slices)
 
-            sub_fg = fg[expanded_slices]
+            # get subvolume in expanded region
+            sub_vol = arr_np[expanded_slices]
 
-            # dilate only inside the cropped region
+            # compute foreground in subvolume, dilate, and keep largest component
+            sub_fg = sub_vol > 0
             dilated = binary_dilation(sub_fg, selem=self._selem)
-
-            # keep largest connected component in that cropped region
             largest = self.keep_largest(dilated)
 
-            # build full-volume mask (only nonzero in expanded region)
-            mask = np.zeros_like(fg, dtype=bool)
-            mask[expanded_slices] = largest
+            # zero out everything in the subvolume except the kept component (in-place)
+            sub_vol[~largest] = 0
 
-            # zero out everything outside the kept foreground
-            arr_np[~mask] = 0
+            # zero everything outside expanded region (in-place)
+            self._zero_outside_expanded(arr_np, expanded_slices)
 
             if is_torch:
-                # write back, preserving original dtype if possible
-                out_tensor = torch.from_numpy(arr_np).to(device)
-                if out_tensor.dtype != arr.dtype:
-                    out_tensor = out_tensor.type(arr.dtype)
-                d[key] = out_tensor
+                # push back into original tensor in-place when possible
+                updated = torch.from_numpy(arr_np)
+                if updated.device != device or updated.dtype != arr.dtype:
+                    updated = updated.to(device=device, dtype=arr.dtype)
+                try:
+                    arr.copy_(updated)  # in-place update original tensor
+                    d[key] = arr
+                except RuntimeError:
+                    # fallback if in-place fails
+                    d[key] = updated
             else:
                 d[key] = arr_np
         return d
