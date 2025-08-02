@@ -63,7 +63,7 @@ def cpu_post(data, inference_config):
     remove_small = mt.Compose([
         RemoveSmallObjectsPerClassd(
             keys=["pred"],
-            min_sizes=[1e5, 1e4, 1e4, 2e3, 2e3, 2e3, 200, 500, 1e3, 500, 1e4, 2e3, 1e4]),
+            min_sizes=[1e5, 1e4, 1e4, 2e3, 2e3, 2e3, 100, 200, 500, 200, 1e4, 1e3, 1e4]),
         mt.AsDiscreted(keys=["pred"], to_onehot=14)
     ])
     to_uint8 = mt.EnsureTyped(keys=["pred", "aladdin", "blackbean"], dtype=torch.uint8)
