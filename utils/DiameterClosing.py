@@ -44,9 +44,8 @@ class DiameterClosingd(MapTransform):
         self.classes = classes
 
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
-        d = dict(data)
-        for key in self.key_iterator(d):
-            img = d[key]
+        for key in self.key_iterator(data):
+            img = data[key]
             is_tensor = isinstance(img, torch.Tensor)
             # convert to numpy array for skimage
             if is_tensor:
@@ -131,15 +130,15 @@ class DiameterClosingd(MapTransform):
                 out_tensor = torch.as_tensor(out, device=orig_device)
                 if out_tensor.dtype != orig_dtype:
                     out_tensor = out_tensor.to(orig_dtype)
-                d[key] = out_tensor
+                data[key] = out_tensor
             else:
                 if orig_dtype is not None:
                     try:
                         out = out.astype(orig_dtype, copy=False)
                     except Exception:
                         pass
-                d[key] = out
-        return d
+                data[key] = out
+        return data
 
 
 class DilatedForegroundd(MapTransform):
@@ -158,10 +157,9 @@ class DilatedForegroundd(MapTransform):
         self.keeplargest = KeepLargestConnectedComponent(connectivity=3)
         
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
-        d = dict(data)
-        for key in self.key_iterator(d):
-            fg = d[key] > 0
+        for key in self.key_iterator(data):
+            fg = (data[key] > 0).squeeze(0).bool()  # assume single channel
             fg = binary_closing(fg, footprint=self.footprint)
-            fg = self.keeplargest(fg).bool()
-            d[key][~fg] = 0
-        return d
+            fg = self.keeplargest(fg).unsqueeze(0).bool()
+            data[key][~fg] = 0
+        return data
