@@ -4,6 +4,6 @@
 "model_config": "configs/labellers/AttnUNet5/model.json",
 "shape": [224, 224, 112],
 "sw_batch_size": 8,
-"sw_overlap": 0.75,
+"sw_overlap": 0.625,
 "autocast": true
 }

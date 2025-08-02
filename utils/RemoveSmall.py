@@ -6,8 +6,9 @@ from torch import Tensor, tensor
 class RemoveSmallObjectsPerClassd(Transform):
     def __init__(self, keys, 
             labels=list(range(1, 14)),
-            min_sizes=[1e5, 1e4, 1e4, 2e3, 2e3, 2e3, 200, 500, 1e3, 500, 1e4, 2e3, 1e4],
-            # min_sizes=[1e5, 1e4, 1e3, 1e3, 1e3, 1e3, 100, 100, 300, 200, 1e3, 1e3, 1e4],
+            # min_sizes=[1e5, 1e4, 1e4, 2e3, 2e3, 2e3, 200, 500, 1e3, 500, 1e4, 2e3, 1e4], Original too much?
+            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 100, 100, 500, 100, 1e3, 1e3, 1e3],
+            # min_sizes=[1e5, 1e4, 1e3, 1e3, 1e3, 1e3, 100, 100, 300, 200, 1e3, 1e3, 1e4], For small?
             connectivity=3):
         self.keys = keys
         self.labels = labels

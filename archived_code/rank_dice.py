@@ -71,7 +71,7 @@ def compute_dice(name):
     return (name, dice)
 
 if __name__ == "__main__":
-    with Pool(20) as pool:
+    with Pool(50) as pool:
         results = list(tqdm(pool.imap(compute_dice, common_names), total=len(common_names), desc="Calculating Dice"))
     mean_dice = sum(np.nanmean(d[1]) for d in results) / len(results)
     results.sort(key=lambda x: x[1].mean())
