@@ -146,7 +146,7 @@ class DilatedForegroundd(MapTransform):
         self,
         keys,
         dilation: int = 8,
-        connectivity: int = 1,
+        connectivity: int | None = None,
         allow_missing_keys: bool = False,
     ):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
@@ -211,7 +211,7 @@ class DilatedForegroundd(MapTransform):
 
             # compute foreground in subvolume, dilate, and keep largest component
             sub_fg = sub_vol > 0
-            dilated = binary_dilation(sub_fg, selem=self._selem)
+            dilated = binary_dilation(sub_fg, footprint=self._selem)
             largest = self.keep_largest(dilated)
 
             # zero out everything in the subvolume except the kept component (in-place)
