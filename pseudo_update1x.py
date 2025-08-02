@@ -92,9 +92,9 @@ def cpu_post(data, inference_config):
     if aladdin_valid and blackbean_valid:
         data = mt.AsDiscreted(keys=["aladdin", "blackbean"], to_onehot=14)(data)
         data = to_uint8(data)
-        data["aladdin"].mul_(64)
-        data["blackbean"].mul_(64)
-        data["pred"].mul_(127)
+        data["aladdin"].mul_(85)
+        data["blackbean"].mul_(85)
+        data["pred"].mul_(85)
         pred[(...,) + slices].add_(data["aladdin"])
         pred[(...,) + slices].add_(data["blackbean"])
     elif aladdin_valid and (not blackbean_valid):
