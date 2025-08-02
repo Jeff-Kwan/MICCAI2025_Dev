@@ -9,25 +9,33 @@ from monai.data import Dataset, ThreadDataLoader
 from monai.config import KeysCollection
 from typing import Hashable, Mapping
 
-class QuantizeTensorDim0d(mt.MapTransform):
+class QuantizeNormalized(mt.MapTransform):
+    """
+    Dictionary-based MONAI transform to quantize a float tensor along dim=0 so that each slice sums to 255 (uint8),
+    preserving original proportions as closely as possible.
+
+    Args:
+        keys: Key or list of keys in the input dictionary whose values are torch.Tensors to be quantized.
+    """
+
     def __init__(self, keys: KeysCollection) -> None:
         super().__init__(keys)
 
-    def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict:
+    def __call__(self, data):
         # make a shallow copy so we don't modify the original dict
         d = dict(data)
         for key in self.keys:
             x = d[key]
             if not torch.is_tensor(x):
-                raise TypeError(f"QuantizeTensorDim0d: expected torch.Tensor for key '{key}', got {type(x)}")
+                raise TypeError(f"QuantizeNormalized: expected torch.Tensor for key '{key}', got {type(x)}")
             d[key] = self._quantize(x)
         return d
 
     @staticmethod
     def _quantize(x: torch.Tensor) -> torch.Tensor:
-        # 1) compute channel‐sums and clamp zeros to 1 in-place
+        # 1) compute channel‐sums
         sums = x.sum(dim=0, keepdim=True)
-        sums.clamp_(min=1.0)                     # avoid div-by-zero via in-place clamp :contentReference[oaicite:0]{index=0}
+        sums[sums == 0] = 1.0  # avoid division by zero
 
         # 2) scale each channel so sum→255
         scaled = x.mul(255.0).div_(sums)
@@ -59,6 +67,7 @@ class QuantizeTensorDim0d(mt.MapTransform):
         # reshape mask to [C, ...] and form final result
         mask = mask_flat.view_as(x).to(torch.uint8)
         return (floors + mask).to(torch.uint8)
+    
 
 def get_data_files(labels_dir, extension=".nii.gz"):
     labels_dir = Path(labels_dir)
@@ -86,7 +95,7 @@ def process_pseudo(datafiles, output_dir):
             mt.EnsureTyped(keys=["label"], dtype=np.float32, track_meta=True),
             mt.Orientationd(keys=["label"], axcodes="RAS"),
             mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="trilinear"),
-            QuantizeTensorDim0d(keys=["label"]),
+            QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
                 output_dir=output_dir,
