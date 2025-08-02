@@ -1,11 +1,10 @@
 from typing import Hashable, Any, Mapping, Sequence, Union
-import itertools
 import numpy as np
 import torch
 from skimage.morphology import diameter_closing
 from monai.config import KeysCollection
 from monai.transforms import MapTransform, KeepLargestConnectedComponent
-from skimage.morphology import binary_dilation, ball
+from skimage.morphology import binary_closing, ball
 
 class DiameterClosingd(MapTransform):
     """
@@ -166,20 +165,18 @@ class DilatedForegroundd(MapTransform):
     @staticmethod
     def _zero_outside_expanded(arr: np.ndarray, expanded_slices: tuple):
         """
-        Zero out all voxels outside expanded_slices in-place, without constructing a full mask.
+        Zero out all voxels outside expanded_slices in-place,
+        by zeroing before/after along each axis (no Cartesian product).
         """
-        ranges = []
-        for sl in expanded_slices:
-            ranges.append([
-                ('before', slice(None, sl.start)),
-                ('inside', slice(sl.start, sl.stop)),
-                ('after', slice(sl.stop, None)),
-            ])
-        for combo in itertools.product(*ranges):
-            if all(part[0] == 'inside' for part in combo):
-                continue
-            sel = tuple(part[1] for part in combo)
-            arr[sel] = 0
+        for dim, sl in enumerate(expanded_slices):
+            if sl.start > 0:
+                sel = [slice(None)] * arr.ndim
+                sel[dim] = slice(None, sl.start)
+                arr[tuple(sel)] = 0
+            if sl.stop < arr.shape[dim]:
+                sel = [slice(None)] * arr.ndim
+                sel[dim] = slice(sl.stop, None)
+                arr[tuple(sel)] = 0
 
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         d = dict(data)
@@ -210,9 +207,9 @@ class DilatedForegroundd(MapTransform):
             sub_vol = arr_np[expanded_slices]
 
             # compute foreground in subvolume, dilate, and keep largest component
-            sub_fg = sub_vol > 0
-            dilated = binary_dilation(sub_fg, footprint=self._selem)
-            largest = self.keep_largest(dilated)
+            sub_fg = (sub_vol > 0).squeeze(axis=0)  # squeeze channel dim
+            dilated = binary_closing(sub_fg, footprint=self._selem)
+            largest = self.keep_largest(dilated).unsqueeze(axis=0)  # restore channel dim
 
             # zero out everything in the subvolume except the kept component (in-place)
             sub_vol[~largest] = 0
