@@ -22,7 +22,7 @@ class DiameterClosingd(MapTransform):
         classes: if None or equal to number of channels, behaves like original per-channel closing.
                  If input has a single channel (C == 1) and `classes` > 1, treats the image as
                  an integer label map with labels 1..classes (0 is background), applies diameter
-                 closing to each label’s binary mask, and recombines. Overlaps are resolved by
+                 closing to each label's binary mask, and recombines. Overlaps are resolved by
                  giving priority to lower label values.
         allow_missing_keys: if True, missing keys are ignored.
     """
@@ -143,24 +143,79 @@ class DiameterClosingd(MapTransform):
 
 
 class DilatedForegroundd(MapTransform):
-    '''Expects integer labels'''
+    """Efficient: crop to ROI, cache structuring element, custom largest-component."""
     def __init__(
         self,
-        keys: KeysCollection,
-        dilation: Union[int, Sequence[int]],
+        keys,
+        dilation: int = 8,
         connectivity: int = 1,
-        allow_missing_keys: bool = False):
+        allow_missing_keys: bool = False,
+    ):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
-
         self.dilation = dilation
         self.connectivity = connectivity
-        self.keeplargest = KeepLargestConnectedComponent(connectivity=3)
+        self._selem = ball(dilation)
+        self.keep_largest = KeepLargestConnectedComponent(
+            connectivity=connectivity)
         
+    def _bounding_box(self, mask: np.ndarray):
+        coords = np.argwhere(mask)
+        if coords.size == 0:
+            return None
+        mins = coords.min(axis=0)
+        maxs = coords.max(axis=0)
+        # slices are inclusive of min, exclusive of max+1
+        return tuple(slice(int(mn), int(mx) + 1) for mn, mx in zip(mins, maxs))
+
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         d = dict(data)
         for key in self.key_iterator(d):
-            fg = d[key] > 0
-            fg = binary_dilation(fg, selem=ball(self.dilation))
-            fg = self.keeplargest(fg).bool()
-            d[key][~fg] = 0
+            arr = d[key]
+            is_torch = isinstance(arr, torch.Tensor)
+            if is_torch:
+                device = arr.device
+                arr_np = arr.cpu().numpy()
+            else:
+                arr_np = arr  # assume numpy array
+
+            fg = arr_np > 0
+            if not fg.any():
+                # nothing to do
+                continue
+
+            bbox = self._bounding_box(fg)
+            if bbox is None:
+                continue
+
+            # expand bbox by dilation, clipped to volume
+            expanded_slices = []
+            for dim, sl in enumerate(bbox):
+                start = max(0, sl.start - self.dilation)
+                stop = min(arr_np.shape[dim], sl.stop + self.dilation)
+                expanded_slices.append(slice(start, stop))
+            expanded_slices = tuple(expanded_slices)
+
+            sub_fg = fg[expanded_slices]
+
+            # dilate only inside the cropped region
+            dilated = binary_dilation(sub_fg, selem=self._selem)
+
+            # keep largest connected component in that cropped region
+            largest = self.keep_largest(dilated)
+
+            # build full-volume mask (only nonzero in expanded region)
+            mask = np.zeros_like(fg, dtype=bool)
+            mask[expanded_slices] = largest
+
+            # zero out everything outside the kept foreground
+            arr_np[~mask] = 0
+
+            if is_torch:
+                # write back, preserving original dtype if possible
+                out_tensor = torch.from_numpy(arr_np).to(device)
+                if out_tensor.dtype != arr.dtype:
+                    out_tensor = out_tensor.type(arr.dtype)
+                d[key] = out_tensor
+            else:
+                d[key] = arr_np
         return d
