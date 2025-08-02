@@ -6,7 +6,7 @@ from skimage.morphology import diameter_closing
 
 from monai.config import KeysCollection
 from monai.transforms import MapTransform, KeepLargestConnectedComponent
-
+from skimage.morphology import binary_dilation, ball
 
 class DiameterClosingd(MapTransform):
     """
@@ -142,30 +142,25 @@ class DiameterClosingd(MapTransform):
         return d
 
 
-class DiameterForegroundd(MapTransform):
+class DilatedForegroundd(MapTransform):
     '''Expects integer labels'''
     def __init__(
         self,
         keys: KeysCollection,
-        diameter_threshold: Union[int, Sequence[int]],
+        dilation: Union[int, Sequence[int]],
         connectivity: int = 1,
         allow_missing_keys: bool = False):
-        super().__init__()
+        super().__init__(keys, allow_missing_keys=allow_missing_keys)
 
-        self.diameter_threshold = diameter_threshold
+        self.dilation = dilation
         self.connectivity = connectivity
-        self.diameter_closing = DiameterClosingd(
-            keys=keys,
-            diameter_threshold=diameter_threshold,
-            connectivity=connectivity,
-            allow_missing_keys=allow_missing_keys)
         self.keeplargest = KeepLargestConnectedComponent(connectivity=3)
         
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         d = dict(data)
         for key in self.key_iterator(d):
             fg = d[key] > 0
-            fg = self.diameter_closing(fg)
+            fg = binary_dilation(fg, selem=ball(self.dilation))
             fg = self.keeplargest(fg).bool()
             d[key][~fg] = 0
         return d
