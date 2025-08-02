@@ -1,20 +1,29 @@
-from typing import Sequence, Union, Hashable, Mapping, Any
+from typing import Hashable, Any, Mapping, Sequence, Union
+
 import numpy as np
 import torch
 from skimage.morphology import diameter_closing
-from monai.transforms import MapTransform, KeepLargestConnectedComponent
+
 from monai.config import KeysCollection
+from monai.transforms import MapTransform, KeepLargestConnectedComponent
 
 
 class DiameterClosingd(MapTransform):
     """
-    Dictionary-based transform applying per-channel diameter closing from scikit-image.
+    Dictionary-based transform applying per-channel diameter closing from scikit-image,
+    with optional integer-label support when the input has a single channel.
 
     Args:
         keys: keys of the corresponding items to be transformed.
-        diameter_threshold: int or sequence of ints. If a sequence, its length must equal number of channels.
+        diameter_threshold: int or sequence of ints. If a sequence, its length must equal
+            number of channels (for multi-channel) or number of classes (for single-channel label mode).
         connectivity: connectivity parameter passed to `skimage.morphology.diameter_closing`
                       (e.g., in 3D, `connectivity=1` is 6-connectivity, `2` yields 26).
+        classes: if None or equal to number of channels, behaves like original per-channel closing.
+                 If input has a single channel (C == 1) and `classes` > 1, treats the image as
+                 an integer label map with labels 1..classes (0 is background), applies diameter
+                 closing to each label’s binary mask, and recombines. Overlaps are resolved by
+                 giving priority to lower label values.
         allow_missing_keys: if True, missing keys are ignored.
     """
 
@@ -23,11 +32,16 @@ class DiameterClosingd(MapTransform):
         keys: KeysCollection,
         diameter_threshold: Union[int, Sequence[int]],
         connectivity: int = 1,
+        classes: Union[None, int] = None,
         allow_missing_keys: bool = False,
     ):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
+        if classes is not None:
+            if not (isinstance(classes, int) and classes >= 1):
+                raise ValueError("classes must be a positive integer or None.")
         self.diameter_threshold = diameter_threshold
         self.connectivity = connectivity
+        self.classes = classes
 
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         d = dict(data)
@@ -49,24 +63,68 @@ class DiameterClosingd(MapTransform):
                 )
 
             n_channels = img_np.shape[0]
-            # prepare per-channel thresholds
-            if np.isscalar(self.diameter_threshold):
-                thresholds = [self.diameter_threshold] * n_channels
-            else:
-                if len(self.diameter_threshold) != n_channels:
-                    raise ValueError(
-                        f"{self.__class__.__name__}: length of diameter_threshold "
-                        f"{len(self.diameter_threshold)} != number of channels {n_channels}"
-                    )
-                thresholds = list(self.diameter_threshold)
 
-            # apply diameter closing per channel
-            out_channels = []
-            for c, thr in enumerate(thresholds):
-                ch = img_np[c]
-                out_ch = diameter_closing(ch, diameter_threshold=thr, connectivity=self.connectivity)
-                out_channels.append(out_ch)
-            out = np.stack(out_channels, axis=0)
+            # label-mode: single channel + classes > 1
+            if n_channels == 1 and self.classes is not None and self.classes > 1:
+                label_img = img_np[0]
+                # prepare per-class thresholds for labels 1..classes
+                if np.isscalar(self.diameter_threshold):
+                    thresholds = [self.diameter_threshold] * self.classes
+                else:
+                    if len(self.diameter_threshold) != self.classes:
+                        raise ValueError(
+                            f"{self.__class__.__name__}: length of diameter_threshold "
+                            f"{len(self.diameter_threshold)} != number of classes {self.classes}"
+                        )
+                    thresholds = list(self.diameter_threshold)
+
+                # initialize output label image (background=0)
+                out_label = np.zeros_like(label_img)
+
+                for label in range(1, self.classes + 1):
+                    thr = thresholds[label - 1]
+                    bin_mask = label_img == label
+                    if not np.any(bin_mask):
+                        continue  # nothing to do for this label
+                    # diameter_closing expects an image; feed binary mask (as uint8 or bool)
+                    closed = diameter_closing(
+                        bin_mask.astype(np.uint8),
+                        diameter_threshold=thr,
+                        connectivity=self.connectivity,
+                    )
+                    closed_mask = closed.astype(bool)
+                    # set label only where output is still background to enforce priority
+                    to_set = closed_mask & (out_label == 0)
+                    out_label[to_set] = label
+
+                out = np.expand_dims(out_label, axis=0)
+
+            else:
+                # standard per-channel mode (including single-channel intensity or classes==n_channels)
+                if self.classes is not None and self.classes != n_channels:
+                    raise ValueError(
+                        f"{self.__class__.__name__}: classes ({self.classes}) must be equal to number of channels ({n_channels}) "
+                        f"when not in single-channel label mode."
+                    )
+                # prepare per-channel thresholds
+                if np.isscalar(self.diameter_threshold):
+                    thresholds = [self.diameter_threshold] * n_channels
+                else:
+                    if len(self.diameter_threshold) != n_channels:
+                        raise ValueError(
+                            f"{self.__class__.__name__}: length of diameter_threshold "
+                            f"{len(self.diameter_threshold)} != number of channels {n_channels}"
+                        )
+                    thresholds = list(self.diameter_threshold)
+
+                out_channels = []
+                for c, thr in enumerate(thresholds):
+                    ch = img_np[c]
+                    out_ch = diameter_closing(
+                        ch, diameter_threshold=thr, connectivity=self.connectivity
+                    )
+                    out_channels.append(out_ch)
+                out = np.stack(out_channels, axis=0)
 
             # cast back to original type / tensor
             if is_tensor:
