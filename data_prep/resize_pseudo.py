@@ -128,7 +128,9 @@ def process_pseudo(in_dir, out_dir, pixdim):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        num_workers=50)
+        num_workers=40,
+        prefetch_factor=32,
+        pin_memory=False)
 
     # iterate, transform, and save
     for batch in tqdm(dataloader, desc=f"Processing Pseudo to Soft"):
