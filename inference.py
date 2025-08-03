@@ -227,7 +227,7 @@ if __name__ == "__main__":
     metrics = manager.list()
 
     # Decide how many CPU workers per GPU (e.g. total_cpus // ngpus)
-    total_cpus = 120
+    total_cpus = 64
     cpus_per_gpu = max(1, total_cpus // ngpus)
 
     # Spawn one process per GPU
