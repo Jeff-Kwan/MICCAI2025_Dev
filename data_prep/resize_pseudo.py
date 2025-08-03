@@ -3,11 +3,9 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import torch
-from torch.nn import functional as F
 import monai.transforms as mt
-from monai.data import Dataset, ThreadDataLoader
+from monai.data import Dataset, DataLoader
 from monai.config import KeysCollection
-from typing import Hashable, Mapping
 
 class QuantizeNormalized(mt.MapTransform):
     """
@@ -88,38 +86,58 @@ def get_data_files(labels_dir, extension=".nii.gz"):
         for name in label_names
     ]
 
-def process_pseudo(datafiles, output_dir):
+def process_pseudo(in_dir, out_dir, pixdim):
+    # create output dirs
+    os.makedirs(out_dir, exist_ok=True)
+
     transform = mt.Compose(
         [
-            mt.LoadImaged(keys=["label"], image_only=False, ensure_channel_first=True),
-            mt.EnsureTyped(keys=["label"], dtype=np.float32, track_meta=True),
-            mt.Orientationd(keys=["label"], axcodes="RAS"),
-            mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="trilinear"),
+            mt.LoadImaged(keys=["label"], ensure_channel_first=True, image_only=False),
+            mt.EnsureTyped(
+                keys=["label"],
+                dtype=torch.float32,
+                track_meta=True),
+            mt.Orientationd(keys=["label"], axcodes="RAS", lazy=True),
+            mt.Spacingd(
+                keys=["label"],
+                pixdim=pixdim,
+                mode="trilinear",
+                lazy=True),
             QuantizeNormalized(keys=["label"]),
             mt.SaveImaged(
                 keys=["label"],
-                output_dir=output_dir,
+                output_dir=out_dir,
                 output_postfix="",
                 output_ext=".nii.gz",
                 separate_folder=False,
                 output_dtype=torch.uint8,
                 print_log=False),
-            mt.DeleteItemsd(keys=["label"]),
+            mt.DeleteItemsd(keys=["label"])
         ]
     )
-    dataloader = ThreadDataLoader(
-        Dataset(data=datafiles, transform=transform),
+
+    # build the MONAI dataset
+    dir = Path(in_dir)
+    if not dir.is_dir():
+        raise FileNotFoundError(f"Directory not found: {dir!r}")
+    names = sorted(
+        entry.name
+        for entry in os.scandir(dir)
+        if entry.is_file() and entry.name.endswith(".nii.gz"))
+    dataset = Dataset(data=[{"label": str(dir / name)} for name in names], transform=transform)
+    dataloader = DataLoader(
+        dataset,
         batch_size=1,
-        num_workers=38,
-        prefetch_factor=32,
-        pin_memory=False,
-        persistent_workers=True)
-    
-    for batch in tqdm(dataloader, desc="Processing pseudo-labels"):
+        num_workers=50)
+
+    # iterate, transform, and save
+    for batch in tqdm(dataloader, desc=f"Processing Pseudo to Soft"):
         pass
+
+    return 
 
 if __name__ == "__main__":
     datafiles = get_data_files("data/nifti/train_pseudo/pseudo1x")
     output_dir = "data/small/train_pseudo/pseudo1x"
 
-    process_pseudo(datafiles, output_dir)
+    process_pseudo(datafiles, output_dir, pixdim=(1.6, 1.6, 2.5))
