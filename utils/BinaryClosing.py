@@ -36,7 +36,7 @@ class BinaryClosingForegroundd(MapTransform):
     def __init__(
         self,
         keys: KeysCollection,
-        width: int = 8,
+        width: int = 4,
         connectivity: int = 1,
         allow_missing_keys: bool = False):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
