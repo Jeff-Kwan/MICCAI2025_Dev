@@ -47,9 +47,10 @@ class BinaryClosingForegroundd(MapTransform):
         
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         for key in self.key_iterator(data):
-            fg = (data[key] > 0).squeeze(0)  # assume single channel
-            fg = binary_closing(fg, footprint=self.footprint)
-            fg = np.expand_dims(fg, axis=0)
-            fg = self.keeplargest(fg).bool()
-            data[key][~fg] = 0
+            orig_fg = (data[key] > 0).squeeze(0)
+            closed = binary_closing(orig_fg, footprint=self.footprint).bool()
+            closed = orig_fg | closed  # force extensivity explicitly
+            closed = np.expand_dims(closed, 0)
+            closed = self.keeplargest(closed).bool()  # if you still want largest after that
+            data[key][~closed] = 0
         return data
