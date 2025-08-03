@@ -67,25 +67,6 @@ class QuantizeNormalized(mt.MapTransform):
         return (floors + mask).to(torch.uint8)
     
 
-def get_data_files(labels_dir, extension=".nii.gz"):
-    labels_dir = Path(labels_dir)
-
-    if not labels_dir.is_dir():
-        raise FileNotFoundError(f"Label directory not found: {labels_dir!r}")
-
-    label_names = sorted(
-        entry.name
-        for entry in os.scandir(labels_dir)
-        if entry.is_file() and entry.name.endswith(extension)
-    )
-    if not label_names:
-        raise RuntimeError(f"No '{extension}' files found in {labels_dir!r}")
-
-    return [
-        {"label": str(labels_dir / name), "base_name": name.removesuffix(".nii.gz")}
-        for name in label_names
-    ]
-
 def process_pseudo(in_dir, out_dir, pixdim):
     # create output dirs
     os.makedirs(out_dir, exist_ok=True)
@@ -139,7 +120,7 @@ def process_pseudo(in_dir, out_dir, pixdim):
     return 
 
 if __name__ == "__main__":
-    datafiles = get_data_files("data/nifti/train_pseudo/pseudo1x")
+    input_dir = "data/nifti/train_pseudo/pseudo1x"
     output_dir = "data/small/train_pseudo/pseudo1x"
 
-    process_pseudo(datafiles, output_dir, pixdim=(1.6, 1.6, 2.5))
+    process_pseudo(input_dir, output_dir, pixdim=(1.6, 1.6, 2.5))
