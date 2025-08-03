@@ -1,25 +1,25 @@
 from typing import Hashable, Any, Mapping
-from skimage.morphology import binary_closing, ball
+from skimage.morphology import binary_closing, cube
 import numpy as np
 from monai.config import KeysCollection
 from monai.transforms import MapTransform, KeepLargestConnectedComponent
 
 class BinaryClosingd(MapTransform):
     """
-    Expects single channel integer labels
+    Expects single channel integer labels, numpy array format.
     """
 
     def __init__(
         self,
         keys: KeysCollection,
-        radius: int = 4,
+        width: int = 4,
         classes: int = 2,
         allow_missing_keys: bool = False,
     ):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
-        self.radius = radius
+        self.width = width
         self.classes = classes
-        self.footprint = ball(radius)
+        self.footprint = cube(width)
 
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         for key in self.key_iterator(data):
@@ -32,22 +32,22 @@ class BinaryClosingd(MapTransform):
 
 
 class BinaryClosingForegroundd(MapTransform):
-    '''Expects single channel integer labels'''
+    '''Expects single channel integer labels, numpy array format.'''
     def __init__(
         self,
         keys: KeysCollection,
-        radius: int = 8,
+        width: int = 8,
         connectivity: int = 1,
         allow_missing_keys: bool = False):
         super().__init__(keys, allow_missing_keys=allow_missing_keys)
-        self.radius = radius
+        self.width = width
         self.connectivity = connectivity
-        self.footprint = ball(self.radius)
+        self.footprint = cube(self.width)
         self.keeplargest = KeepLargestConnectedComponent(connectivity=3)
         
     def __call__(self, data: Mapping[Hashable, Any]) -> dict:
         for key in self.key_iterator(data):
-            fg = (data[key] > 0).squeeze(0).bool()  # assume single channel
+            fg = (data[key] > 0).squeeze(0)  # assume single channel
             fg = binary_closing(fg, footprint=self.footprint)
             fg = np.expand_dims(fg, axis=0)
             fg = self.keeplargest(fg).bool()
