@@ -74,14 +74,20 @@ def cpu_post(data, inference_config):
 
     # Prepare
     data = prep_tf(data)
-    pred = torch.zeros((14, *data["pred"].shape[1:]), dtype=torch.uint8)
+    pred = torch.cat([  # Default is background class
+        torch.ones((1, *data["pred"].shape[1:]), dtype=torch.uint8).mul_(255),
+        torch.zeros((13, *data["pred"].shape[1:]), dtype=torch.uint8)],
+        dim=0)  # 14 classes, 1 background + 13 foreground
 
+    # Get foreground
     data["fg"] = (data["aladdin"] > 0) | (data["blackbean"] > 0)
-    if data["fg"].any():
-        data = crop(data)
+    data = crop(data)
 
     offset = data.get("foreground_start_coord", (0, 0, 0))  # this gives ROI origin indices
     slices = tuple(slice(start, start + size) for start, size in zip(offset, data["pred"].shape[-len(offset):]))
+
+    # Zero out foreground
+    pred[(...,) + slices] = 0
 
     # Remove small objects
     data = remove_small(data)
