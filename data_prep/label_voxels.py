@@ -44,7 +44,7 @@ def process_labels(datafiles, num_classes=14):
         [
             mt.LoadImaged(keys=["label"], ensure_channel_first=True),
             mt.Orientationd(keys=["label"], axcodes="RAS"),
-            mt.Spacingd(keys=["label"], pixdim=(0.8, 0.8, 2.5), mode="nearest"),
+            mt.Spacingd(keys=["label"], pixdim=(1.6, 1.6, 2.5), mode="nearest"),
             mt.EnsureTyped(keys=["label"], dtype=np.uint8, track_meta=True),
         ]
     )

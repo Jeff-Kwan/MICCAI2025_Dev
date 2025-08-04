@@ -57,7 +57,7 @@ def get_post_transforms(pre_transforms, out_dir):
     return mt.Compose([
         mt.AsDiscreted(keys="pred", argmax=True),
         RemoveSmallObjectsPerClassd(keys=["pred"],
-            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 100, 100, 500, 100, 1e3, 1e3, 1e3]),
+            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 100, 100, 200, 100, 1e3, 500, 1e3]),
         mt.Invertd(
             keys="pred",
             transform=pre_transforms,

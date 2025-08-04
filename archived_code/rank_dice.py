@@ -51,7 +51,7 @@ def compute_NSD(name):
         y_pred=pred, y=label,
         include_background=False,
         class_thresholds=[1]*13,
-        # spacing=data["vol1"].meta["pixdim"][1:4]
+        spacing=data["vol1"].meta["pixdim"][1:4].tolist()
     ).cpu().numpy()
     return (name, nsd)
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         results = list(tqdm(pool.imap(compute_dice, common_names), total=len(common_names), desc="Calculating Dice"))
     mean_dice = sum(np.nanmean(d[1]) for d in results) / len(results)
     results.sort(key=lambda x: x[1].mean())
-    results = [[x[0].replace(".nii.gz", "")] + np.round(x[1].squeeze(), 3).tolist() for x in results]
+    results = [[x[0].replace(".nii.gz", "")] + x[1].squeeze().tolist() for x in results]
 
     df = pd.DataFrame(
         results,
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         results = list(tqdm(pool.imap(compute_NSD, common_names), total=len(common_names), desc="Calculating NSD"))
     mean_nsd = sum(np.nanmean(d[1]) for d in results) / len(results)
     results.sort(key=lambda x: x[1].mean())
-    results = [[x[0].replace(".nii.gz", "")] + np.round(x[1].squeeze(), 3).tolist() for x in results]
+    results = [[x[0].replace(".nii.gz", "")] + x[1].squeeze().tolist() for x in results]
 
     df = pd.DataFrame(
         results,
