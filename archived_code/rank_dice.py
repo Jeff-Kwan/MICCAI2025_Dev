@@ -51,7 +51,7 @@ def compute_NSD(name):
         y_pred=pred, y=label,
         include_background=False,
         class_thresholds=[1]*13,
-        spacing=data["vol1"].meta["pixdim"][1:4]
+        # spacing=data["vol1"].meta["pixdim"][1:4]
     ).cpu().numpy()
     return (name, nsd)
 
