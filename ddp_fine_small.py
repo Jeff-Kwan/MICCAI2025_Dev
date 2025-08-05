@@ -79,7 +79,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/small/train_gt/images",
                 labels_dir="data/small/train_gt/softquant",
-                extension='.nii.gz') * 6
+                extension='.nii.gz') * 4
             + get_data_files(
                 images_dir="data/small/train_pseudo/images",
                 labels_dir="data/small/train_pseudo/pseudo1x",
@@ -143,8 +143,8 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*6 + Soft Pseudo; 0.05 background loss weight, class loss weight [1,2] by log space",
-        f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
+        f"{output_dir} - GT*4 + Soft Pseudo; 0.05 background loss weight, class loss weight [1,2] by log space",
+        f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
     ]
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     for architecture in architectures:
         model_params = json.load(open(f"configs/small/model.json"))
         train_params = json.load(open(f"configs/small/train.json"))
-        output_dir = "output/Small/AttnUNet6-Official"
+        output_dir = "output/Small/AttnUNet6-600"
         comments = get_comments(f"{architecture}", train_params)
 
         print(f"Starting training for {architecture}...")
