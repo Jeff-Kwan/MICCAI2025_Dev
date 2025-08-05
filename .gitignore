@@ -3,6 +3,7 @@ data/
 output/
 inputs/
 outputs/
+images/
 labels/
 
 # Byte-compiled / optimized / DLL files

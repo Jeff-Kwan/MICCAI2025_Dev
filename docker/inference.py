@@ -29,7 +29,7 @@ def get_image_files(images_dir, extension=".nii.gz"):
 class RemoveSmallObjectsPerClassd(Transform):
     def __init__(self, keys, 
             labels=list(range(1, 14)),
-            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 100, 200, 500, 200, 1e3, 1e3, 1e3],
+            min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 50, 100, 300, 100, 1000, 500, 500],
             connectivity=3):
         self.keys = keys
         self.labels = labels
