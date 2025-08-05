@@ -13,17 +13,19 @@ loader = mt.Compose([
     mt.LoadImaged(keys=["vol1", "vol2"], ensure_channel_first=True),
     # mt.CropForegroundd(keys=["vol1", "vol2"], source_key="vol2"),
     mt.Orientationd(keys=["vol1", "vol2"], axcodes="RAS"),
-    mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.5, 1.5, 1.5), mode=['nearest', 'nearest']),
+    mt.Spacingd(keys=["vol1", "vol2"], pixdim=(1.6, 1.6, 2.5), mode=['nearest', 'nearest']),
 ])
 clean_small = False
-organ = np.array([10, 11])
-num = '34'
+organ = None#np.array([50])
+num = '50'
 data = loader({
     "vol1": rf"archived_code\plots\labels\au5_post_output\FLARETs_00{num}.nii.gz",
     "vol2": rf"archived_code\plots\labels\Validation-Public-Labels\FLARETs_00{num}.nii.gz"
 })
 vol1 = data["vol1"].numpy().astype(int)
 vol2 = data["vol2"].numpy().astype(int)
+print(vol2.shape)
+exit()
 
 fp = ((vol1 > vol2) & (vol2 == 0)).astype(int)
 fn = ((vol1 < vol2) & (vol1 == 0)).astype(int)
