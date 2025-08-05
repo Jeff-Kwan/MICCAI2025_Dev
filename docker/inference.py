@@ -60,7 +60,7 @@ def get_pre_transforms(pixdim, intensities):
         mt.LoadImaged(["img"], image_only=False, ensure_channel_first=True),
         mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
         mt.Orientationd(["img"], axcodes="RAS", lazy=False),
-        mt.Spacingd(["img"], pixdim=pixdim, mode=("bilinear"), lazy=False),
+        mt.Spacingd(["img"], pixdim=pixdim, mode=("trilinear"), lazy=False),
     ])
     intensity = mt.Compose([
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),

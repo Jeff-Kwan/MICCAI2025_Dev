@@ -15,7 +15,9 @@ class ConvBlock(nn.Module):
             nn.Conv3d(h_c, h_c, 3, 1, 1, bias=bias, groups=h_c),
             nn.GroupNorm(h_c, h_c),
             nn.GELU())
-        self.out_conv = nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False)
+        self.out_conv = nn.Sequential(
+            nn.Dropout3d(dropout) if dropout else nn.Identity(),
+            nn.Conv3d(h_c*2, out_c, 1, 1, 0, bias=False))
         
     def forward(self, x):
         x = self.conv1(x)
