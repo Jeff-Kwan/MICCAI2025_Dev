@@ -79,7 +79,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 6
+                extension='.nii.gz') * 8
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/softquant",
@@ -143,7 +143,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*6 + Soft Pseudo; 0.1 background loss weight",
+        f"{output_dir} - GT*8 + Soft Pseudo; 0.1 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
