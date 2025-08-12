@@ -79,7 +79,7 @@ def main_worker(rank: int,
             data=get_data_files(
                 images_dir="data/nifti/train_gt/images",
                 labels_dir="data/nifti/train_gt/softquant",
-                extension='.nii.gz') * 12
+                extension='.nii.gz') * 6
             + get_data_files(
                 images_dir="data/nifti/train_pseudo/images",
                 labels_dir="data/nifti/train_pseudo/softquant",
@@ -99,7 +99,7 @@ def main_worker(rank: int,
             train_ds,
             batch_size=train_params['batch_size'],
             sampler=train_sampler,
-            num_workers=44,
+            num_workers=46,
             prefetch_factor=4,
             pin_memory=False,
             persistent_workers=True)
@@ -117,7 +117,7 @@ def main_worker(rank: int,
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
-            weight=torch.tensor([0.05] + train_params["weights"], device=rank),
+            weight=torch.tensor([0.1] + train_params["weights"], device=rank),
             lambda_focal=2,
             lambda_dice=1)
 
@@ -143,7 +143,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*12 + Soft Pseudo; 0.05 background loss weight",
+        f"{output_dir} - GT*6 + Soft Pseudo; 0.1 background loss weight",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding, k3 conv smooth after convtranspose (k3 merge), LayerNormTranspose", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
