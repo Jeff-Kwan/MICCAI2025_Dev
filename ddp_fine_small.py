@@ -117,7 +117,7 @@ def main_worker(rank: int,
         criterion = SoftDiceFocalLoss(  # Use soft labels
             include_background=True, 
             softmax=True, 
-            weight=torch.tensor([0.1] + train_params["weights"], device=rank),
+            weight=torch.tensor([0.05] + train_params["weights"], device=rank),
             lambda_focal=2,
             lambda_dice=1)
 
@@ -143,7 +143,7 @@ def main_worker(rank: int,
 
 def get_comments(output_dir, train_params):
     return [
-        f"{output_dir} - GT*4 + Soft Pseudo; 0.1 background loss weight, class loss weight [1,2] by log space",
+        f"{output_dir} - GT*4 + Soft Pseudo; 0.05 background loss weight, class loss weight [1,2] by log space",
         f"{train_params['shape']} shape, (2, 2, 1) patch embedding", 
         f"SoftDiceFocal, 1-sample rand crop + augmentations",
         f"Spatial {train_params['data_augmentation']['spatial']}; Intensity {train_params['data_augmentation']['intensity']}; Coarse {train_params['data_augmentation']['coarse']}",
