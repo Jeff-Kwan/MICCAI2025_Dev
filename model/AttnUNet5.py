@@ -2,6 +2,19 @@ import torch
 from torch import nn
 from torchvision.ops import stochastic_depth
 
+class LayerNormTranspose(nn.Module):
+    def __init__(self, dim: int, features: int):
+        super().__init__()
+        self.dim = dim
+        self.norm = nn.LayerNorm(features, elementwise_affine=False, bias=False)
+
+    def forward(self, x):
+        # (..., C, ...) -> (..., ..., C) -> norm -> restore
+        x = x.transpose(self.dim, -1)
+        x = self.norm(x)
+        return x.transpose(self.dim, -1)
+    
+
 class ConvBlock(nn.Module):
     def __init__(self, in_c: int, h_c: int, out_c: int, 
                  bias: bool = False, dropout: float = 0.0):
@@ -168,7 +181,7 @@ class AttnUNet5(nn.Module):
 
         self.out_conv = nn.Sequential(
             nn.ConvTranspose3d(channels[0], 16, (2, 2, 1), (2, 2, 1), 0, bias=False),
-            nn.GroupNorm(1, 16, affine=False),
+            LayerNormTranspose(1, 16),
             nn.Conv3d(16, out_c, 3, 1, 1, bias=True))
 
         
