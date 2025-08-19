@@ -9,7 +9,7 @@ from torch.optim import AdamW, lr_scheduler
 from monai.data import DataLoader, Dataset
 from monai.losses import DiceLoss, FocalLoss
 
-from utils.dataset import get_transforms, get_data_files
+from utils.dataset_small import get_transforms, get_data_files
 from model.AttnUNet6 import AttnUNet6
 from utils.ddp_trainer import DDPTrainer
 

@@ -10,7 +10,7 @@ from tqdm import tqdm
 from monai.transforms import Transform
 from monai.data import MetaTensor
 from skimage.morphology import remove_small_objects
-import nibabel as nib
+from nibabel.orientations import aff2axcodes
 
 
 # My Model
@@ -31,7 +31,7 @@ class RemoveSmallObjectsPerClass(Transform):
     def __init__(self,
             labels=list(range(1, 14)),
             min_sizes=[1e4, 1e3, 1e3, 1e3, 1e3, 1e3, 50, 100, 300, 100, 1000, 500, 500],
-            connectivity=3):
+            connectivity=1):
         self.labels = labels
         self.min_sizes = min_sizes
         self.conn = connectivity
@@ -46,6 +46,35 @@ class RemoveSmallObjectsPerClass(Transform):
         return img 
 
 
+def monai_target_shape(spatial_shape, src_pixdim, dst_pixdim):
+    return tuple(int(round(s * p_src / p_dst)) for s, p_src, p_dst in zip(spatial_shape, src_pixdim, dst_pixdim))
+
+def _center_crop(x: torch.Tensor, roi_size):
+    D, H, W = x.shape[1:]
+    t = []
+    s = []
+    for dim_len, req in zip((D,H,W), roi_size):
+        size = dim_len if (req in (-1, None)) else min(dim_len, int(req))
+        start = (dim_len - size) // 2
+        # if odd remainder, MONAI effectively gives the extra voxel to the end
+        end = start + size
+        t.append(size)
+        s.append(slice(start, end))
+    cropped = x[:, s[0], s[1], s[2]]
+    return cropped, (s[0], s[1], s[2])
+
+
+def _insert_with_slices(full_shape, patch: torch.Tensor, crop_slices):
+    out = torch.zeros(full_shape, dtype=patch.dtype, device=patch.device)
+    out[(slice(None),) + crop_slices] = patch
+    return out
+
+def _clamp_and_norm_(x: torch.Tensor, lo, hi, mean, std):
+    x.clamp_(min=lo, max=hi).sub_(mean).div_(std)
+    return x
+
+
+
 @torch.inference_mode()
 def run_inference(args, inference_config):
     # Load the model
@@ -58,8 +87,8 @@ def run_inference(args, inference_config):
     pixdim = inference_config["pixdim"]
     loader = mt.Compose([
         mt.LoadImaged(["img"], image_only=False, ensure_channel_first=True),
-        mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True)])
-    orientation = mt.Orientationd(["img"], axcodes="RAS", lazy=False)
+        mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
+        mt.Orientationd(["img"], axcodes="RAS", lazy=False)])
     intensity = mt.Compose([
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
         mt.ThresholdIntensityd(["img"], above=True, threshold=lower, cval=lower),
@@ -74,7 +103,7 @@ def run_inference(args, inference_config):
             print_log=False)
     dataset = Dataset(
         data=get_image_files(args.input_dir), 
-        transform=mt.Compose([loader, orientation]))
+        transform=loader)
     os.makedirs(args.output_dir, exist_ok=True)
 
     remove_small = RemoveSmallObjectsPerClass()
@@ -84,7 +113,7 @@ def run_inference(args, inference_config):
     preprocess = mt.Compose([mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear"), centercrop, intensity])
     invert_all = mt.Invertd(
             keys="pred",
-            transform=mt.Compose([loader, orientation, preprocess]),
+            transform=mt.Compose([loader, preprocess]),
             orig_keys="img",
             meta_keys="pred_meta_dict",
             orig_meta_keys="img_meta_dict",
@@ -100,50 +129,49 @@ def run_inference(args, inference_config):
         manual_invert = ss[0]*ss[1]*ss[2] > 2.5e7 or data["img"].numel() > 1.5e8
 
         if manual_invert:
-            data["pred_meta_dict"] = data["img"].meta.copy()
-            orig_axcodes = nib.orientations.aff2axcodes(data["img"].meta["original_affine"])
-            invert_orientation = mt.Orientationd(keys=["pred"], axcodes=orig_axcodes)
+            img_mt: MetaTensor = data["img"]  # (C,D,H,W), in RAS
+            img_meta = img_mt.meta
 
-            orig_shape = list(data["img"].shape)[1:]
-            scale = [s / d for d, s in zip(pixdim, orig_pixdim)]
-            data["img"] = torch.nn.functional.interpolate(
-                data["img"].unsqueeze(0), 
-                scale_factor=scale,
-                mode="trilinear", align_corners=True).squeeze(0)
-            full_shape = list(data["img"].shape)
+            orig_shape_ras = tuple(img_mt.shape[1:])
+            src_pixdim = img_meta["pixdim"][1:4].tolist()
 
-            data = centercrop(data)
-            data = intensity(data)
+            # Resample to target spacing on CPU
+            resampled_shape = monai_target_shape(orig_shape_ras, src_pixdim, inference_config["pixdim"])
+            img_resampled = torch.nn.functional.interpolate(
+                img_mt.unsqueeze(0), size=resampled_shape, mode="trilinear", align_corners=False
+            ).squeeze(0)
 
-            pred = torch.argmax(sliding_window_inference(
-                        data["img"].to(args.device, non_blocking=True).unsqueeze(0),
-                        roi_size=inference_config['shape'],
-                        sw_batch_size=inference_config.get('sw_batch_size', 1),
-                        predictor=lambda x: model(x),
-                        overlap=inference_config.get('sw_overlap', 0.25),
-                        mode="gaussian").cpu().squeeze(0), dim=0, keepdim=True).to(torch.uint8)
+            # Center crop + intensity normalize (in-place)
+            img_cropped, crop_slices = _center_crop(img_resampled, inference_config["max_shape"])
+            _clamp_and_norm_(img_cropped, lower, upper, mean, std)
 
-            # Remove small objects
-            pred = torch.tensor(remove_small(pred))
-            
-            # Invert center crop
-            data["pred"] = torch.zeros(full_shape, dtype=torch.uint8)
-            start = [(s - p) // 2 for s, p in zip(full_shape[1:], pred.shape[1:])]
-            end = [start[i] + pred.shape[i+1] for i in range(len(start))]
-            data["pred"][:, *tuple(slice(s, e) for s, e in zip(start, end))] = pred
+            # Sliding-window inference (send only crop to device)
+            logits = sliding_window_inference(
+                img_cropped.to(args.device, non_blocking=True).unsqueeze(0),
+                roi_size=inference_config["shape"],
+                sw_batch_size=inference_config["sw_batch_size"],
+                predictor=model,
+                overlap=inference_config["sw_overlap"],
+                mode="gaussian",
+            ).detach().cpu().squeeze(0)  # (C_out, d, h, w)
 
-            # Invert spacing
-            data["pred"] = torch.nn.functional.interpolate(
-                data["pred"].unsqueeze(0), 
-                size=orig_shape,
-                mode="nearest").squeeze(0)
-            
-            # Invert orientation
-            data["pred"] = MetaTensor(data["pred"], meta=data["pred_meta_dict"])
-            data = invert_orientation(data)
-            
-            # Post-processing and saving results
-            saver(data)
+            pred_crop = torch.argmax(logits, dim=0, keepdim=True).to(torch.uint8)
+
+            # Postproc (skimage on CPU)
+            pred_crop = torch.from_numpy(remove_small(pred_crop)).to(torch.uint8, copy=False)
+
+            # Invert: crop -> full resampled canvas -> original RAS grid -> original orientation
+            pred_full_resampled = _insert_with_slices((1, *resampled_shape), pred_crop, crop_slices)
+            pred_orig_ras = torch.nn.functional.interpolate(
+                pred_full_resampled.unsqueeze(0), size=orig_shape_ras, mode="nearest"
+            ).squeeze(0)
+
+            pred_mt = MetaTensor(pred_orig_ras, meta=img_meta.copy())
+
+            pred_mt = mt.Orientation(axcodes=aff2axcodes(img_meta["original_affine"]))(pred_mt)
+
+            saver({"pred": pred_mt, "pred_meta_dict": pred_mt.meta.copy()})
+
 
         else:
             data = preprocess(data)

@@ -182,13 +182,13 @@ class AttnUNet6(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cpu")
     
-    B, S1, S2, S3 = 1, 160, 160, 80
+    B, S1, S2, S3 = 1, 256, 256, 64
     params = {
         "out_channels": 14,
         "channels":     [32, 64, 128, 256],
         "convs":        [24, 48, 96, 192],
         "head_dim":     64,
-        "e_layers":     [4, 6, 6, 6],
+        "e_layers":     [4, 6, 6, 8],
         "d_layers":     [4, 6, 6],
         "dropout":      0.0
     }

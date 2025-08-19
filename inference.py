@@ -45,6 +45,7 @@ def get_pre_transforms(pixdim, intensities):
         mt.EnsureTyped(["img"], dtype=[torch.float32], track_meta=True),
         mt.Orientationd(["img"], axcodes="RAS", lazy=False),
         mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear", lazy=False),
+        mt.CenterSpatialCropd(["img"], roi_size=(256, 256, -1), lazy=False),
     ])
     intensity = mt.Compose([
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
@@ -206,9 +207,9 @@ if __name__ == "__main__":
     inference_config = {
         "pixdim": [1.6, 1.6, 2.5],
         "intensities": [295.0, -974.0, 95.958, 139.964],
-        "shape": [160, 160, 80],
+        "shape": [256, 256, 64],
         "sw_batch_size": 8,
-        "sw_overlap": 0.25,
+        "sw_overlap": 0.2,
         "out_dir": "archived_code/plots/labels/au6_official",
     }
 
