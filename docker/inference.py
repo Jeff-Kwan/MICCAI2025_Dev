@@ -78,8 +78,7 @@ def _clamp_and_norm_(x: torch.Tensor, lo, hi, mean, std):
 @torch.inference_mode()
 def run_inference(args, inference_config):
     # Load the model
-    model = AttnUNet6(json.load(open('./model/model.json', 'r')))
-    model.load_state_dict(torch.load('./model/model.pth', map_location='cpu', weights_only=True))
+    model = torch.jit.load("model_cpu.pth", map_location="cpu")
     model.eval().to(args.device)
 
     # Create dataset and dataloader
