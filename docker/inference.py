@@ -89,28 +89,13 @@ def run_inference(args, inference_config):
         mt.LoadImaged(["img"], image_only=False, ensure_channel_first=True),
         mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
         mt.Orientationd(["img"], axcodes="RAS", lazy=False)])
-    intensity = mt.Compose([
+    preprocess = mt.Compose([
+        mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear"), 
+        mt.CenterSpatialCropd(["img"], roi_size=inference_config["max_shape"]), 
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
         mt.ThresholdIntensityd(["img"], above=True, threshold=lower, cval=lower),
         mt.NormalizeIntensityd(["img"], subtrahend=mean, divisor=std)])
-    saver = mt.SaveImaged(keys="pred",
-            output_dir=args.output_dir, 
-            output_postfix="", 
-            output_ext=".nii.gz", 
-            resample=False,     # Invert already resamples
-            separate_folder=False,
-            output_dtype=torch.uint8,
-            print_log=False)
-    dataset = Dataset(
-        data=get_image_files(args.input_dir), 
-        transform=loader)
-    os.makedirs(args.output_dir, exist_ok=True)
-
     remove_small = RemoveSmallObjectsPerClass()
-    centercrop = mt.CenterSpatialCropd(["img"], roi_size=inference_config["max_shape"])
-
-    
-    preprocess = mt.Compose([mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear"), centercrop, intensity])
     invert_all = mt.Invertd(
             keys="pred",
             transform=mt.Compose([loader, preprocess]),
@@ -120,6 +105,19 @@ def run_inference(args, inference_config):
             meta_key_postfix="meta_dict",
             nearest_interp=True,
             to_tensor=True)
+    saver = mt.SaveImaged(keys="pred",
+            output_dir=args.output_dir, 
+            output_postfix="", 
+            output_ext=".nii.gz", 
+            resample=False,     # Invert already resamples
+            separate_folder=False,
+            output_dtype=torch.uint8,
+            print_log=False)
+    
+    dataset = Dataset(
+        data=get_image_files(args.input_dir), 
+        transform=loader)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # Run inference
     for data in tqdm(dataset, desc="Inference"):
