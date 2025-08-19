@@ -124,7 +124,7 @@ def run_inference(args, inference_config):
         # actual spatial size
         orig_pixdim = data["img"].meta["pixdim"][1:4].tolist()
         ss = [s*p1/p2 for s, p1, p2 in zip(data["img"].shape[1:], orig_pixdim, pixdim)]
-        manual_invert = ss[0]*ss[1]*ss[2]*data["img"].numel() > 1e15
+        manual_invert = ss[0]*ss[1]*ss[2]*data["img"].numel() > 2e15
 
         if manual_invert:
             img_mt: MetaTensor = data["img"]  # (C,D,H,W), in RAS
