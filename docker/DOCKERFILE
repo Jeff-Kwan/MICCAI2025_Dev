@@ -21,8 +21,7 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # copy your code, model, and the launcher script
-COPY inference.py inference_config.json predict.sh /workspace/
-COPY model/ /workspace/model/
+COPY inference.py inference_config.json predict.sh model_cpu.pth /workspace/
 
 # make sure predict.sh is executable
 RUN chmod +x predict.sh

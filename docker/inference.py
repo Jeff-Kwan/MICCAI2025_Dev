@@ -13,11 +13,6 @@ from monai.data import MetaTensor
 from skimage.morphology import remove_small_objects
 from nibabel.orientations import aff2axcodes
 
-
-# My Model
-from model.AttnUNet6 import AttnUNet6
-
-
 def get_image_files(images_dir, extension=".nii.gz"):
     images_dir = Path(images_dir)
     image_dicts = [
