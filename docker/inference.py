@@ -88,9 +88,9 @@ def run_inference(args, inference_config):
     loader = mt.Compose([
         mt.LoadImaged(["img"], image_only=False, ensure_channel_first=True),
         mt.EnsureTyped(["img"], dtype=torch.float32, track_meta=True),
-        mt.Orientationd(["img"], axcodes="RAS", lazy=False)])
+        mt.Orientationd(["img"], axcodes="RAS")])
     preprocess = mt.Compose([
-        mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear"), 
+        mt.Spacingd(["img"], pixdim=pixdim, mode="trilinear", dtype=None), 
         mt.CenterSpatialCropd(["img"], roi_size=inference_config["max_shape"]), 
         mt.ThresholdIntensityd(["img"], above=False, threshold=upper, cval=upper),
         mt.ThresholdIntensityd(["img"], above=True, threshold=lower, cval=lower),
