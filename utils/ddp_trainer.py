@@ -100,6 +100,8 @@ class DDPTrainer:
                 masks = batch['label'].to(self.device, non_blocking=True)
                 if soft:
                     masks = masks.float() / 255.0  # Convert to float on GPU
+                else:
+                    masks = one_hot(masks, num_classes=self.num_classes)
 
                 with torch.autocast(device_type='cuda', dtype=self.precision):
                     outputs = self.model(imgs)
@@ -117,7 +119,7 @@ class DDPTrainer:
 
             self.scheduler.step()
 
-            val_loss, metrics = self.evaluate(val_loader, one_hot_loss=soft)
+            val_loss, metrics = self.evaluate(val_loader, one_hot_loss=True)
             if self.world_size > 1:
                 torch.cuda.synchronize(self.device)
                 dist.barrier()
